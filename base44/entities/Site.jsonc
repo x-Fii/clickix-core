@@ -1,0 +1,31 @@
+{
+  "name": "Site",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "site_name": {
+      "type": "string"
+    },
+    "site_location": {
+      "type": "string"
+    },
+    "pic_name": {
+      "type": "string"
+    },
+    "pic_phone": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "site_name",
+    "client_id"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "Client",
+  "type": "object",
+  "properties": {
+    "company_name": {
+      "type": "string"
+    },
+    "contact_person": {
+      "type": "string"
+    },
+    "contact_email": {
+      "type": "string"
+    },
+    "contact_phone": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "company_name"
+  ]
+}

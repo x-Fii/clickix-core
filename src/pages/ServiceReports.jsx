@@ -1,0 +1,139 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Link } from 'react-router-dom';
+import StatusBadge from '@/components/StatusBadge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Search, FileText } from 'lucide-react';
+import { format } from 'date-fns';
+
+const STATUSES = ['all', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'];
+
+export default function ServiceReports() {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const { data: reports = [], isLoading } = useQuery({
+    queryKey: ['service-reports'],
+    queryFn: () => base44.entities.ServiceReport.list('-created_date', 500),
+  });
+
+  const filtered = reports.filter(r => {
+    const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+    const q = search.toLowerCase();
+    const matchSearch = !q || [r.running_number, r.client_name, r.site_name, r.reported_by]
+      .some(f => f?.toLowerCase().includes(q));
+    return matchStatus && matchSearch;
+  });
+
+  const pipelineCounts = STATUSES.filter(s => s !== 'all').map(s => ({
+    status: s,
+    count: reports.filter(r => r.status === s).length,
+  }));
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold font-heading">Service Reports</h1>
+          <p className="text-sm text-muted-foreground mt-1">{reports.length} total reports</p>
+        </div>
+        <Link to="/reports/new">
+          <Button className="gap-2">
+            <Plus size={16} /> New Report
+          </Button>
+        </Link>
+      </div>
+
+      {/* Pipeline summary */}
+      <div className="flex gap-2 flex-wrap">
+        {pipelineCounts.map(({ status, count }) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(statusFilter === status ? 'all' : status)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors ${
+              statusFilter === status ? 'border-primary/50 bg-primary/10' : 'border-border bg-card hover:border-primary/30'
+            }`}
+          >
+            <StatusBadge status={status} />
+            <span className="text-foreground font-semibold">{count}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by report no., client, site..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 bg-card"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40 bg-card">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUSES.map(s => (
+              <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Table */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left px-5 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Report No.</th>
+              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Client</th>
+              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Site</th>
+              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Reported By</th>
+              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Date</th>
+              <th className="px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {isLoading ? (
+              <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">Loading reports...</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="text-center py-16">
+                  <FileText size={32} className="mx-auto text-muted-foreground/40 mb-3" />
+                  <p className="text-sm text-muted-foreground">No reports found</p>
+                  <Link to="/reports/new" className="text-primary text-sm hover:underline mt-1 inline-block">Create first report →</Link>
+                </td>
+              </tr>
+            ) : filtered.map(r => (
+              <tr key={r.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-5 py-3.5">
+                  <span className="font-mono text-xs text-primary">{r.running_number}</span>
+                </td>
+                <td className="px-4 py-3.5 text-sm">{r.client_name || '—'}</td>
+                <td className="px-4 py-3.5 text-sm text-muted-foreground hidden md:table-cell">{r.site_name || '—'}</td>
+                <td className="px-4 py-3.5 text-sm text-muted-foreground hidden lg:table-cell">{r.reported_by || '—'}</td>
+                <td className="px-4 py-3.5"><StatusBadge status={r.status} /></td>
+                <td className="px-4 py-3.5 text-xs font-mono text-muted-foreground hidden lg:table-cell">
+                  {r.created_date ? format(new Date(r.created_date), 'dd MMM yyyy') : '—'}
+                </td>
+                <td className="px-4 py-3.5">
+                  <Link to={`/reports/${r.id}`}>
+                    <Button variant="ghost" size="sm" className="text-xs">View →</Button>
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

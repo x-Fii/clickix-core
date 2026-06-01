@@ -1,0 +1,223 @@
+{
+  "name": "ServiceReport",
+  "type": "object",
+  "properties": {
+    "running_number": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "reported",
+        "resolved",
+        "escalated",
+        "quote",
+        "approved",
+        "schedule",
+        "complete"
+      ]
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "site_id": {
+      "type": "string"
+    },
+    "site_name": {
+      "type": "string"
+    },
+    "site_location": {
+      "type": "string"
+    },
+    "reported_by": {
+      "type": "string"
+    },
+    "l1_date": {
+      "type": "string"
+    },
+    "l1_attended_staff_name": {
+      "type": "string"
+    },
+    "l1_attended_staff_id": {
+      "type": "string"
+    },
+    "l1_attended_staff_email": {
+      "type": "string"
+    },
+    "l1_affected_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "device_type": {
+            "type": "string"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "issue_description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "l1_status": {
+      "type": "string",
+      "enum": [
+        "resolved",
+        "escalate"
+      ]
+    },
+    "l1_submitted": {
+      "type": "boolean"
+    },
+    "l1_submitted_at": {
+      "type": "string"
+    },
+    "quote_date": {
+      "type": "string"
+    },
+    "approved_date": {
+      "type": "string"
+    },
+    "scheduled_date": {
+      "type": "string"
+    },
+    "l2_job_description": {
+      "type": "string"
+    },
+    "l2_work_detail": {
+      "type": "string"
+    },
+    "l2_remarks": {
+      "type": "string"
+    },
+    "l2_attended_staff_name": {
+      "type": "string"
+    },
+    "l2_attended_staff_id": {
+      "type": "string"
+    },
+    "l2_attended_staff_email": {
+      "type": "string"
+    },
+    "l2_attend_date": {
+      "type": "string"
+    },
+    "l2_attend_time": {
+      "type": "string"
+    },
+    "l2_approver_name": {
+      "type": "string"
+    },
+    "l2_approver_detail": {
+      "type": "string"
+    },
+    "l2_work_order_number": {
+      "type": "string"
+    },
+    "l2_site_pic_name": {
+      "type": "string"
+    },
+    "l2_site_pic_id": {
+      "type": "string"
+    },
+    "l2_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "device_type": {
+            "type": "string"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "issue_description": {
+            "type": "string"
+          },
+          "rectification_steps": {
+            "type": "string"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "l2_addon_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "device_type": {
+            "type": "string"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "issue_description": {
+            "type": "string"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "l2_replacements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_description": {
+            "type": "string"
+          },
+          "old_item_detail": {
+            "type": "string"
+          },
+          "new_item_detail": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "supporting_documents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ack_signature": {
+      "type": "string"
+    },
+    "ack_name": {
+      "type": "string"
+    },
+    "ack_phone": {
+      "type": "string"
+    },
+    "ack_timestamp": {
+      "type": "string"
+    },
+    "submitted": {
+      "type": "boolean"
+    },
+    "submitted_at": {
+      "type": "string"
+    },
+    "admin_email": {
+      "type": "string"
+    }
+  },
+  "required": []
+}

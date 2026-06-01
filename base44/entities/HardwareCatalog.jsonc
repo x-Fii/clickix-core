@@ -1,0 +1,30 @@
+{
+  "name": "HardwareCatalog",
+  "type": "object",
+  "properties": {
+    "device_type": {
+      "type": "string",
+      "enum": [
+        "PC",
+        "TV",
+        "Network Device",
+        "Cabling",
+        "CMS Software",
+        "Other"
+      ]
+    },
+    "device_name": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "device_type",
+    "device_name"
+  ]
+}
