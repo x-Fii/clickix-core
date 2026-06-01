@@ -68,7 +68,7 @@ export default function ReportDetail() {
         l2_attend_date: r.l2_attend_date || '',
         l2_attend_time: r.l2_attend_time || '',
         l2_approver_name: r.l2_approver_name || '',
-        l2_approver_detail: r.l2_approver_detail || '',
+        l2_approver_email: r.l2_approver_email || r.l2_approver_detail || '',
         l2_work_order_number: r.l2_work_order_number || '',
         l2_site_pic_name: r.l2_site_pic_name || '',
         l2_site_pic_id: r.l2_site_pic_id || '',
@@ -336,7 +336,7 @@ export default function ReportDetail() {
             <ReadField label="Staff ID" value={report.l1_attended_staff_id} />
             <ReadField label="Staff Email" value={report.l1_attended_staff_email} />
             <ReadField label="Date" value={report.l1_date} />
-            <ReadField label="L1 Status" value={report.l1_status} />
+            <ReadField label="L1 Status" value={report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : ''} />
           </div>
           {(report.l1_affected_items || []).length > 0 && (
             <div>
@@ -361,13 +361,8 @@ export default function ReportDetail() {
               <SectionHeader title="L2 Onsite Support — Job Details" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="md:col-span-2">
-                  <Field label="Job Description">
-                    <Textarea value={l2Form.l2_job_description} onChange={e => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={2} readOnly={report.status === 'complete' && !editing} />
-                  </Field>
-                </div>
-                <div className="md:col-span-2">
-                  <Field label="Work Detail">
-                    <Textarea value={l2Form.l2_work_detail} onChange={e => setLF('l2_work_detail', e.target.value)} className="bg-background resize-none" rows={3} readOnly={report.status === 'complete' && !editing} />
+                  <Field label="Job Description / Work Detail">
+                    <Textarea value={l2Form.l2_job_description} onChange={e => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={4} readOnly={report.status === 'complete' && !editing} />
                   </Field>
                 </div>
                 <div className="md:col-span-2">
@@ -389,7 +384,8 @@ export default function ReportDetail() {
                 <Field label="Attend Time"><Input type="time" value={l2Form.l2_attend_time} onChange={e => setLF('l2_attend_time', e.target.value)} className="bg-background" /></Field>
                 <Field label="Work Order No."><Input value={l2Form.l2_work_order_number} onChange={e => setLF('l2_work_order_number', e.target.value)} className="bg-background" /></Field>
                 <Field label="Approver Name"><Input value={l2Form.l2_approver_name} onChange={e => setLF('l2_approver_name', e.target.value)} className="bg-background" /></Field>
-                <Field label="Approver Detail"><Input value={l2Form.l2_approver_detail} onChange={e => setLF('l2_approver_detail', e.target.value)} className="bg-background" /></Field>
+                <Field label="Approver Email"><Input type="email" value={l2Form.l2_approver_email} onChange={e => setLF('l2_approver_email', e.target.value)} className="bg-background" /></Field>
+                <ReadField label="Approved Date" value={report.approved_date || l2Form.approved_date} />
                 <Field label="Site PIC Name"><Input value={l2Form.l2_site_pic_name} onChange={e => setLF('l2_site_pic_name', e.target.value)} className="bg-background" /></Field>
                 <Field label="Site PIC ID"><Input value={l2Form.l2_site_pic_id} onChange={e => setLF('l2_site_pic_id', e.target.value)} className="bg-background" /></Field>
               </div>
@@ -531,65 +527,150 @@ export default function ReportDetail() {
 
       {/* Hidden PDF Template */}
       <div id="pdf-print-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, width: '794px', background: 'white', padding: '40px', fontFamily: 'Arial, sans-serif', color: '#111' }}>
-        <div style={{ textAlign: 'center', borderBottom: '2px solid #1e40af', paddingBottom: '16px', marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1e40af', letterSpacing: '4px' }}>CLICK IX SDN BHD</h1>
-          <p style={{ fontSize: '13px', marginTop: '4px', color: '#374151' }}>SERVICE REPORT — {report.status?.toUpperCase()}</p>
-          <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', fontFamily: 'monospace' }}>{report.running_number} · Generated: {format(new Date(), 'dd MMM yyyy HH:mm')}</p>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '24px' }}>
-          {[['Client', report.client_name], ['Site', report.site_name], ['Location', report.site_location], ['Reported By', report.reported_by], ['Date', report.l1_date], ['Status', report.status]].map(([k, v]) => (
-            <div key={k} style={{ padding: '8px', background: '#f9fafb', borderRadius: '4px' }}>
-              <p style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase' }}>{k}</p>
-              <p style={{ fontWeight: '600', marginTop: '2px' }}>{v || '—'}</p>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', borderBottom: '1px solid #dbeafe', paddingBottom: '6px', marginBottom: '10px' }}>L1 REMOTE SUPPORT</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' }}>
-            {[['Staff', report.l1_attended_staff_name], ['ID', report.l1_attended_staff_id], ['Email', report.l1_attended_staff_email], ['Date', report.l1_date], ['L1 Status', report.l1_status]].map(([k, v]) => (
-              <div key={k} style={{ padding: '6px', background: '#f9fafb', borderRadius: '4px' }}>
-                <p style={{ color: '#6b7280', fontSize: '10px' }}>{k}</p>
-                <p style={{ fontWeight: '600' }}>{v || '—'}</p>
-              </div>
-            ))}
+      <div style={{ textAlign: 'center', borderBottom: '2px solid #1e40af', paddingBottom: '16px', marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1e40af', letterSpacing: '4px' }}>CLICK IX SDN BHD</h1>
+        <p style={{ fontSize: '13px', marginTop: '4px', color: '#374151' }}>SERVICE REPORT — {report.status?.toUpperCase()}</p>
+        <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', fontFamily: 'monospace' }}>{report.running_number} · Generated: {format(new Date(), 'dd MMM yyyy HH:mm')}</p>
+      </div>
+
+      {/* Job Info */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '24px' }}>
+        {[['Client', report.client_name], ['Site', report.site_name], ['Location', report.site_location], ['Reported By', report.reported_by], ['Date', report.l1_date], ['Status', report.status?.toUpperCase()]].map(([k, v]) => (
+          <div key={k} style={{ padding: '8px', background: '#f9fafb', borderRadius: '4px' }}>
+            <p style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase' }}>{k}</p>
+            <p style={{ fontWeight: '600', marginTop: '2px' }}>{v || '—'}</p>
           </div>
-          {(report.l1_affected_items || []).map((item, i) => (
-            <div key={i} style={{ marginTop: '8px', padding: '8px', background: '#eff6ff', borderRadius: '4px', fontSize: '12px', display: 'flex', gap: '12px' }}>
-              <span style={{ fontWeight: 'bold', color: '#1e40af' }}>{item.device_type}</span>
-              <span style={{ fontWeight: '600' }}>{item.device_name}</span>
-              <span style={{ color: '#374151' }}>{item.issue_description}</span>
+        ))}
+      </div>
+
+      {/* L1 Section */}
+      <div style={{ marginBottom: '20px' }}>
+        <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', borderBottom: '1px solid #dbeafe', paddingBottom: '6px', marginBottom: '10px' }}>L1 REMOTE SUPPORT</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' }}>
+          {[['Staff', report.l1_attended_staff_name], ['ID', report.l1_attended_staff_id], ['Email', report.l1_attended_staff_email], ['Date', report.l1_date], ['L1 Status', report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : '']].map(([k, v]) => (
+            <div key={k} style={{ padding: '6px', background: '#f9fafb', borderRadius: '4px' }}>
+              <p style={{ color: '#6b7280', fontSize: '10px' }}>{k}</p>
+              <p style={{ fontWeight: '600' }}>{v || '—'}</p>
             </div>
           ))}
         </div>
-        {isL2Stage && (
-          <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', borderBottom: '1px solid #dbeafe', paddingBottom: '6px', marginBottom: '10px' }}>L2 ONSITE SUPPORT</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '10px' }}>
-              {[['Staff', report.l2_attended_staff_name], ['ID', report.l2_attended_staff_id], ['Date', report.l2_attend_date], ['Time', report.l2_attend_time], ['Work Order', report.l2_work_order_number], ['Approver', report.l2_approver_name]].map(([k, v]) => (
-                <div key={k} style={{ padding: '6px', background: '#f9fafb', borderRadius: '4px' }}>
-                  <p style={{ color: '#6b7280', fontSize: '10px' }}>{k}</p>
-                  <p style={{ fontWeight: '600' }}>{v || '—'}</p>
+        {(report.l1_affected_items || []).map((item, i) => (
+          <div key={i} style={{ marginTop: '8px', padding: '8px', background: '#eff6ff', borderRadius: '4px', fontSize: '12px', display: 'flex', gap: '12px' }}>
+            <span style={{ fontWeight: 'bold', color: '#1e40af' }}>{item.device_type}</span>
+            <span style={{ fontWeight: '600' }}>{item.device_name}</span>
+            <span style={{ color: '#374151' }}>{item.issue_description}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* L2 Section */}
+      {isL2Stage && (
+        <div style={{ marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', borderBottom: '1px solid #dbeafe', paddingBottom: '6px', marginBottom: '10px' }}>L2 ONSITE SUPPORT</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '10px' }}>
+            {[['Staff', report.l2_attended_staff_name], ['ID', report.l2_attended_staff_id], ['Date', report.l2_attend_date], ['Time', report.l2_attend_time], ['Work Order', report.l2_work_order_number], ['Approver', report.l2_approver_name], ['Approver Email', report.l2_approver_email || report.l2_approver_detail], ['Approved Date', report.approved_date]].map(([k, v]) => (
+            <div key={k} style={{ padding: '6px', background: '#f9fafb', borderRadius: '4px' }}>
+              <p style={{ color: '#6b7280', fontSize: '10px' }}>{k}</p>
+              <p style={{ fontWeight: '600' }}>{v || '—'}</p>
+            </div>
+          ))}
+          </div>
+          {report.l2_job_description && <div style={{ marginBottom: '8px', fontSize: '12px', padding: '8px', background: '#f9fafb', borderRadius: '4px' }}><strong>Job Description / Work Detail:</strong><br />{report.l2_job_description}</div>}
+          {report.l2_remarks && <div style={{ fontSize: '12px', padding: '8px', background: '#f9fafb', borderRadius: '4px' }}><strong>Remarks:</strong> {report.l2_remarks}</div>}
+
+          {/* L2 Items (L1 items with rectification) */}
+          {(report.l2_items || []).length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', marginBottom: '8px', textTransform: 'uppercase' }}>L1 Items — Onsite Rectification</h4>
+              {(report.l2_items || []).map((item, i) => (
+                <div key={i} style={{ marginBottom: '12px', padding: '10px', border: '1px solid #dbeafe', borderRadius: '4px', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: 'bold', color: '#1e40af', background: '#eff6ff', padding: '2px 6px', borderRadius: '3px' }}>{item.device_type}</span>
+                    <span style={{ fontWeight: '600' }}>{item.device_name}</span>
+                    <span style={{ color: '#374151' }}>{item.issue_description}</span>
+                  </div>
+                  {item.rectification_steps && <p style={{ color: '#374151', marginBottom: '8px' }}><strong>Rectification:</strong> {item.rectification_steps}</p>}
+                  {(item.photos || []).length > 0 && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                      {item.photos.map((url, pi) => (
+                        <img key={pi} src={url} alt={`photo-${pi}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }} crossOrigin="anonymous" />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-            {report.l2_job_description && <div style={{ marginBottom: '8px', fontSize: '12px' }}><strong>Job Description:</strong> {report.l2_job_description}</div>}
-            {report.l2_work_detail && <div style={{ marginBottom: '8px', fontSize: '12px' }}><strong>Work Detail:</strong> {report.l2_work_detail}</div>}
-            {report.l2_remarks && <div style={{ fontSize: '12px' }}><strong>Remarks:</strong> {report.l2_remarks}</div>}
-          </div>
-        )}
-        {report.ack_name && (
-          <div style={{ marginTop: '20px', borderTop: '2px solid #1e40af', paddingTop: '16px' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', marginBottom: '10px' }}>ACKNOWLEDGEMENT</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
-              <div><p style={{ color: '#6b7280', fontSize: '10px' }}>PIC Name</p><p style={{ fontWeight: '600' }}>{report.ack_name}</p></div>
-              <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Phone</p><p style={{ fontWeight: '600' }}>{report.ack_phone}</p></div>
-              <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Timestamp</p><p style={{ fontWeight: '600' }}>{report.ack_timestamp ? format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm') : '—'}</p></div>
+          )}
+
+          {/* Add-on Items */}
+          {(report.l2_addon_items || []).length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', marginBottom: '8px', textTransform: 'uppercase' }}>Add-On Items (Onsite)</h4>
+              {(report.l2_addon_items || []).map((item, i) => (
+                <div key={i} style={{ marginBottom: '12px', padding: '10px', border: '1px solid #d1fae5', borderRadius: '4px', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: 'bold', color: '#065f46', background: '#d1fae5', padding: '2px 6px', borderRadius: '3px' }}>{item.device_type}</span>
+                    <span style={{ fontWeight: '600' }}>{item.device_name}</span>
+                    <span style={{ color: '#374151' }}>{item.issue_description}</span>
+                  </div>
+                  {(item.photos || []).length > 0 && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                      {item.photos.map((url, pi) => (
+                        <img key={pi} src={url} alt={`addon-photo-${pi}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }} crossOrigin="anonymous" />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            {report.ack_signature && <div style={{ marginTop: '12px' }}><p style={{ color: '#6b7280', fontSize: '10px', marginBottom: '4px' }}>SIGNATURE</p><img src={report.ack_signature} alt="signature" style={{ border: '1px solid #e5e7eb', borderRadius: '4px', maxHeight: '80px' }} /></div>}
+          )}
+
+          {/* Replacements */}
+          {(report.l2_replacements || []).length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', marginBottom: '8px', textTransform: 'uppercase' }}>Replacement Items</h4>
+              {report.l2_replacements.map((r, i) => (
+                <div key={i} style={{ marginBottom: '6px', padding: '8px', background: '#fefce8', borderRadius: '4px', fontSize: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Item</p><p style={{ fontWeight: '600' }}>{r.item_description}</p></div>
+                  <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Old</p><p>{r.old_item_detail}</p></div>
+                  <div><p style={{ color: '#6b7280', fontSize: '10px' }}>New</p><p>{r.new_item_detail}</p></div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Supporting Documents */}
+      {(report.supporting_documents || []).length > 0 && (
+        <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', borderBottom: '1px solid #dbeafe', paddingBottom: '6px', marginBottom: '10px' }}>SUPPORTING DOCUMENTS</h3>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {report.supporting_documents.map((url, i) => {
+              const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+              return isImage ? (
+                <img key={i} src={url} alt={`doc-${i+1}`} style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }} crossOrigin="anonymous" />
+              ) : (
+                <div key={i} style={{ padding: '10px 16px', background: '#f3f4f6', borderRadius: '4px', fontSize: '11px', color: '#374151', border: '1px solid #e5e7eb' }}>📎 Document {i + 1}</div>
+              );
+            })}
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Acknowledgement */}
+      {report.ack_name && (
+        <div style={{ marginTop: '20px', borderTop: '2px solid #1e40af', paddingTop: '16px' }}>
+          <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', marginBottom: '10px' }}>ACKNOWLEDGEMENT</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+            <div><p style={{ color: '#6b7280', fontSize: '10px' }}>PIC Name</p><p style={{ fontWeight: '600' }}>{report.ack_name}</p></div>
+            <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Phone</p><p style={{ fontWeight: '600' }}>{report.ack_phone}</p></div>
+            <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Timestamp</p><p style={{ fontWeight: '600' }}>{report.ack_timestamp ? format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm') : '—'}</p></div>
+          </div>
+          {report.ack_signature && <div style={{ marginTop: '12px' }}><p style={{ color: '#6b7280', fontSize: '10px', marginBottom: '4px' }}>SIGNATURE</p><img src={report.ack_signature} alt="signature" style={{ border: '1px solid #e5e7eb', borderRadius: '4px', maxHeight: '80px' }} /></div>}
+        </div>
+      )}
       </div>
-    </div>
-  );
-}
+      </div>
+      );
+      }
