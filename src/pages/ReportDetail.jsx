@@ -53,6 +53,8 @@ export default function ReportDetail() {
   const [uploadingPhoto, setUploadingPhoto] = useState(null);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [supportingDocs, setSupportingDocs] = useState([]);
+  const [companyStamp, setCompanyStamp] = useState('');
+  const [uploadingStamp, setUploadingStamp] = useState(false);
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['service-report', id],
@@ -83,6 +85,7 @@ export default function ReportDetail() {
       setAckName(r.ack_name || '');
       setAckPhone(r.ack_phone || '');
       setSupportingDocs(r.supporting_documents || []);
+      setCompanyStamp(r.ack_company_stamp || '');
       return r;
     },
     enabled: !!id,
@@ -133,6 +136,15 @@ export default function ReportDetail() {
     setUploadingDoc(false);
   };
 
+  const handleStampUpload = async (files) => {
+    const file = files[0];
+    if (!file) return;
+    setUploadingStamp(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setCompanyStamp(file_url);
+    setUploadingStamp(false);
+  };
+
   const handleStaffSelect = (staffId) => {
     const s = staffList.find(x => x.id === staffId);
     if (s) setL2Form(f => ({ ...f, l2_attended_staff_name: s.name, l2_attended_staff_id: s.staff_id, l2_attended_staff_email: s.email || '' }));
@@ -145,6 +157,7 @@ export default function ReportDetail() {
       l2_addon_items: l2Addons,
       l2_replacements: replacements,
       supporting_documents: supportingDocs,
+      ack_company_stamp: companyStamp,
     });
   };
 
@@ -162,6 +175,7 @@ export default function ReportDetail() {
       supporting_documents: supportingDocs,
       status: 'complete',
       ack_signature: signature,
+      ack_company_stamp: companyStamp,
       ack_name: ackName,
       ack_phone: ackPhone,
       ack_timestamp: new Date().toISOString(),
@@ -188,25 +202,47 @@ export default function ReportDetail() {
     toast.info('Generating PDF...');
     const { default: jsPDF } = await import('jspdf');
     const { default: html2canvas } = await import('html2canvas');
-    const el = document.getElementById('pdf-print-area');
-    el.style.display = 'block';
-    const canvas = await html2canvas(el, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794 });
-    el.style.display = 'none';
-    const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pw = pdf.internal.pageSize.getWidth();
     const ph = pdf.internal.pageSize.getHeight();
-    const imgH = (canvas.height * pw) / canvas.width;
-    let remaining = imgH;
-    let pos = 0;
-    pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
-    remaining -= ph;
-    while (remaining > 0) {
-      pos -= ph;
-      pdf.addPage();
+    const wrapper = document.getElementById('pdf-print-area');
+    wrapper.style.display = 'block';
+    const pageIds = ['pdf-page-1', 'pdf-page-2', 'pdf-page-3', 'pdf-page-4'];
+    let isFirstPage = true;
+    for (const pageId of pageIds) {
+      const el = document.getElementById(pageId);
+      if (!el || el.offsetHeight < 5) continue;
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
+      const imgData = canvas.toDataURL('image/png');
+      const imgH = (canvas.height * pw) / canvas.width;
+      if (!isFirstPage) pdf.addPage();
+      isFirstPage = false;
+      let remaining = imgH;
+      let pos = 0;
       pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
       remaining -= ph;
+      while (remaining > 0) {
+        pos -= ph;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
+        remaining -= ph;
+      }
     }
+    // Add clickable link annotations for supporting documents
+    const docsEl = document.getElementById('pdf-page-3');
+    if (docsEl) {
+      const links = docsEl.querySelectorAll('a[data-url]');
+      links.forEach(link => {
+        const url = link.getAttribute('data-url');
+        if (url) {
+          const pageNum = pdf.internal.getNumberOfPages();
+          // Approximate annotation — overlay on last page
+          pdf.setPage(pageNum);
+          pdf.link(10, 60, pw - 20, 8, { url });
+        }
+      });
+    }
+    wrapper.style.display = 'none';
     pdf.save(`${report.running_number}.pdf`);
     toast.success('PDF exported');
   };
@@ -336,6 +372,7 @@ export default function ReportDetail() {
             <ReadField label="Staff ID" value={report.l1_attended_staff_id} />
             <ReadField label="Staff Email" value={report.l1_attended_staff_email} />
             <ReadField label="Date" value={report.l1_date} />
+            <ReadField label="Report ID" value={report.running_number} />
             <ReadField label="L1 Status" value={report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : ''} />
           </div>
           {(report.l1_affected_items || []).length > 0 && (
@@ -517,160 +554,280 @@ export default function ReportDetail() {
                   <ReadField label="Acknowledged At" value={format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm')} />
                 )}
               </div>
-              <Field label="Signature">
-                <SignaturePad value={signature} onChange={setSignature} readOnly={report.status === 'complete' && !editing} />
-              </Field>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Signature">
+                  <SignaturePad value={signature} onChange={setSignature} readOnly={report.status === 'complete' && !editing} />
+                </Field>
+                <Field label="Company Stamp">
+                  {companyStamp ? (
+                    <div className="relative inline-block">
+                      <img src={companyStamp} alt="Company Stamp" className="w-full max-h-40 object-contain rounded border border-border bg-muted/20" />
+                      {!(report.status === 'complete' && !editing) && (
+                        <button onClick={() => setCompanyStamp('')} className="absolute top-1 right-1 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"><X size={10} /></button>
+                      )}
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded cursor-pointer hover:border-primary transition-colors bg-muted/10">
+                      {uploadingStamp ? <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <><Upload size={16} className="text-muted-foreground mb-2" /><span className="text-xs text-muted-foreground">Upload Stamp</span></>}
+                      <input type="file" accept="image/*" className="hidden" onChange={e => handleStampUpload(e.target.files)} />
+                    </label>
+                  )}
+                </Field>
+              </div>
             </div>
           </>
         )}
       </div>
 
       {/* Hidden PDF Template */}
-      <div id="pdf-print-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, width: '794px', background: 'white', padding: '40px', fontFamily: 'Arial, sans-serif', color: '#111' }}>
-      <div style={{ textAlign: 'center', borderBottom: '2px solid #1e40af', paddingBottom: '16px', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1e40af', letterSpacing: '4px' }}>CLICK IX SDN BHD</h1>
-        <p style={{ fontSize: '13px', marginTop: '4px', color: '#374151' }}>SERVICE REPORT — {report.status?.toUpperCase()}</p>
-        <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px', fontFamily: 'monospace' }}>{report.running_number} · Generated: {format(new Date(), 'dd MMM yyyy HH:mm')}</p>
-      </div>
+      <div id="pdf-print-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#0f172a' }}>
 
-      {/* Job Info */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '24px' }}>
-        {[['Client', report.client_name], ['Site', report.site_name], ['Location', report.site_location], ['Reported By', report.reported_by], ['Date', report.l1_date], ['Status', report.status?.toUpperCase()]].map(([k, v]) => (
-          <div key={k} style={{ padding: '8px', background: '#f9fafb', borderRadius: '4px' }}>
-            <p style={{ color: '#6b7280', fontSize: '10px', textTransform: 'uppercase' }}>{k}</p>
-            <p style={{ fontWeight: '600', marginTop: '2px' }}>{v || '—'}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* L1 Section */}
-      <div style={{ marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', borderBottom: '1px solid #dbeafe', paddingBottom: '6px', marginBottom: '10px' }}>L1 REMOTE SUPPORT</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' }}>
-          {[['Staff', report.l1_attended_staff_name], ['ID', report.l1_attended_staff_id], ['Email', report.l1_attended_staff_email], ['Date', report.l1_date], ['L1 Status', report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : '']].map(([k, v]) => (
-            <div key={k} style={{ padding: '6px', background: '#f9fafb', borderRadius: '4px' }}>
-              <p style={{ color: '#6b7280', fontSize: '10px' }}>{k}</p>
-              <p style={{ fontWeight: '600' }}>{v || '—'}</p>
+        {/* PAGE 1 — Header + Job Info + L1 */}
+        <div id="pdf-page-1" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
+          {/* Header */}
+          <div style={{ background: '#0f172a', borderRadius: '8px', padding: '24px 28px', marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#f8fafc', letterSpacing: '3px', margin: 0 }}>CLICK IX SDN BHD</h1>
+              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', letterSpacing: '1px' }}>SERVICE REPORT</p>
             </div>
-          ))}
-        </div>
-        {(report.l1_affected_items || []).map((item, i) => (
-          <div key={i} style={{ marginTop: '8px', padding: '8px', background: '#eff6ff', borderRadius: '4px', fontSize: '12px', display: 'flex', gap: '12px' }}>
-            <span style={{ fontWeight: 'bold', color: '#1e40af' }}>{item.device_type}</span>
-            <span style={{ fontWeight: '600' }}>{item.device_name}</span>
-            <span style={{ color: '#374151' }}>{item.issue_description}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* L2 Section */}
-      {isL2Stage && (
-        <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', borderBottom: '1px solid #dbeafe', paddingBottom: '6px', marginBottom: '10px' }}>L2 ONSITE SUPPORT</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '10px' }}>
-            {[['Staff', report.l2_attended_staff_name], ['ID', report.l2_attended_staff_id], ['Date', report.l2_attend_date], ['Time', report.l2_attend_time], ['Work Order', report.l2_work_order_number], ['Approver', report.l2_approver_name], ['Approver Email', report.l2_approver_email || report.l2_approver_detail], ['Approved Date', report.approved_date]].map(([k, v]) => (
-            <div key={k} style={{ padding: '6px', background: '#f9fafb', borderRadius: '4px' }}>
-              <p style={{ color: '#6b7280', fontSize: '10px' }}>{k}</p>
-              <p style={{ fontWeight: '600' }}>{v || '—'}</p>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ background: '#f59e0b', color: '#0f172a', fontWeight: '700', fontSize: '13px', padding: '4px 12px', borderRadius: '4px', fontFamily: 'monospace' }}>{report.status?.toUpperCase()}</div>
+              <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '6px', fontFamily: 'monospace' }}>{report.running_number}</p>
+              <p style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>Generated: {format(new Date(), 'dd MMM yyyy HH:mm')}</p>
             </div>
-          ))}
           </div>
-          {report.l2_job_description && <div style={{ marginBottom: '8px', fontSize: '12px', padding: '8px', background: '#f9fafb', borderRadius: '4px' }}><strong>Job Description / Work Detail:</strong><br />{report.l2_job_description}</div>}
-          {report.l2_remarks && <div style={{ fontSize: '12px', padding: '8px', background: '#f9fafb', borderRadius: '4px' }}><strong>Remarks:</strong> {report.l2_remarks}</div>}
 
-          {/* L2 Items (L1 items with rectification) */}
-          {(report.l2_items || []).length > 0 && (
-            <div style={{ marginTop: '16px' }}>
-              <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', marginBottom: '8px', textTransform: 'uppercase' }}>L1 Items — Onsite Rectification</h4>
-              {(report.l2_items || []).map((item, i) => (
-                <div key={i} style={{ marginBottom: '12px', padding: '10px', border: '1px solid #dbeafe', borderRadius: '4px', fontSize: '12px' }}>
-                  <div style={{ display: 'flex', gap: '10px', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 'bold', color: '#1e40af', background: '#eff6ff', padding: '2px 6px', borderRadius: '3px' }}>{item.device_type}</span>
-                    <span style={{ fontWeight: '600' }}>{item.device_name}</span>
+          {/* Job Info Grid */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ width: '4px', height: '16px', background: '#f59e0b', borderRadius: '2px' }} />
+              <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Job Information</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' }}>
+              {[['Client', report.client_name], ['Site Name', report.site_name], ['Site Location', report.site_location], ['Reported By', report.reported_by], ['Report Date', report.l1_date], ['Created', report.created_date ? format(new Date(report.created_date), 'dd MMM yyyy') : '']].map(([k, v]) => (
+                <div key={k} style={{ padding: '8px 10px', background: '#f8fafc', borderRadius: '6px', borderLeft: '3px solid #3b82f6' }}>
+                  <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
+                  <p style={{ fontWeight: '600', color: '#0f172a', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* L1 Remote Support */}
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ width: '4px', height: '16px', background: '#3b82f6', borderRadius: '2px' }} />
+              <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>L1 Remote Support</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px', marginBottom: '10px' }}>
+              {[['Staff', report.l1_attended_staff_name], ['Staff ID', report.l1_attended_staff_id], ['Email', report.l1_attended_staff_email], ['Date', report.l1_date], ['Report ID', report.running_number], ['L1 Status', report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : '']].map(([k, v]) => (
+                <div key={k} style={{ padding: '8px 10px', background: '#eff6ff', borderRadius: '6px', borderLeft: '3px solid #60a5fa' }}>
+                  <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
+                  <p style={{ fontWeight: '600', color: '#1e40af', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
+                </div>
+              ))}
+            </div>
+            {(report.l1_affected_items || []).length > 0 && (
+              <div>
+                <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Affected Items</p>
+                {report.l1_affected_items.map((item, i) => (
+                  <div key={i} style={{ marginBottom: '5px', padding: '8px 12px', background: '#dbeafe', borderRadius: '6px', fontSize: '11px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <span style={{ fontWeight: '700', color: '#1d4ed8', background: '#bfdbfe', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', flexShrink: 0 }}>{item.device_type}</span>
+                    <span style={{ fontWeight: '600', color: '#1e3a8a' }}>{item.device_name}</span>
                     <span style={{ color: '#374151' }}>{item.issue_description}</span>
                   </div>
-                  {item.rectification_steps && <p style={{ color: '#374151', marginBottom: '8px' }}><strong>Rectification:</strong> {item.rectification_steps}</p>}
-                  {(item.photos || []).length > 0 && (
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
-                      {item.photos.map((url, pi) => (
-                        <img key={pi} src={url} alt={`photo-${pi}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }} crossOrigin="anonymous" />
-                      ))}
-                    </div>
-                  )}
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* PAGE 2 — L2 Onsite Support */}
+        {isL2Stage && (
+          <div id="pdf-page-2" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ width: '4px', height: '16px', background: '#10b981', borderRadius: '2px' }} />
+              <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#065f46', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>L2 Onsite Support — Job Details</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '11px', marginBottom: '12px' }}>
+              {[['Staff', report.l2_attended_staff_name], ['Staff ID', report.l2_attended_staff_id], ['Email', report.l2_attended_staff_email], ['Attend Date', report.l2_attend_date], ['Attend Time', report.l2_attend_time], ['Work Order', report.l2_work_order_number], ['Approver', report.l2_approver_name], ['Approver Email', report.l2_approver_email || report.l2_approver_detail], ['Approved Date', report.approved_date]].map(([k, v]) => (
+                <div key={k} style={{ padding: '8px 10px', background: '#ecfdf5', borderRadius: '6px', borderLeft: '3px solid #34d399' }}>
+                  <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
+                  <p style={{ fontWeight: '600', color: '#065f46', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
                 </div>
               ))}
             </div>
-          )}
+            {report.l2_job_description && (
+              <div style={{ marginBottom: '8px', padding: '12px', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Job Description / Work Detail</p>
+                <p style={{ fontSize: '11px', color: '#0f172a', margin: 0, lineHeight: '1.5' }}>{report.l2_job_description}</p>
+              </div>
+            )}
+            {report.l2_remarks && (
+              <div style={{ padding: '12px', background: '#fefce8', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Remarks</p>
+                <p style={{ fontSize: '11px', color: '#0f172a', margin: 0 }}>{report.l2_remarks}</p>
+              </div>
+            )}
 
-          {/* Add-on Items */}
-          {(report.l2_addon_items || []).length > 0 && (
-            <div style={{ marginTop: '16px' }}>
-              <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', marginBottom: '8px', textTransform: 'uppercase' }}>Add-On Items (Onsite)</h4>
-              {(report.l2_addon_items || []).map((item, i) => (
-                <div key={i} style={{ marginBottom: '12px', padding: '10px', border: '1px solid #d1fae5', borderRadius: '4px', fontSize: '12px' }}>
-                  <div style={{ display: 'flex', gap: '10px', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 'bold', color: '#065f46', background: '#d1fae5', padding: '2px 6px', borderRadius: '3px' }}>{item.device_type}</span>
-                    <span style={{ fontWeight: '600' }}>{item.device_name}</span>
-                    <span style={{ color: '#374151' }}>{item.issue_description}</span>
+            {/* L2 Items Rectification */}
+            {(report.l2_items || []).length > 0 && (
+              <div style={{ marginTop: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <div style={{ width: '4px', height: '16px', background: '#3b82f6', borderRadius: '2px' }} />
+                  <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>L1 Items — Onsite Rectification</h4>
+                </div>
+                {report.l2_items.map((item, i) => (
+                  <div key={i} style={{ marginBottom: '12px', padding: '12px', border: '1px solid #bfdbfe', borderRadius: '6px', background: '#f8fafc' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '6px', alignItems: 'center' }}>
+                      <span style={{ fontWeight: '700', color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', flexShrink: 0 }}>{item.device_type}</span>
+                      <span style={{ fontWeight: '600', fontSize: '11px' }}>{item.device_name}</span>
+                      <span style={{ color: '#64748b', fontSize: '11px' }}>{item.issue_description}</span>
+                    </div>
+                    {item.rectification_steps && <p style={{ fontSize: '11px', color: '#374151', margin: '0 0 8px', paddingLeft: '4px' }}><strong>Rectification:</strong> {item.rectification_steps}</p>}
+                    {(item.photos || []).length > 0 && (
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {item.photos.map((url, pi) => (
+                          <img key={pi} src={url} alt={`photo-${pi}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #bfdbfe' }} crossOrigin="anonymous" />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {(item.photos || []).length > 0 && (
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
-                      {item.photos.map((url, pi) => (
-                        <img key={pi} src={url} alt={`addon-photo-${pi}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }} crossOrigin="anonymous" />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {/* Replacements */}
-          {(report.l2_replacements || []).length > 0 && (
-            <div style={{ marginTop: '16px' }}>
-              <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#374151', marginBottom: '8px', textTransform: 'uppercase' }}>Replacement Items</h4>
-              {report.l2_replacements.map((r, i) => (
-                <div key={i} style={{ marginBottom: '6px', padding: '8px', background: '#fefce8', borderRadius: '4px', fontSize: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                  <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Item</p><p style={{ fontWeight: '600' }}>{r.item_description}</p></div>
-                  <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Old</p><p>{r.old_item_detail}</p></div>
-                  <div><p style={{ color: '#6b7280', fontSize: '10px' }}>New</p><p>{r.new_item_detail}</p></div>
+            {/* Add-on Items */}
+            {(report.l2_addon_items || []).length > 0 && (
+              <div style={{ marginTop: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <div style={{ width: '4px', height: '16px', background: '#a855f7', borderRadius: '2px' }} />
+                  <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Add-On Items (Onsite)</h4>
                 </div>
-              ))}
-            </div>
+                {report.l2_addon_items.map((item, i) => (
+                  <div key={i} style={{ marginBottom: '10px', padding: '12px', border: '1px solid #e9d5ff', borderRadius: '6px', background: '#faf5ff' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '6px', alignItems: 'center' }}>
+                      <span style={{ fontWeight: '700', color: '#6b21a8', background: '#e9d5ff', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', flexShrink: 0 }}>{item.device_type}</span>
+                      <span style={{ fontWeight: '600', fontSize: '11px' }}>{item.device_name}</span>
+                      <span style={{ color: '#64748b', fontSize: '11px' }}>{item.issue_description}</span>
+                    </div>
+                    {(item.photos || []).length > 0 && (
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {item.photos.map((url, pi) => (
+                          <img key={pi} src={url} alt={`addon-${pi}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e9d5ff' }} crossOrigin="anonymous" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Replacements */}
+            {(report.l2_replacements || []).length > 0 && (
+              <div style={{ marginTop: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <div style={{ width: '4px', height: '16px', background: '#f59e0b', borderRadius: '2px' }} />
+                  <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Replacement Items</h4>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <thead>
+                    <tr style={{ background: '#fef3c7' }}>
+                      <th style={{ padding: '7px 10px', textAlign: 'left', color: '#92400e', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase' }}>Item</th>
+                      <th style={{ padding: '7px 10px', textAlign: 'left', color: '#92400e', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase' }}>Old (S/N / Model)</th>
+                      <th style={{ padding: '7px 10px', textAlign: 'left', color: '#92400e', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase' }}>New (S/N / Model)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.l2_replacements.map((r, i) => (
+                      <tr key={i} style={{ background: i % 2 === 0 ? '#fffbeb' : '#ffffff', borderBottom: '1px solid #fde68a' }}>
+                        <td style={{ padding: '7px 10px', fontWeight: '600' }}>{r.item_description}</td>
+                        <td style={{ padding: '7px 10px', color: '#dc2626' }}>{r.old_item_detail}</td>
+                        <td style={{ padding: '7px 10px', color: '#16a34a' }}>{r.new_item_detail}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PAGE 3 — Supporting Documents */}
+        <div id="pdf-page-3" style={{ width: '794px', background: 'white', padding: '40px 40px 32px', minHeight: (report.supporting_documents || []).length > 0 ? '50px' : '0px' }}>
+          {(report.supporting_documents || []).length > 0 && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                <div style={{ width: '4px', height: '16px', background: '#06b6d4', borderRadius: '2px' }} />
+                <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#164e63', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Supporting Documents</h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {report.supporting_documents.map((url, i) => {
+                  const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                  const fileName = url.split('/').pop()?.split('?')[0] || `Document ${i + 1}`;
+                  return isImage ? (
+                    <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px', background: '#ecfeff', borderRadius: '6px', border: '1px solid #a5f3fc' }}>
+                      <img src={url} alt={`doc-${i+1}`} style={{ width: '120px', height: '90px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #67e8f9', flexShrink: 0 }} crossOrigin="anonymous" />
+                      <div>
+                        <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Document {i + 1}</p>
+                        <p style={{ fontSize: '10px', color: '#0891b2', margin: '0 0 4px', wordBreak: 'break-all' }}>{url}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={i} style={{ padding: '10px 14px', background: '#ecfeff', borderRadius: '6px', border: '1px solid #a5f3fc', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '16px' }}>📎</span>
+                      <div>
+                        <p style={{ fontSize: '9px', color: '#64748b', margin: '0 0 2px' }}>Document {i + 1}</p>
+                        <a data-url={url} href={url} style={{ fontSize: '10px', color: '#0891b2', textDecoration: 'underline', wordBreak: 'break-all' }}>{url}</a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
-      )}
 
-      {/* Supporting Documents */}
-      {(report.supporting_documents || []).length > 0 && (
-        <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', borderBottom: '1px solid #dbeafe', paddingBottom: '6px', marginBottom: '10px' }}>SUPPORTING DOCUMENTS</h3>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {report.supporting_documents.map((url, i) => {
-              const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-              return isImage ? (
-                <img key={i} src={url} alt={`doc-${i+1}`} style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #e5e7eb' }} crossOrigin="anonymous" />
+        {/* PAGE 4 — Acknowledgement */}
+        <div id="pdf-page-4" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+            <div style={{ width: '4px', height: '16px', background: '#f59e0b', borderRadius: '2px' }} />
+            <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Site Acknowledgement</h3>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '11px', marginBottom: '16px' }}>
+            {[['PIC Name', report.ack_name], ['Phone', report.ack_phone], ['Timestamp', report.ack_timestamp ? format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm') : '']].map(([k, v]) => (
+              <div key={k} style={{ padding: '8px 10px', background: '#fef3c7', borderRadius: '6px', borderLeft: '3px solid #f59e0b' }}>
+                <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
+                <p style={{ fontWeight: '600', color: '#92400e', margin: 0 }}>{v || '—'}</p>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+              <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 8px' }}>Signature</p>
+              {report.ack_signature ? (
+                <img src={report.ack_signature} alt="signature" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '4px' }} />
               ) : (
-                <div key={i} style={{ padding: '10px 16px', background: '#f3f4f6', borderRadius: '4px', fontSize: '11px', color: '#374151', border: '1px solid #e5e7eb' }}>📎 Document {i + 1}</div>
-              );
-            })}
+                <div style={{ height: '80px', background: '#f8fafc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '11px' }}>No signature</div>
+              )}
+            </div>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
+              <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 8px' }}>Company Stamp</p>
+              {(report.ack_company_stamp || companyStamp) ? (
+                <img src={report.ack_company_stamp || companyStamp} alt="company stamp" style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain', borderRadius: '4px' }} crossOrigin="anonymous" />
+              ) : (
+                <div style={{ height: '80px', background: '#f8fafc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '11px' }}>No stamp</div>
+              )}
+            </div>
+          </div>
+          {/* Footer */}
+          <div style={{ marginTop: '32px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#94a3b8' }}>
+            <span>Click IX Sdn Bhd · Service Report System</span>
+            <span>{report.running_number} · {format(new Date(), 'dd MMM yyyy')}</span>
           </div>
         </div>
-      )}
 
-      {/* Acknowledgement */}
-      {report.ack_name && (
-        <div style={{ marginTop: '20px', borderTop: '2px solid #1e40af', paddingTop: '16px' }}>
-          <h3 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e40af', marginBottom: '10px' }}>ACKNOWLEDGEMENT</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
-            <div><p style={{ color: '#6b7280', fontSize: '10px' }}>PIC Name</p><p style={{ fontWeight: '600' }}>{report.ack_name}</p></div>
-            <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Phone</p><p style={{ fontWeight: '600' }}>{report.ack_phone}</p></div>
-            <div><p style={{ color: '#6b7280', fontSize: '10px' }}>Timestamp</p><p style={{ fontWeight: '600' }}>{report.ack_timestamp ? format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm') : '—'}</p></div>
-          </div>
-          {report.ack_signature && <div style={{ marginTop: '12px' }}><p style={{ color: '#6b7280', fontSize: '10px', marginBottom: '4px' }}>SIGNATURE</p><img src={report.ack_signature} alt="signature" style={{ border: '1px solid #e5e7eb', borderRadius: '4px', maxHeight: '80px' }} /></div>}
-        </div>
-      )}
       </div>
-      </div>
-      );
-      }
+    </div>
+  );
+}
