@@ -1,0 +1,110 @@
+{
+  "name": "PurchaseRequisition",
+  "type": "object",
+  "properties": {
+    "pr_number": {
+      "type": "string"
+    },
+    "pr_date": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "submitted",
+        "approved",
+        "rejected"
+      ],
+      "default": "draft"
+    },
+    "requester_name": {
+      "type": "string"
+    },
+    "requester_department": {
+      "type": "string"
+    },
+    "requester_email": {
+      "type": "string"
+    },
+    "requester_phone": {
+      "type": "string"
+    },
+    "quotation_id": {
+      "type": "string"
+    },
+    "quotation_number": {
+      "type": "string"
+    },
+    "sr_id": {
+      "type": "string"
+    },
+    "sr_number": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "site_name": {
+      "type": "string"
+    },
+    "purpose_of_purchase": {
+      "type": "string"
+    },
+    "payment_term": {
+      "type": "string",
+      "enum": [
+        "30 Days",
+        "60 Days",
+        "90 Days",
+        "COD",
+        "Advance Payment",
+        "Upon Delivery"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_no": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_cost": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "subtotal": {
+      "type": "number"
+    },
+    "grand_total": {
+      "type": "number"
+    },
+    "remarks": {
+      "type": "string"
+    },
+    "approved_by": {
+      "type": "string"
+    },
+    "approved_date": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "pr_number"
+  ]
+}

@@ -14,6 +14,10 @@ import ReportDetail from './pages/ReportDetail';
 import Clients from './pages/Clients';
 import Sites from './pages/Sites';
 import StaffMembers from './pages/StaffMembers';
+import Quotations from './pages/Quotations';
+import QuotationForm from './pages/QuotationForm';
+import PurchaseRequisitions from './pages/PurchaseRequisitions';
+import PRForm from './pages/PRForm';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -49,6 +53,12 @@ const AuthenticatedApp = () => {
         <Route path="/clients" element={<Clients />} />
         <Route path="/sites" element={<Sites />} />
         <Route path="/staff" element={<StaffMembers />} />
+        <Route path="/quotations" element={<Quotations />} />
+        <Route path="/quotations/new" element={<QuotationForm />} />
+        <Route path="/quotations/:id" element={<QuotationForm />} />
+        <Route path="/pr" element={<PurchaseRequisitions />} />
+        <Route path="/pr/new" element={<PRForm />} />
+        <Route path="/pr/:id" element={<PRForm />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

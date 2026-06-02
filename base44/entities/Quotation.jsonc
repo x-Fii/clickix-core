@@ -1,0 +1,84 @@
+{
+  "name": "Quotation",
+  "type": "object",
+  "properties": {
+    "quotation_number": {
+      "type": "string"
+    },
+    "quotation_date": {
+      "type": "string"
+    },
+    "valid_until": {
+      "type": "string"
+    },
+    "sr_id": {
+      "type": "string"
+    },
+    "sr_number": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "site_name": {
+      "type": "string"
+    },
+    "site_location": {
+      "type": "string"
+    },
+    "prepared_by": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "submitted",
+        "approved",
+        "rejected"
+      ],
+      "default": "draft"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_cost": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "subtotal": {
+      "type": "number"
+    },
+    "tax_percent": {
+      "type": "number"
+    },
+    "tax_amount": {
+      "type": "number"
+    },
+    "grand_total": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "quotation_number"
+  ]
+}
