@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -205,6 +205,9 @@ export default function PRForm() {
         </div>
         {isEdit && (
           <div className="flex gap-2 flex-wrap justify-end">
+            <Button variant="outline" size="sm" onClick={() => navigate(`/claims/new?from_pr=${id}`)} className="gap-2 text-amber-400 border-amber-500/30 hover:bg-amber-500/10">
+              <GitMerge size={14} /> Convert to Claim
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
               <Download size={14} /> PDF
             </Button>
