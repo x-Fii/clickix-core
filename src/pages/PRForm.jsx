@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -137,14 +137,82 @@ export default function PRForm() {
     saveMutation.mutate({ ...form, items, subtotal: grandTotal, grand_total: grandTotal, status: status || form.status });
   };
 
+  const handleExportPDF = async () => {
+    toast.info('Generating PDF...');
+    const { default: jsPDF } = await import('jspdf');
+    const { default: html2canvas } = await import('html2canvas');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pw = pdf.internal.pageSize.getWidth();
+    const ph = pdf.internal.pageSize.getHeight();
+    const wrapper = document.getElementById('pr-pdf-area');
+    wrapper.style.display = 'block';
+    const pageIds = ['pr-pdf-page-1', 'pr-pdf-page-2'];
+    let isFirstPage = true;
+    for (const pageId of pageIds) {
+      const el = document.getElementById(pageId);
+      if (!el || el.offsetHeight < 5) continue;
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
+      const imgData = canvas.toDataURL('image/png');
+      const imgH = (canvas.height * pw) / canvas.width;
+      if (!isFirstPage) pdf.addPage();
+      isFirstPage = false;
+      let remaining = imgH;
+      let pos = 0;
+      pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
+      remaining -= ph;
+      while (remaining > 0) {
+        pos -= ph;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
+        remaining -= ph;
+      }
+    }
+    wrapper.style.display = 'none';
+    pdf.save(`${form.pr_number}.pdf`);
+    toast.success('PDF exported');
+  };
+
+  const handleSubmitToAdmin = async () => {
+    const adminEmail = prompt('Enter admin email address:');
+    if (!adminEmail) return;
+    await base44.integrations.Core.SendEmail({
+      to: adminEmail,
+      subject: `Purchase Requisition ${form.pr_number} — ${form.status?.toUpperCase()}`,
+      body: `Purchase Requisition Submission\n\nPR No: ${form.pr_number}\nDate: ${form.pr_date}\nRequester: ${form.requester_name} (${form.requester_department})\nClient: ${form.client_name}\nSite: ${form.site_name}\nQuotation: ${form.quotation_number || '—'}\nSR No: ${form.sr_number || '—'}\nGrand Total: MYR ${grandTotal.toFixed(2)}\nPayment Term: ${form.payment_term}\n\nPurpose: ${form.purpose_of_purchase}\n\nPlease log in to the system to review this PR.`,
+    });
+    toast.success(`PR submitted to ${adminEmail}`);
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto pb-20">
-      <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/pr')}><ArrowLeft size={16} className="mr-2" /> Back</Button>
-        <div>
-          <h1 className="text-xl font-semibold">{isEdit ? 'Edit Purchase Requisition' : 'New Purchase Requisition'}</h1>
-          <p className="text-xs text-muted-foreground font-mono mt-0.5">{form.pr_number}</p>
+      <div className="flex items-start justify-between mb-8 gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/pr')}><ArrowLeft size={16} className="mr-2" /> Back</Button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold">{isEdit ? 'Edit Purchase Requisition' : 'New Purchase Requisition'}</h1>
+              {form.status && (
+                <span className={`inline-flex px-2.5 py-0.5 text-[11px] font-mono border rounded-full ${
+                  form.status === 'approved' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' :
+                  form.status === 'submitted' ? 'bg-blue-500/15 text-blue-400 border-blue-500/25' :
+                  form.status === 'rejected' ? 'bg-red-500/15 text-red-400 border-red-500/25' :
+                  'bg-slate-500/15 text-slate-400 border-slate-500/25'
+                }`}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground font-mono mt-0.5">{form.pr_number}</p>
+          </div>
         </div>
+        {isEdit && (
+          <div className="flex gap-2 flex-wrap justify-end">
+            <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
+              <Download size={14} /> PDF
+            </Button>
+            <Button size="sm" onClick={handleSubmitToAdmin} className="gap-2">
+              <Send size={14} /> Submit to Admin
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="space-y-6">
@@ -291,6 +359,166 @@ export default function PRForm() {
           <Button variant="outline" onClick={() => navigate('/pr')}>Cancel</Button>
           <Button variant="outline" onClick={() => handleSave('draft')} disabled={saveMutation.isPending}><Save size={14} className="mr-2" /> Save Draft</Button>
           <Button onClick={() => handleSave('submitted')} disabled={saveMutation.isPending}>Submit PR</Button>
+        </div>
+      </div>
+
+      {/* Hidden PDF Template */}
+      <div id="pr-pdf-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#0f172a' }}>
+
+        {/* PAGE 1 — Header + Requester + Linked Docs + Purchase Details */}
+        <div id="pr-pdf-page-1" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
+          {/* Header */}
+          <div style={{ background: '#0f172a', borderRadius: '8px', padding: '24px 28px', marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#f8fafc', letterSpacing: '3px', margin: 0 }}>CLICK IX SDN BHD</h1>
+              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', letterSpacing: '1px' }}>PURCHASE REQUISITION</p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ background: form.status === 'approved' ? '#10b981' : form.status === 'submitted' ? '#3b82f6' : form.status === 'rejected' ? '#ef4444' : '#64748b', color: 'white', fontWeight: '700', fontSize: '13px', padding: '4px 12px', borderRadius: '4px', fontFamily: 'monospace' }}>
+                {form.status?.toUpperCase()}
+              </div>
+              <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '6px', fontFamily: 'monospace' }}>{form.pr_number}</p>
+              <p style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>Date: {form.pr_date}</p>
+              <p style={{ fontSize: '9px', color: '#64748b' }}>Generated: {format(new Date(), 'dd MMM yyyy HH:mm')}</p>
+            </div>
+          </div>
+
+          {/* Requester Details */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ width: '4px', height: '16px', background: '#3b82f6', borderRadius: '2px' }} />
+              <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Requester Details</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', fontSize: '11px' }}>
+              {[['Name', form.requester_name], ['Department', form.requester_department], ['Email', form.requester_email], ['Phone', form.requester_phone]].map(([k, v]) => (
+                <div key={k} style={{ padding: '8px 10px', background: '#eff6ff', borderRadius: '6px', borderLeft: '3px solid #60a5fa' }}>
+                  <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
+                  <p style={{ fontWeight: '600', color: '#1e40af', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Linked Documents */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ width: '4px', height: '16px', background: '#a855f7', borderRadius: '2px' }} />
+              <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Linked Documents</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', fontSize: '11px' }}>
+              {[['Quotation No.', form.quotation_number], ['SR Number', form.sr_number], ['Client', form.client_name], ['Site', form.site_name]].map(([k, v]) => (
+                <div key={k} style={{ padding: '8px 10px', background: '#faf5ff', borderRadius: '6px', borderLeft: '3px solid #c084fc' }}>
+                  <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
+                  <p style={{ fontWeight: '600', color: '#6b21a8', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Purchase Details */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ width: '4px', height: '16px', background: '#f59e0b', borderRadius: '2px' }} />
+              <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Purchase Details</h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '8px' }}>
+              <div style={{ padding: '10px 12px', background: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Purpose of Purchase</p>
+                <p style={{ fontSize: '11px', color: '#0f172a', margin: 0, lineHeight: '1.5' }}>{form.purpose_of_purchase || '—'}</p>
+              </div>
+              <div style={{ padding: '10px 12px', background: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Payment Term</p>
+                <p style={{ fontSize: '12px', fontWeight: '700', color: '#92400e', margin: 0 }}>{form.payment_term || '—'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Approval */}
+          {(form.approved_by || form.approved_date) && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <div style={{ width: '4px', height: '16px', background: '#10b981', borderRadius: '2px' }} />
+                <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#065f46', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Approval</h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {[['Approved By', form.approved_by], ['Approved Date', form.approved_date]].map(([k, v]) => (
+                  <div key={k} style={{ padding: '8px 10px', background: '#ecfdf5', borderRadius: '6px', borderLeft: '3px solid #34d399' }}>
+                    <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
+                    <p style={{ fontWeight: '600', color: '#065f46', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* PAGE 2 — Items Table + Totals + Remarks */}
+        <div id="pr-pdf-page-2" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+            <div style={{ width: '4px', height: '16px', background: '#0891b2', borderRadius: '2px' }} />
+            <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#164e63', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Items List</h3>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
+            <thead>
+              <tr style={{ background: '#0f172a', color: 'white' }}>
+                <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', width: '30px' }}>#</th>
+                <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase' }}>Description</th>
+                <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', width: '90px' }}>Category</th>
+                <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', width: '50px' }}>Qty</th>
+                <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', width: '90px' }}>Unit Cost</th>
+                <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', width: '90px' }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, i) => (
+                <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '8px 10px', textAlign: 'center', color: '#64748b', fontFamily: 'monospace', fontSize: '10px' }}>{i + 1}</td>
+                  <td style={{ padding: '8px 10px', fontWeight: '500' }}>{item.description || '—'}</td>
+                  <td style={{ padding: '8px 10px', color: '#64748b' }}>{item.category || '—'}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{item.quantity}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{(item.unit_cost || 0).toFixed(2)}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace' }}>{(item.total || 0).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Grand Total */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+            <div style={{ background: '#0f172a', borderRadius: '8px', padding: '12px 20px', minWidth: '200px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Grand Total</span>
+                <span style={{ color: '#f8fafc', fontWeight: '900', fontSize: '16px', fontFamily: 'monospace' }}>MYR {grandTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Remarks */}
+          {form.remarks && (
+            <div style={{ padding: '12px', background: '#fefce8', borderRadius: '6px', border: '1px solid #fde68a', marginBottom: '20px' }}>
+              <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Remarks</p>
+              <p style={{ fontSize: '11px', color: '#0f172a', margin: 0 }}>{form.remarks}</p>
+            </div>
+          )}
+
+          {/* Signature Line */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
+            {['Prepared By', 'Approved By'].map(role => (
+              <div key={role}>
+                <div style={{ height: '50px', borderBottom: '1px solid #94a3b8', marginBottom: '6px' }} />
+                <p style={{ fontSize: '10px', color: '#64748b', textAlign: 'center', margin: 0 }}>{role}</p>
+                <p style={{ fontSize: '10px', color: '#94a3b8', textAlign: 'center', margin: '2px 0 0' }}>
+                  {role === 'Prepared By' ? (form.requester_name || '________________') : (form.approved_by || '________________')}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div style={{ marginTop: '24px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#94a3b8' }}>
+            <span>Click IX Sdn Bhd · Purchase Requisition System</span>
+            <span>{form.pr_number} · {format(new Date(), 'dd MMM yyyy')}</span>
+          </div>
         </div>
       </div>
     </div>
