@@ -207,19 +207,48 @@ export default function ReportDetail() {
     toast.info('Generating PDF...');
     const { default: jsPDF } = await import('jspdf');
     const { default: html2canvas } = await import('html2canvas');
+
+    // Collect all image URLs that need to be pre-loaded
+    const allImageUrls = [
+      ...l2Items.flatMap(item => item.photos || []),
+      ...l2Addons.flatMap(item => item.photos || []),
+      ...supportingDocs.filter(url => url.match(/\.(jpg|jpeg|png|gif|webp)$/i)),
+      ...(signature ? [signature] : []),
+      ...(companyStamp ? [companyStamp] : []),
+    ];
+
+    // Pre-load all images to ensure they are in browser cache before html2canvas runs
+    await Promise.all(allImageUrls.map(url => new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = resolve;
+      img.onerror = resolve; // don't block on failed images
+      img.src = url + (url.includes('?') ? '&' : '?') + '_nocache=' + Date.now();
+    })));
+
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pw = pdf.internal.pageSize.getWidth();
     const ph = pdf.internal.pageSize.getHeight();
     const wrapper = document.getElementById('pdf-print-area');
     wrapper.style.display = 'block';
-    // Skip page 3 if no supporting documents
+
+    // Small delay to allow DOM to fully render images
+    await new Promise(r => setTimeout(r, 500));
+
     const hasDocs = supportingDocs.length > 0;
     const pageIds = ['pdf-page-1', 'pdf-page-2', ...(hasDocs ? ['pdf-page-3'] : []), 'pdf-page-4'];
     let isFirstPage = true;
     for (const pageId of pageIds) {
       const el = document.getElementById(pageId);
       if (!el || el.offsetHeight < 5) continue;
-      const canvas = await html2canvas(el, { scale: 3, useCORS: true, backgroundColor: '#ffffff', width: 794 });
+      const canvas = await html2canvas(el, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        width: 794,
+        logging: false,
+      });
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const imgH = (canvas.height * pw) / canvas.width;
       if (!isFirstPage) pdf.addPage();
@@ -261,16 +290,20 @@ export default function ReportDetail() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
-          {canEdit && (
-            <Button variant="outline" size="sm" onClick={() => setEditing(!editing)} className="gap-2">
-              <Edit2 size={14} /> {editing ? 'Cancel Edit' : 'Edit'}
+          {canEdit && !editing && (
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-2">
+              <Edit2 size={14} /> Edit
             </Button>
           )}
-          {/* Show Save button in header when editing a completed report */}
-          {editing && report.status === 'complete' && (
-            <Button size="sm" onClick={saveL2} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-              <Save size={14} /> Save Changes
-            </Button>
+          {editing && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="gap-2">
+                <X size={14} /> Cancel
+              </Button>
+              <Button size="sm" onClick={saveL2} className="gap-2 bg-emerald-600 hover:bg-emerald-700" disabled={updateReport.isPending}>
+                <Save size={14} /> {updateReport.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </>
           )}
           <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
             <Download size={14} /> PDF
@@ -336,10 +369,10 @@ export default function ReportDetail() {
                 ✓ Mark Complete
               </Button>
             )}
-            {/* Save Draft available for all non-complete statuses, or when editing a complete report */}
-            {isL2Stage && (report.status !== 'complete' || editing) && (
-              <Button variant="outline" size="sm" onClick={saveL2}>
-                <Save size={14} className="mr-2" /> {report.status === 'complete' ? 'Save Changes' : 'Save Draft'}
+            {/* Save Draft for non-complete statuses */}
+            {report.status !== 'complete' && (
+              <Button variant="outline" size="sm" onClick={saveL2} disabled={updateReport.isPending}>
+                <Save size={14} className="mr-2" /> {updateReport.isPending ? 'Saving...' : 'Save Draft'}
               </Button>
             )}
           </div>
