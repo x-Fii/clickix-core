@@ -108,7 +108,8 @@ export default function ReportDetail() {
   if (!report) return <div className="p-6 text-muted-foreground">Report not found.</div>;
 
   const isL2Stage = L2_FLOW.includes(report.status);
-  const canEdit = report.status !== 'resolved';
+  // Allow editing on all statuses except 'resolved'
+  const canEdit = true;
 
   const setLF = (key, val) => setL2Form(f => ({ ...f, [key]: val }));
   const updateL2Item = (i, field, val) => setL2Items(prev => prev.map((item, idx) => idx === i ? { ...item, [field]: val } : item));
@@ -150,6 +151,7 @@ export default function ReportDetail() {
     if (s) setL2Form(f => ({ ...f, l2_attended_staff_name: s.name, l2_attended_staff_id: s.staff_id, l2_attended_staff_email: s.email || '' }));
   };
 
+  // Save all L2 data including ack fields — works for both draft and completed reports
   const saveL2 = () => {
     updateReport.mutate({
       ...l2Form,
@@ -158,6 +160,9 @@ export default function ReportDetail() {
       l2_replacements: replacements,
       supporting_documents: supportingDocs,
       ack_company_stamp: companyStamp,
+      ack_signature: signature,
+      ack_name: ackName,
+      ack_phone: ackPhone,
     });
   };
 
@@ -207,40 +212,28 @@ export default function ReportDetail() {
     const ph = pdf.internal.pageSize.getHeight();
     const wrapper = document.getElementById('pdf-print-area');
     wrapper.style.display = 'block';
-    const pageIds = ['pdf-page-1', 'pdf-page-2', 'pdf-page-3', 'pdf-page-4'];
+    // Skip page 3 if no supporting documents
+    const hasDocs = supportingDocs.length > 0;
+    const pageIds = ['pdf-page-1', 'pdf-page-2', ...(hasDocs ? ['pdf-page-3'] : []), 'pdf-page-4'];
     let isFirstPage = true;
     for (const pageId of pageIds) {
       const el = document.getElementById(pageId);
       if (!el || el.offsetHeight < 5) continue;
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
-      const imgData = canvas.toDataURL('image/png');
+      const canvas = await html2canvas(el, { scale: 3, useCORS: true, backgroundColor: '#ffffff', width: 794 });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const imgH = (canvas.height * pw) / canvas.width;
       if (!isFirstPage) pdf.addPage();
       isFirstPage = false;
       let remaining = imgH;
       let pos = 0;
-      pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
+      pdf.addImage(imgData, 'JPEG', 0, pos, pw, imgH);
       remaining -= ph;
       while (remaining > 0) {
         pos -= ph;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
+        pdf.addImage(imgData, 'JPEG', 0, pos, pw, imgH);
         remaining -= ph;
       }
-    }
-    // Add clickable link annotations for supporting documents
-    const docsEl = document.getElementById('pdf-page-3');
-    if (docsEl) {
-      const links = docsEl.querySelectorAll('a[data-url]');
-      links.forEach(link => {
-        const url = link.getAttribute('data-url');
-        if (url) {
-          const pageNum = pdf.internal.getNumberOfPages();
-          // Approximate annotation — overlay on last page
-          pdf.setPage(pageNum);
-          pdf.link(10, 60, pw - 20, 8, { url });
-        }
-      });
     }
     wrapper.style.display = 'none';
     pdf.save(`${report.running_number}.pdf`);
@@ -248,6 +241,7 @@ export default function ReportDetail() {
   };
 
   const statusIdx = L2_FLOW.indexOf(report.status);
+  const isReadOnly = report.status === 'complete' && !editing;
 
   return (
     <div className="p-6 max-w-4xl mx-auto pb-20">
@@ -270,6 +264,12 @@ export default function ReportDetail() {
           {canEdit && (
             <Button variant="outline" size="sm" onClick={() => setEditing(!editing)} className="gap-2">
               <Edit2 size={14} /> {editing ? 'Cancel Edit' : 'Edit'}
+            </Button>
+          )}
+          {/* Show Save button in header when editing a completed report */}
+          {editing && report.status === 'complete' && (
+            <Button size="sm" onClick={saveL2} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+              <Save size={14} /> Save Changes
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
@@ -336,9 +336,10 @@ export default function ReportDetail() {
                 ✓ Mark Complete
               </Button>
             )}
-            {report.status !== 'complete' && isL2Stage && (
+            {/* Save Draft available for all non-complete statuses, or when editing a complete report */}
+            {isL2Stage && (report.status !== 'complete' || editing) && (
               <Button variant="outline" size="sm" onClick={saveL2}>
-                <Save size={14} className="mr-2" /> Save Draft
+                <Save size={14} className="mr-2" /> {report.status === 'complete' ? 'Save Changes' : 'Save Draft'}
               </Button>
             )}
           </div>
@@ -399,32 +400,32 @@ export default function ReportDetail() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="md:col-span-2">
                   <Field label="Job Description / Work Detail">
-                    <Textarea value={l2Form.l2_job_description} onChange={e => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={4} readOnly={report.status === 'complete' && !editing} />
+                    <Textarea value={l2Form.l2_job_description} onChange={e => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={4} readOnly={isReadOnly} />
                   </Field>
                 </div>
                 <div className="md:col-span-2">
                   <Field label="Remarks">
-                    <Textarea value={l2Form.l2_remarks} onChange={e => setLF('l2_remarks', e.target.value)} className="bg-background resize-none" rows={2} readOnly={report.status === 'complete' && !editing} />
+                    <Textarea value={l2Form.l2_remarks} onChange={e => setLF('l2_remarks', e.target.value)} className="bg-background resize-none" rows={2} readOnly={isReadOnly} />
                   </Field>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Field label="Attended By (L2 Staff)">
-                  <Select onValueChange={handleStaffSelect}>
+                  <Select onValueChange={handleStaffSelect} disabled={isReadOnly}>
                     <SelectTrigger className="bg-background text-sm"><SelectValue placeholder={l2Form.l2_attended_staff_name || 'Select staff'} /></SelectTrigger>
                     <SelectContent>{l2Staff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </Field>
-                <Field label="Staff ID"><Input value={l2Form.l2_attended_staff_id} onChange={e => setLF('l2_attended_staff_id', e.target.value)} className="bg-background" /></Field>
-                <Field label="Staff Email"><Input value={l2Form.l2_attended_staff_email} onChange={e => setLF('l2_attended_staff_email', e.target.value)} className="bg-background" /></Field>
-                <Field label="Attend Date"><Input type="date" value={l2Form.l2_attend_date} onChange={e => setLF('l2_attend_date', e.target.value)} className="bg-background" /></Field>
-                <Field label="Attend Time"><Input type="time" value={l2Form.l2_attend_time} onChange={e => setLF('l2_attend_time', e.target.value)} className="bg-background" /></Field>
-                <Field label="Work Order No."><Input value={l2Form.l2_work_order_number} onChange={e => setLF('l2_work_order_number', e.target.value)} className="bg-background" /></Field>
-                <Field label="Approver Name"><Input value={l2Form.l2_approver_name} onChange={e => setLF('l2_approver_name', e.target.value)} className="bg-background" /></Field>
-                <Field label="Approver Email"><Input type="email" value={l2Form.l2_approver_email} onChange={e => setLF('l2_approver_email', e.target.value)} className="bg-background" /></Field>
+                <Field label="Staff ID"><Input value={l2Form.l2_attended_staff_id} onChange={e => setLF('l2_attended_staff_id', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Staff Email"><Input value={l2Form.l2_attended_staff_email} onChange={e => setLF('l2_attended_staff_email', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Attend Date"><Input type="date" value={l2Form.l2_attend_date} onChange={e => setLF('l2_attend_date', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Attend Time"><Input type="time" value={l2Form.l2_attend_time} onChange={e => setLF('l2_attend_time', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Work Order No."><Input value={l2Form.l2_work_order_number} onChange={e => setLF('l2_work_order_number', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Approver Name"><Input value={l2Form.l2_approver_name} onChange={e => setLF('l2_approver_name', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Approver Email"><Input type="email" value={l2Form.l2_approver_email} onChange={e => setLF('l2_approver_email', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
                 <ReadField label="Approved Date" value={report.approved_date || l2Form.approved_date} />
-                <Field label="Site PIC Name"><Input value={l2Form.l2_site_pic_name} onChange={e => setLF('l2_site_pic_name', e.target.value)} className="bg-background" /></Field>
-                <Field label="Site PIC ID"><Input value={l2Form.l2_site_pic_id} onChange={e => setLF('l2_site_pic_id', e.target.value)} className="bg-background" /></Field>
+                <Field label="Site PIC Name"><Input value={l2Form.l2_site_pic_name} onChange={e => setLF('l2_site_pic_name', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Site PIC ID"><Input value={l2Form.l2_site_pic_id} onChange={e => setLF('l2_site_pic_id', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
               </div>
             </div>
 
@@ -440,18 +441,27 @@ export default function ReportDetail() {
                       <span className="text-sm text-muted-foreground">{item.issue_description}</span>
                     </div>
                     <Field label="Onsite Rectification Steps">
-                      <Textarea value={item.rectification_steps} onChange={e => updateL2Item(i, 'rectification_steps', e.target.value)} className="bg-background resize-none text-sm" rows={2} placeholder="Describe steps taken onsite..." />
+                      <Textarea value={item.rectification_steps} onChange={e => updateL2Item(i, 'rectification_steps', e.target.value)} className="bg-background resize-none text-sm" rows={2} placeholder="Describe steps taken onsite..." readOnly={isReadOnly} />
                     </Field>
                     <div>
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Photo Evidence</Label>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {(item.photos || []).map((url, pi) => (
-                          <img key={pi} src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                          <div key={pi} className="relative group">
+                            <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                            {!isReadOnly && (
+                              <button onClick={() => updateL2Item(i, 'photos', item.photos.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                                <X size={8} />
+                              </button>
+                            )}
+                          </div>
                         ))}
-                        <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                          {uploadingPhoto === `l2item-${i}` ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
-                          <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoUpload('l2item', i, e.target.files)} />
-                        </label>
+                        {!isReadOnly && (
+                          <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                            {uploadingPhoto === `l2item-${i}` ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
+                            <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoUpload('l2item', i, e.target.files)} />
+                          </label>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -466,31 +476,42 @@ export default function ReportDetail() {
                   <h3 className="font-semibold text-sm">Add-On Items (Onsite)</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Additional items found and attended onsite</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={addL2Addon} className="gap-1 text-xs"><Plus size={12} /> Add Item</Button>
+                {!isReadOnly && <Button variant="outline" size="sm" onClick={addL2Addon} className="gap-1 text-xs"><Plus size={12} /> Add Item</Button>}
               </div>
               {l2Addons.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No add-on items. Click "Add Item" if there are additional issues found onsite.</p>}
               <div className="space-y-4">
                 {l2Addons.map((item, i) => (
                   <div key={i} className="p-4 bg-muted/30 rounded-lg border border-border space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                      <Select value={item.device_type} onValueChange={v => updateAddon(i, 'device_type', v)}>
+                      <Select value={item.device_type} onValueChange={v => updateAddon(i, 'device_type', v)} disabled={isReadOnly}>
                         <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Device Type" /></SelectTrigger>
                         <SelectContent>{DEVICE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                       </Select>
-                      <Input value={item.device_name} onChange={e => updateAddon(i, 'device_name', e.target.value)} placeholder="Device name" className="bg-background text-xs h-8" />
-                      <Input value={item.issue_description} onChange={e => updateAddon(i, 'issue_description', e.target.value)} placeholder="Issue description" className="bg-background text-xs h-8" />
+                      <Input value={item.device_name} onChange={e => updateAddon(i, 'device_name', e.target.value)} placeholder="Device name" className="bg-background text-xs h-8" readOnly={isReadOnly} />
+                      <Input value={item.issue_description} onChange={e => updateAddon(i, 'issue_description', e.target.value)} placeholder="Issue description" className="bg-background text-xs h-8" readOnly={isReadOnly} />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {(item.photos || []).map((url, pi) => (
-                        <img key={pi} src={url} alt="" className="w-16 h-16 object-cover rounded border border-border" />
+                        <div key={pi} className="relative group">
+                          <img src={url} alt="" className="w-16 h-16 object-cover rounded border border-border" />
+                          {!isReadOnly && (
+                            <button onClick={() => updateAddon(i, 'photos', item.photos.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X size={8} />
+                            </button>
+                          )}
+                        </div>
                       ))}
-                      <label className="w-16 h-16 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary">
-                        {uploadingPhoto === `addon-${i}` ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={12} className="text-muted-foreground" />}
-                        <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoUpload('addon', i, e.target.files)} />
-                      </label>
-                      <button type="button" onClick={() => setL2Addons(p => p.filter((_, idx) => idx !== i))} className="w-16 h-16 border border-border rounded flex items-center justify-center text-muted-foreground hover:text-destructive">
-                        <X size={12} />
-                      </button>
+                      {!isReadOnly && (
+                        <label className="w-16 h-16 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary">
+                          {uploadingPhoto === `addon-${i}` ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={12} className="text-muted-foreground" />}
+                          <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoUpload('addon', i, e.target.files)} />
+                        </label>
+                      )}
+                      {!isReadOnly && (
+                        <button type="button" onClick={() => setL2Addons(p => p.filter((_, idx) => idx !== i))} className="w-16 h-16 border border-border rounded flex items-center justify-center text-muted-foreground hover:text-destructive">
+                          <X size={12} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -504,19 +525,21 @@ export default function ReportDetail() {
                   <h3 className="font-semibold text-sm">Replacement Items</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Parts or devices replaced during onsite visit</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={addReplacement} className="gap-1 text-xs"><Plus size={12} /> Add Replacement</Button>
+                {!isReadOnly && <Button variant="outline" size="sm" onClick={addReplacement} className="gap-1 text-xs"><Plus size={12} /> Add Replacement</Button>}
               </div>
               {replacements.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No replacements recorded.</p>}
               <div className="space-y-3">
                 {replacements.map((r, i) => (
                   <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 bg-muted/30 rounded-lg border border-border">
-                    <Input value={r.item_description} onChange={e => updateReplacement(i, 'item_description', e.target.value)} placeholder="Item description" className="bg-background text-xs" />
-                    <Input value={r.old_item_detail} onChange={e => updateReplacement(i, 'old_item_detail', e.target.value)} placeholder="Old item detail (S/N, model)" className="bg-background text-xs" />
+                    <Input value={r.item_description} onChange={e => updateReplacement(i, 'item_description', e.target.value)} placeholder="Item description" className="bg-background text-xs" readOnly={isReadOnly} />
+                    <Input value={r.old_item_detail} onChange={e => updateReplacement(i, 'old_item_detail', e.target.value)} placeholder="Old item detail (S/N, model)" className="bg-background text-xs" readOnly={isReadOnly} />
                     <div className="flex gap-2">
-                      <Input value={r.new_item_detail} onChange={e => updateReplacement(i, 'new_item_detail', e.target.value)} placeholder="New item detail (S/N, model)" className="bg-background text-xs flex-1" />
-                      <button onClick={() => setReplacements(p => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
-                        <X size={14} />
-                      </button>
+                      <Input value={r.new_item_detail} onChange={e => updateReplacement(i, 'new_item_detail', e.target.value)} placeholder="New item detail (S/N, model)" className="bg-background text-xs flex-1" readOnly={isReadOnly} />
+                      {!isReadOnly && (
+                        <button onClick={() => setReplacements(p => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
+                          <X size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -528,15 +551,24 @@ export default function ReportDetail() {
               <SectionHeader title="Supporting Documents" subtitle="Attach any supporting files or documents" />
               <div className="flex flex-wrap gap-3">
                 {supportingDocs.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border border-border text-xs text-primary hover:underline">
-                    <Download size={12} /> Document {i + 1}
-                  </a>
+                  <div key={i} className="flex items-center gap-1">
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border border-border text-xs text-primary hover:underline">
+                      <Download size={12} /> Document {i + 1}
+                    </a>
+                    {!isReadOnly && (
+                      <button onClick={() => setSupportingDocs(p => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive ml-1">
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
                 ))}
-                <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary text-xs text-muted-foreground transition-colors">
-                  {uploadingDoc ? <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={12} />}
-                  Attach Document
-                  <input type="file" className="hidden" onChange={e => handleDocUpload(e.target.files)} />
-                </label>
+                {!isReadOnly && (
+                  <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary text-xs text-muted-foreground transition-colors">
+                    {uploadingDoc ? <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={12} />}
+                    Attach Document
+                    <input type="file" className="hidden" onChange={e => handleDocUpload(e.target.files)} />
+                  </label>
+                )}
               </div>
             </div>
 
@@ -545,10 +577,10 @@ export default function ReportDetail() {
               <SectionHeader title="Site Acknowledgement" subtitle="Site PIC signature and confirmation" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                 <Field label="PIC Name">
-                  <Input value={ackName} onChange={e => setAckName(e.target.value)} placeholder="Site PIC full name" className="bg-background" readOnly={report.status === 'complete' && !editing} />
+                  <Input value={ackName} onChange={e => setAckName(e.target.value)} placeholder="Site PIC full name" className="bg-background" readOnly={isReadOnly} />
                 </Field>
                 <Field label="PIC Phone">
-                  <Input value={ackPhone} onChange={e => setAckPhone(e.target.value)} placeholder="+60 12-xxx xxxx" className="bg-background" readOnly={report.status === 'complete' && !editing} />
+                  <Input value={ackPhone} onChange={e => setAckPhone(e.target.value)} placeholder="+60 12-xxx xxxx" className="bg-background" readOnly={isReadOnly} />
                 </Field>
                 {report.ack_timestamp && (
                   <ReadField label="Acknowledged At" value={format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm')} />
@@ -556,21 +588,23 @@ export default function ReportDetail() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Signature">
-                  <SignaturePad value={signature} onChange={setSignature} readOnly={report.status === 'complete' && !editing} />
+                  <SignaturePad value={signature} onChange={setSignature} readOnly={isReadOnly} />
                 </Field>
                 <Field label="Company Stamp">
                   {companyStamp ? (
-                    <div className="relative inline-block">
+                    <div className="relative inline-block w-full">
                       <img src={companyStamp} alt="Company Stamp" className="w-full max-h-40 object-contain rounded border border-border bg-muted/20" />
-                      {!(report.status === 'complete' && !editing) && (
+                      {!isReadOnly && (
                         <button onClick={() => setCompanyStamp('')} className="absolute top-1 right-1 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"><X size={10} /></button>
                       )}
                     </div>
                   ) : (
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded cursor-pointer hover:border-primary transition-colors bg-muted/10">
-                      {uploadingStamp ? <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <><Upload size={16} className="text-muted-foreground mb-2" /><span className="text-xs text-muted-foreground">Upload Stamp</span></>}
-                      <input type="file" accept="image/*" className="hidden" onChange={e => handleStampUpload(e.target.files)} />
-                    </label>
+                    !isReadOnly && (
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded cursor-pointer hover:border-primary transition-colors bg-muted/10">
+                        {uploadingStamp ? <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <><Upload size={16} className="text-muted-foreground mb-2" /><span className="text-xs text-muted-foreground">Upload Stamp</span></>}
+                        <input type="file" accept="image/*" className="hidden" onChange={e => handleStampUpload(e.target.files)} />
+                      </label>
+                    )
                   )}
                 </Field>
               </div>
@@ -642,7 +676,7 @@ export default function ReportDetail() {
           </div>
         </div>
 
-        {/* PAGE 2 — L2 Onsite Support */}
+        {/* PAGE 2 — L2 Onsite Support — uses LOCAL state so unsaved edits & photos appear */}
         {isL2Stage && (
           <div id="pdf-page-2" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
@@ -650,34 +684,34 @@ export default function ReportDetail() {
               <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#065f46', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>L2 Onsite Support — Job Details</h3>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '11px', marginBottom: '12px' }}>
-              {[['Staff', report.l2_attended_staff_name], ['Staff ID', report.l2_attended_staff_id], ['Email', report.l2_attended_staff_email], ['Attend Date', report.l2_attend_date], ['Attend Time', report.l2_attend_time], ['Work Order', report.l2_work_order_number], ['Approver', report.l2_approver_name], ['Approver Email', report.l2_approver_email || report.l2_approver_detail], ['Approved Date', report.approved_date]].map(([k, v]) => (
+              {[['Staff', l2Form.l2_attended_staff_name], ['Staff ID', l2Form.l2_attended_staff_id], ['Email', l2Form.l2_attended_staff_email], ['Attend Date', l2Form.l2_attend_date], ['Attend Time', l2Form.l2_attend_time], ['Work Order', l2Form.l2_work_order_number], ['Approver', l2Form.l2_approver_name], ['Approver Email', l2Form.l2_approver_email], ['Approved Date', report.approved_date]].map(([k, v]) => (
                 <div key={k} style={{ padding: '8px 10px', background: '#ecfdf5', borderRadius: '6px', borderLeft: '3px solid #34d399' }}>
                   <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
                   <p style={{ fontWeight: '600', color: '#065f46', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
                 </div>
               ))}
             </div>
-            {report.l2_job_description && (
+            {l2Form.l2_job_description && (
               <div style={{ marginBottom: '8px', padding: '12px', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
                 <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Job Description / Work Detail</p>
-                <p style={{ fontSize: '11px', color: '#0f172a', margin: 0, lineHeight: '1.5' }}>{report.l2_job_description}</p>
+                <p style={{ fontSize: '11px', color: '#0f172a', margin: 0, lineHeight: '1.5' }}>{l2Form.l2_job_description}</p>
               </div>
             )}
-            {report.l2_remarks && (
+            {l2Form.l2_remarks && (
               <div style={{ padding: '12px', background: '#fefce8', borderRadius: '6px', border: '1px solid #fde68a' }}>
                 <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Remarks</p>
-                <p style={{ fontSize: '11px', color: '#0f172a', margin: 0 }}>{report.l2_remarks}</p>
+                <p style={{ fontSize: '11px', color: '#0f172a', margin: 0 }}>{l2Form.l2_remarks}</p>
               </div>
             )}
 
-            {/* L2 Items Rectification */}
-            {(report.l2_items || []).length > 0 && (
+            {/* L2 Items Rectification — use local l2Items state */}
+            {l2Items.length > 0 && (
               <div style={{ marginTop: '18px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <div style={{ width: '4px', height: '16px', background: '#3b82f6', borderRadius: '2px' }} />
                   <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>L1 Items — Onsite Rectification</h4>
                 </div>
-                {report.l2_items.map((item, i) => (
+                {l2Items.map((item, i) => (
                   <div key={i} style={{ marginBottom: '12px', padding: '12px', border: '1px solid #bfdbfe', borderRadius: '6px', background: '#f8fafc' }}>
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '6px', alignItems: 'center' }}>
                       <span style={{ fontWeight: '700', color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', flexShrink: 0 }}>{item.device_type}</span>
@@ -688,7 +722,7 @@ export default function ReportDetail() {
                     {(item.photos || []).length > 0 && (
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {item.photos.map((url, pi) => (
-                          <img key={pi} src={url} alt={`photo-${pi}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #bfdbfe' }} crossOrigin="anonymous" />
+                          <img key={pi} src={url} alt={`photo-${pi}`} style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #bfdbfe' }} crossOrigin="anonymous" />
                         ))}
                       </div>
                     )}
@@ -697,14 +731,14 @@ export default function ReportDetail() {
               </div>
             )}
 
-            {/* Add-on Items */}
-            {(report.l2_addon_items || []).length > 0 && (
+            {/* Add-on Items — use local l2Addons state */}
+            {l2Addons.length > 0 && (
               <div style={{ marginTop: '18px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <div style={{ width: '4px', height: '16px', background: '#a855f7', borderRadius: '2px' }} />
                   <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Add-On Items (Onsite)</h4>
                 </div>
-                {report.l2_addon_items.map((item, i) => (
+                {l2Addons.map((item, i) => (
                   <div key={i} style={{ marginBottom: '10px', padding: '12px', border: '1px solid #e9d5ff', borderRadius: '6px', background: '#faf5ff' }}>
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '6px', alignItems: 'center' }}>
                       <span style={{ fontWeight: '700', color: '#6b21a8', background: '#e9d5ff', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', flexShrink: 0 }}>{item.device_type}</span>
@@ -714,7 +748,7 @@ export default function ReportDetail() {
                     {(item.photos || []).length > 0 && (
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {item.photos.map((url, pi) => (
-                          <img key={pi} src={url} alt={`addon-${pi}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e9d5ff' }} crossOrigin="anonymous" />
+                          <img key={pi} src={url} alt={`addon-${pi}`} style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e9d5ff' }} crossOrigin="anonymous" />
                         ))}
                       </div>
                     )}
@@ -723,8 +757,8 @@ export default function ReportDetail() {
               </div>
             )}
 
-            {/* Replacements */}
-            {(report.l2_replacements || []).length > 0 && (
+            {/* Replacements — use local replacements state */}
+            {replacements.length > 0 && (
               <div style={{ marginTop: '18px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <div style={{ width: '4px', height: '16px', background: '#f59e0b', borderRadius: '2px' }} />
@@ -739,7 +773,7 @@ export default function ReportDetail() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.l2_replacements.map((r, i) => (
+                    {replacements.map((r, i) => (
                       <tr key={i} style={{ background: i % 2 === 0 ? '#fffbeb' : '#ffffff', borderBottom: '1px solid #fde68a' }}>
                         <td style={{ padding: '7px 10px', fontWeight: '600' }}>{r.item_description}</td>
                         <td style={{ padding: '7px 10px', color: '#dc2626' }}>{r.old_item_detail}</td>
@@ -753,40 +787,37 @@ export default function ReportDetail() {
           </div>
         )}
 
-        {/* PAGE 3 — Supporting Documents */}
-        <div id="pdf-page-3" style={{ width: '794px', background: 'white', padding: '40px 40px 32px', minHeight: (report.supporting_documents || []).length > 0 ? '50px' : '0px' }}>
-          {(report.supporting_documents || []).length > 0 && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <div style={{ width: '4px', height: '16px', background: '#06b6d4', borderRadius: '2px' }} />
-                <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#164e63', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Supporting Documents</h3>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {report.supporting_documents.map((url, i) => {
-                  const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                  const fileName = url.split('/').pop()?.split('?')[0] || `Document ${i + 1}`;
-                  return isImage ? (
-                    <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px', background: '#ecfeff', borderRadius: '6px', border: '1px solid #a5f3fc' }}>
-                      <img src={url} alt={`doc-${i+1}`} style={{ width: '120px', height: '90px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #67e8f9', flexShrink: 0 }} crossOrigin="anonymous" />
-                      <div>
-                        <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Document {i + 1}</p>
-                        <p style={{ fontSize: '10px', color: '#0891b2', margin: '0 0 4px', wordBreak: 'break-all' }}>{url}</p>
-                      </div>
+        {/* PAGE 3 — Supporting Documents (only rendered if there are docs) */}
+        {supportingDocs.length > 0 && (
+          <div id="pdf-page-3" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+              <div style={{ width: '4px', height: '16px', background: '#06b6d4', borderRadius: '2px' }} />
+              <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#164e63', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Supporting Documents</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {supportingDocs.map((url, i) => {
+                const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                return isImage ? (
+                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px', background: '#ecfeff', borderRadius: '6px', border: '1px solid #a5f3fc' }}>
+                    <img src={url} alt={`doc-${i+1}`} style={{ width: '150px', height: '120px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #67e8f9', flexShrink: 0 }} crossOrigin="anonymous" />
+                    <div>
+                      <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Document {i + 1}</p>
+                      <p style={{ fontSize: '10px', color: '#0891b2', margin: '0 0 4px', wordBreak: 'break-all' }}>{url}</p>
                     </div>
-                  ) : (
-                    <div key={i} style={{ padding: '10px 14px', background: '#ecfeff', borderRadius: '6px', border: '1px solid #a5f3fc', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '16px' }}>📎</span>
-                      <div>
-                        <p style={{ fontSize: '9px', color: '#64748b', margin: '0 0 2px' }}>Document {i + 1}</p>
-                        <a data-url={url} href={url} style={{ fontSize: '10px', color: '#0891b2', textDecoration: 'underline', wordBreak: 'break-all' }}>{url}</a>
-                      </div>
+                  </div>
+                ) : (
+                  <div key={i} style={{ padding: '10px 14px', background: '#ecfeff', borderRadius: '6px', border: '1px solid #a5f3fc', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '16px' }}>📎</span>
+                    <div>
+                      <p style={{ fontSize: '9px', color: '#64748b', margin: '0 0 2px' }}>Document {i + 1}</p>
+                      <p style={{ fontSize: '10px', color: '#0891b2', wordBreak: 'break-all', margin: 0 }}>{url}</p>
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* PAGE 4 — Acknowledgement */}
         <div id="pdf-page-4" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
@@ -795,7 +826,7 @@ export default function ReportDetail() {
             <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Site Acknowledgement</h3>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '11px', marginBottom: '16px' }}>
-            {[['PIC Name', report.ack_name], ['Phone', report.ack_phone], ['Timestamp', report.ack_timestamp ? format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm') : '']].map(([k, v]) => (
+            {[['PIC Name', ackName || report.ack_name], ['Phone', ackPhone || report.ack_phone], ['Timestamp', report.ack_timestamp ? format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm') : '']].map(([k, v]) => (
               <div key={k} style={{ padding: '8px 10px', background: '#fef3c7', borderRadius: '6px', borderLeft: '3px solid #f59e0b' }}>
                 <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
                 <p style={{ fontWeight: '600', color: '#92400e', margin: 0 }}>{v || '—'}</p>
@@ -805,16 +836,16 @@ export default function ReportDetail() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
               <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 8px' }}>Signature</p>
-              {report.ack_signature ? (
-                <img src={report.ack_signature} alt="signature" style={{ maxWidth: '100%', maxHeight: '100px', borderRadius: '4px' }} />
+              {(signature || report.ack_signature) ? (
+                <img src={signature || report.ack_signature} alt="signature" style={{ maxWidth: '100%', maxHeight: '120px', borderRadius: '4px' }} crossOrigin="anonymous" />
               ) : (
                 <div style={{ height: '80px', background: '#f8fafc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '11px' }}>No signature</div>
               )}
             </div>
             <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px' }}>
               <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 8px' }}>Company Stamp</p>
-              {(report.ack_company_stamp || companyStamp) ? (
-                <img src={report.ack_company_stamp || companyStamp} alt="company stamp" style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain', borderRadius: '4px' }} crossOrigin="anonymous" />
+              {(companyStamp || report.ack_company_stamp) ? (
+                <img src={companyStamp || report.ack_company_stamp} alt="company stamp" style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'contain', borderRadius: '4px' }} crossOrigin="anonymous" />
               ) : (
                 <div style={{ height: '80px', background: '#f8fafc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '11px' }}>No stamp</div>
               )}

@@ -7,11 +7,20 @@ export default function SignaturePad({ value, onChange, readOnly = false }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const lastPos = useRef(null);
 
+  // Set up canvas with proper pixel ratio scaling to fix touch offset issues
   useEffect(() => {
-    if (value && canvasRef.current) {
-      const ctx = canvasRef.current.getContext('2d');
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    if (value) {
       const img = new Image();
-      img.onload = () => ctx.drawImage(img, 0, 0);
+      img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
       img.src = value;
     }
   }, []);
@@ -19,7 +28,10 @@ export default function SignaturePad({ value, onChange, readOnly = false }) {
   const getPos = (e, canvas) => {
     const rect = canvas.getBoundingClientRect();
     const src = e.touches ? e.touches[0] : e;
-    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+    return {
+      x: src.clientX - rect.left,
+      y: src.clientY - rect.top,
+    };
   };
 
   const startDraw = (e) => {
@@ -35,7 +47,7 @@ export default function SignaturePad({ value, onChange, readOnly = false }) {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const pos = getPos(e, canvas);
-    ctx.strokeStyle = '#60a5fa';
+    ctx.strokeStyle = '#1e3a8a';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -54,18 +66,19 @@ export default function SignaturePad({ value, onChange, readOnly = false }) {
 
   const clear = () => {
     const canvas = canvasRef.current;
-    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, rect.width, rect.height);
     onChange?.('');
   };
 
   return (
     <div className="space-y-2">
-      <div className="relative border border-border rounded-lg overflow-hidden bg-muted/30">
+      <div className="relative border border-border rounded-lg overflow-hidden bg-white" style={{ height: '150px' }}>
         <canvas
           ref={canvasRef}
-          width={500}
-          height={150}
-          className="w-full cursor-crosshair touch-none"
+          className="w-full h-full cursor-crosshair touch-none"
           onMouseDown={startDraw}
           onMouseMove={draw}
           onMouseUp={endDraw}
