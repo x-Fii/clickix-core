@@ -20,6 +20,7 @@ import PurchaseRequisitions from './pages/PurchaseRequisitions';
 import PRForm from './pages/PRForm';
 import Claims from './pages/Claims';
 import ClaimForm from './pages/ClaimForm';
+import ScheduleCalendar from './pages/ScheduleCalendar';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
         <Route path="/pr" element={<PurchaseRequisitions />} />
         <Route path="/pr/new" element={<PRForm />} />
         <Route path="/pr/:id" element={<PRForm />} />
+        <Route path="/schedule" element={<ScheduleCalendar />} />
         <Route path="/claims" element={<Claims />} />
         <Route path="/claims/new" element={<ClaimForm />} />
         <Route path="/claims/:id" element={<ClaimForm />} />
