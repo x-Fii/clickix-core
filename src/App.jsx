@@ -21,6 +21,9 @@ import PRForm from './pages/PRForm';
 import Claims from './pages/Claims';
 import ClaimForm from './pages/ClaimForm';
 import ScheduleCalendar from './pages/ScheduleCalendar';
+import InstallationReports from './pages/InstallationReports';
+import InstallationReportForm from './pages/InstallationReportForm';
+import InstallationReportDetail from './pages/InstallationReportDetail';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -63,6 +66,10 @@ const AuthenticatedApp = () => {
         <Route path="/pr/new" element={<PRForm />} />
         <Route path="/pr/:id" element={<PRForm />} />
         <Route path="/schedule" element={<ScheduleCalendar />} />
+        <Route path="/installation" element={<InstallationReports />} />
+        <Route path="/installation/new" element={<InstallationReportForm />} />
+        <Route path="/installation/:id/edit" element={<InstallationReportForm />} />
+        <Route path="/installation/:id" element={<InstallationReportDetail />} />
         <Route path="/claims" element={<Claims />} />
         <Route path="/claims/new" element={<ClaimForm />} />
         <Route path="/claims/:id" element={<ClaimForm />} />

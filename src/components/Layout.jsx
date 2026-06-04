@@ -1,5 +1,5 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, Users, MapPin, UserCog, ChevronRight, ChevronLeft, Monitor, FileText, ShoppingCart, Receipt, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, MapPin, UserCog, ChevronRight, ChevronLeft, Monitor, FileText, ShoppingCart, Receipt, CalendarDays, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -7,6 +7,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/reports', label: 'Service Reports', icon: ClipboardList },
   { path: '/schedule', label: 'Schedule', icon: CalendarDays },
+  { path: '/installation', label: 'Installation Reports', icon: Wrench },
   { path: '/quotations', label: 'Quotations', icon: FileText },
   { path: '/pr', label: 'Purchase Requisitions', icon: ShoppingCart },
   { path: '/claims', label: 'Claims', icon: Receipt },

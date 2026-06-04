@@ -1,0 +1,151 @@
+{
+  "name": "InstallationReport",
+  "type": "object",
+  "properties": {
+    "report_number": {
+      "type": "string"
+    },
+    "report_type": {
+      "type": "string",
+      "enum": [
+        "commissioning",
+        "decommissioning"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "scheduled",
+        "completed",
+        "cancelled"
+      ],
+      "default": "pending"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "site_id": {
+      "type": "string"
+    },
+    "site_name": {
+      "type": "string"
+    },
+    "site_location": {
+      "type": "string"
+    },
+    "reported_by": {
+      "type": "string"
+    },
+    "scheduled_date": {
+      "type": "string"
+    },
+    "installation_date": {
+      "type": "string"
+    },
+    "attended_staff_name": {
+      "type": "string"
+    },
+    "attended_staff_id": {
+      "type": "string"
+    },
+    "attended_staff_email": {
+      "type": "string"
+    },
+    "attend_time": {
+      "type": "string"
+    },
+    "work_order_number": {
+      "type": "string"
+    },
+    "site_pic_name": {
+      "type": "string"
+    },
+    "equipment_installed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "device_type": {
+            "type": "string"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "serial_number": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "equipment_decommissioned": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "device_type": {
+            "type": "string"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "serial_number": {
+            "type": "string"
+          },
+          "reason_for_decommission": {
+            "type": "string"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "technician_notes": {
+      "type": "string"
+    },
+    "supporting_documents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ack_signature": {
+      "type": "string"
+    },
+    "ack_name": {
+      "type": "string"
+    },
+    "ack_phone": {
+      "type": "string"
+    },
+    "ack_timestamp": {
+      "type": "string"
+    },
+    "submitted": {
+      "type": "boolean"
+    },
+    "submitted_at": {
+      "type": "string"
+    },
+    "admin_email": {
+      "type": "string"
+    }
+  },
+  "required": []
+}
