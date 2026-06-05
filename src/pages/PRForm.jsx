@@ -252,18 +252,18 @@ export default function PRForm() {
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Linked Documents</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Quotation">
-              <Select value={form.quotation_id} onValueChange={handleQuotationSelect}>
+              <Select value={form.quotation_id || undefined} onValueChange={handleQuotationSelect}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select quotation..." /></SelectTrigger>
-                <SelectContent>
-                  {quotations.map(q => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}
+                <SelectContent className="max-h-60 overflow-y-auto">
+                  {quotations.slice(0, 100).map(q => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
             <Field label="Service Report">
-              <Select value={form.sr_id} onValueChange={handleSRSelect}>
+              <Select value={form.sr_id || undefined} onValueChange={handleSRSelect}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR (or auto-filled from quotation)..." /></SelectTrigger>
-                <SelectContent>
-                  {reports.map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}
+                <SelectContent className="max-h-60 overflow-y-auto">
+                  {reports.slice(0, 100).map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
@@ -280,7 +280,7 @@ export default function PRForm() {
               <Textarea value={form.purpose_of_purchase} onChange={e => setF('purpose_of_purchase', e.target.value)} className="bg-background resize-none" rows={3} placeholder="Describe the purpose and justification for this purchase..." />
             </Field>
             <Field label="Payment Term">
-              <Select value={form.payment_term} onValueChange={v => setF('payment_term', v)}>
+              <Select value={form.payment_term || undefined} onValueChange={v => setF('payment_term', v)}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select payment term..." /></SelectTrigger>
                 <SelectContent>
                   {PAYMENT_TERMS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
