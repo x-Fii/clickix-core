@@ -50,7 +50,7 @@ export default function PRForm() {
     approved_date: '',
   });
   const [items, setItems] = useState([
-    { item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }
+    { item_no: 1, description: '', category: '', quantity: 1, unit_cost: '', total: 0 }
   ]);
 
   useQuery({
@@ -129,9 +129,9 @@ export default function PRForm() {
     }));
   };
 
-  const addItem = () => setItems(p => [...p, { item_no: p.length + 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
+  const addItem = () => setItems(p => [...p, { item_no: p.length + 1, description: '', category: '', quantity: 1, unit_cost: '', total: 0 }]);
 
-  const grandTotal = items.reduce((s, it) => s + (it.total || 0), 0);
+  const grandTotal = items.reduce((s, it) => s + (parseFloat(it.unit_cost) || 0) * (parseFloat(it.quantity) || 0), 0);
 
   const handleSave = (status) => {
     saveMutation.mutate({ ...form, items, subtotal: grandTotal, grand_total: grandTotal, status: status || form.status });
@@ -325,9 +325,9 @@ export default function PRForm() {
                         <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                       </Select>
                     </td>
-                    <td className="py-2 pr-2"><Input type="number" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" min="1" /></td>
-                    <td className="py-2 pr-2"><Input type="number" value={item.unit_cost} onChange={e => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.01" /></td>
-                    <td className="py-2 text-right font-mono text-xs">{(item.total || 0).toFixed(2)}</td>
+                    <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" /></td>
+                    <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.unit_cost} onChange={e => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" placeholder="0.00" /></td>
+                    <td className="py-2 text-right font-mono text-xs">{((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)).toFixed(2)}</td>
                     <td className="py-2 pl-2">
                       <button onClick={() => setItems(p => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
                     </td>
