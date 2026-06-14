@@ -175,28 +175,21 @@ export default function PRForm() {
     const ph = pdf.internal.pageSize.getHeight();
     const wrapper = document.getElementById('pr-pdf-area');
     wrapper.style.display = 'block';
-    const pageIds = ['pr-pdf-page-1', 'pr-pdf-page-2'];
-    let isFirstPage = true;
-    for (const pageId of pageIds) {
-      const el = document.getElementById(pageId);
-      if (!el || el.offsetHeight < 5) continue;
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
-      const imgData = canvas.toDataURL('image/png');
-      const imgH = (canvas.height * pw) / canvas.width;
-      if (!isFirstPage) pdf.addPage();
-      isFirstPage = false;
-      let remaining = imgH;
-      let pos = 0;
-      pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
-      remaining -= ph;
-      while (remaining > 0) {
-        pos -= ph;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
-        remaining -= ph;
-      }
-    }
+    await new Promise(r => setTimeout(r, 100));
+    const el = document.getElementById('pr-pdf-content');
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
     wrapper.style.display = 'none';
+    const imgData = canvas.toDataURL('image/png');
+    const imgW = pw;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    let yPos = 0;
+    let pageCount = 0;
+    while (yPos < imgH) {
+      if (pageCount > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH);
+      yPos += ph;
+      pageCount++;
+    }
     pdf.save(`${form.pr_number}.pdf`);
     toast.success('PDF exported');
   };
@@ -415,8 +408,7 @@ export default function PRForm() {
       {/* Hidden PDF Template */}
       <div id="pr-pdf-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#0f172a' }}>
 
-        {/* PAGE 1 — Header + Requester + Linked Docs + Purchase Details */}
-        <div id="pr-pdf-page-1" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
+        <div id="pr-pdf-content" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
           {/* Header */}
           <div style={{ background: '#0f172a', borderRadius: '8px', padding: '24px 28px', marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -500,10 +492,7 @@ export default function PRForm() {
               </div>
             </div>
           )}
-        </div>
-
-        {/* PAGE 2 — Items Table + Totals + Remarks */}
-        <div id="pr-pdf-page-2" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
+          {/* Items List */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
             <div style={{ width: '4px', height: '16px', background: '#0891b2', borderRadius: '2px' }} />
             <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#164e63', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Items List</h3>
