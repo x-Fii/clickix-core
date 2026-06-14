@@ -76,7 +76,7 @@ export default function Quotations() {
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Quotation No.</th>
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">SR No.</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Linked Report</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Client</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Date</th>
                 <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Total (MYR)</th>
@@ -88,7 +88,9 @@ export default function Quotations() {
               {filtered.map(q => (
                 <tr key={q.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-primary">{q.quotation_number}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{q.sr_number || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {q.sr_number ? <span className="font-mono text-blue-400">{q.sr_number}</span> : q.ir_number ? <span className="font-mono text-indigo-400">{q.ir_number}</span> : '—'}
+                  </td>
                   <td className="px-4 py-3">{q.client_name || '—'}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{q.quotation_date ? format(new Date(q.quotation_date), 'dd MMM yyyy') : '—'}</td>
                   <td className="px-4 py-3 text-right font-mono text-sm">{q.grand_total != null ? q.grand_total.toFixed(2) : '—'}</td>
