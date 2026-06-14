@@ -119,6 +119,12 @@
     "technician_notes": {
       "type": "string"
     },
+    "supporting_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "supporting_documents": {
       "type": "array",
       "items": {

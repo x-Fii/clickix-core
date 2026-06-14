@@ -210,6 +210,22 @@ export default function InstallationReportDetail() {
         </div>
       )}
 
+      {/* Supporting Photos */}
+      {report.supporting_photos && report.supporting_photos.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+          <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+            <Package size={14} /> Supporting Photos
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            {report.supporting_photos.map((url, i) => (
+              <a key={i} href={url} target="_blank" rel="noreferrer">
+                <img src={url} alt={`Photo ${i + 1}`} className="w-28 h-28 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Supporting Documents */}
       {report.supporting_documents && report.supporting_documents.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-2">
