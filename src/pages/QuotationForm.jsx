@@ -33,6 +33,8 @@ export default function QuotationForm() {
     valid_until: '',
     sr_id: '',
     sr_number: '',
+    ir_id: '',
+    ir_number: '',
     client_id: '',
     client_name: '',
     site_name: '',
@@ -60,6 +62,11 @@ export default function QuotationForm() {
     queryFn: () => base44.entities.ServiceReport.list('-created_date', 100),
   });
 
+  const { data: installationReports = [] } = useQuery({
+    queryKey: ['installation-reports'],
+    queryFn: () => base44.entities.InstallationReport.list('-created_date', 100),
+  });
+
   const { data: staff = [] } = useQuery({
     queryKey: ['staff'],
     queryFn: () => base44.entities.StaffMember.filter({ is_active: true }, 'name', 100),
@@ -79,8 +86,15 @@ export default function QuotationForm() {
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSRSelect = (srId) => {
+    if (srId === '__none__') { setForm(f => ({ ...f, sr_id: '', sr_number: '' })); return; }
     const sr = reports.find(r => r.id === srId);
-    if (sr) setForm(f => ({ ...f, sr_id: sr.id, sr_number: sr.running_number, client_id: sr.client_id || '', client_name: sr.client_name || '', site_name: sr.site_name || '', site_location: sr.site_location || '' }));
+    if (sr) setForm(f => ({ ...f, sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '', client_id: sr.client_id || '', client_name: sr.client_name || '', site_name: sr.site_name || '', site_location: sr.site_location || '' }));
+  };
+
+  const handleIRSelect = (irId) => {
+    if (irId === '__none__') { setForm(f => ({ ...f, ir_id: '', ir_number: '' })); return; }
+    const ir = installationReports.find(r => r.id === irId);
+    if (ir) setForm(f => ({ ...f, ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '', client_id: ir.client_id || '', client_name: ir.client_name || '', site_name: ir.site_name || '', site_location: ir.site_location || '' }));
   };
 
   const updateItem = (i, field, val) => {
@@ -140,21 +154,31 @@ export default function QuotationForm() {
           </div>
         </div>
 
-        {/* Linked SR */}
+        {/* Linked Report */}
         <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Linked Service Report</h3>
+          <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Linked Report & Client Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Service Report">
-              <Select value={form.sr_id} onValueChange={handleSRSelect}>
+              <Select value={form.sr_id || '__none__'} onValueChange={handleSRSelect}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR..." /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
                   {reports.map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Client"><Input value={form.client_name} onChange={e => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled from SR" /></Field>
-            <Field label="Site Name"><Input value={form.site_name} onChange={e => setF('site_name', e.target.value)} className="bg-background" /></Field>
-            <Field label="Site Location"><Input value={form.site_location} onChange={e => setF('site_location', e.target.value)} className="bg-background" /></Field>
+            <Field label="Installation Report">
+              <Select value={form.ir_id || '__none__'} onValueChange={handleIRSelect}>
+                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select IR..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {installationReports.map(r => <SelectItem key={r.id} value={r.id}>{r.report_number} — {r.client_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Client"><Input value={form.client_name} onChange={e => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled from linked report" /></Field>
+            <Field label="Site Name"><Input value={form.site_name} onChange={e => setF('site_name', e.target.value)} className="bg-background" placeholder="Auto-filled from linked report" /></Field>
+            <Field label="Site Location"><Input value={form.site_location} onChange={e => setF('site_location', e.target.value)} className="bg-background" placeholder="Auto-filled from linked report" /></Field>
           </div>
         </div>
 
