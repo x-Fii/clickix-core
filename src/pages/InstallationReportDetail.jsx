@@ -304,6 +304,23 @@ export default function InstallationReportDetail() {
                   ))}
                 </tbody>
               </table>
+              {/* Equipment photos */}
+              {equipment.some(item => item.photos && item.photos.length > 0) && (
+                <div style={{ marginTop: '12px' }}>
+                  {equipment.map((item, i) => item.photos && item.photos.length > 0 && (
+                    <div key={i} style={{ marginBottom: '10px' }}>
+                      <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '6px', fontWeight: '600' }}>
+                        Item {i + 1} — {item.device_name} Photos:
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {item.photos.map((url, pi) => (
+                          <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '120px', height: '90px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -315,8 +332,20 @@ export default function InstallationReportDetail() {
             </div>
           )}
 
+          {/* Supporting Photos */}
+          {report.supporting_photos && report.supporting_photos.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', color: '#1e3a5f', marginBottom: '10px', borderBottom: '2px solid #1e3a5f', paddingBottom: '4px' }}>Supporting Photos</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {report.supporting_photos.map((url, i) => (
+                  <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '140px', height: '105px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Acknowledgement */}
-          {(report.ack_name || report.ack_phone) && (
+          {(report.ack_name || report.ack_phone || report.ack_signature) && (
             <div style={{ marginTop: '24px', borderTop: '2px solid #e5e7eb', paddingTop: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
                 <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '4px' }}>Acknowledged By</div>
@@ -325,10 +354,11 @@ export default function InstallationReportDetail() {
                 {report.ack_timestamp && <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>{new Date(report.ack_timestamp).toLocaleString()}</div>}
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '4px' }}>Signature</div>
-                <div style={{ border: '1px solid #e5e7eb', height: '60px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '10px' }}>
-                  {report.ack_signature ? <img src={report.ack_signature} alt="sig" style={{ maxHeight: '56px' }} /> : 'No signature captured'}
-                </div>
+                <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '8px' }}>Signature</div>
+                {report.ack_signature
+                  ? <img src={report.ack_signature} alt="sig" crossOrigin="anonymous" style={{ maxHeight: '70px', maxWidth: '200px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', padding: '4px' }} />
+                  : <div style={{ border: '1px solid #e5e7eb', height: '60px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '10px' }}>No signature captured</div>
+                }
               </div>
             </div>
           )}
