@@ -19,22 +19,22 @@ export default function ServiceReports() {
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['service-reports'],
-    queryFn: () => base44.entities.ServiceReport.list('-created_date', 500),
+    queryFn: () => base44.entities.ServiceReport.list('-created_date', 500)
   });
 
-  const filtered = reports.filter(r => {
+  const filtered = reports.filter((r) => {
     const matchStatus = statusFilter === 'all' || r.status === statusFilter;
     const q = search.toLowerCase();
-    const matchSearch = !q || [r.running_number, r.client_name, r.site_name, r.reported_by]
-      .some(f => f?.toLowerCase().includes(q));
+    const matchSearch = !q || [r.running_number, r.client_name, r.site_name, r.reported_by].
+    some((f) => f?.toLowerCase().includes(q));
     return matchStatus && matchSearch;
   });
 
   const counts = {
     all: reports.length,
-    resolved: reports.filter(r => r.status === 'resolved').length,
-    escalated: reports.filter(r => r.status === 'escalated').length,
-    complete: reports.filter(r => r.status === 'complete').length,
+    resolved: reports.filter((r) => r.status === 'resolved').length,
+    escalated: reports.filter((r) => r.status === 'escalated').length,
+    complete: reports.filter((r) => r.status === 'complete').length
   };
 
   return (
@@ -55,16 +55,16 @@ export default function ServiceReports() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total', value: counts.all, color: 'text-foreground' },
-          { label: 'Resolved', value: counts.resolved, color: 'text-emerald-400' },
-          { label: 'Escalated', value: counts.escalated, color: 'text-amber-400' },
-          { label: 'Complete', value: counts.complete, color: 'text-blue-400' },
-        ].map(s => (
-          <div key={s.label} className="bg-card border border-border rounded-xl p-4">
+        { label: 'Total', value: counts.all, color: 'text-foreground' },
+        { label: 'Resolved', value: counts.resolved, color: 'text-emerald-400' },
+        { label: 'Escalated', value: counts.escalated, color: 'text-amber-400' },
+        { label: 'Complete', value: counts.complete, color: 'text-blue-400' }].
+        map((s) =>
+        <div key={s.label} className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">{s.label}</p>
             <p className={`text-2xl font-bold font-mono mt-1 ${s.color}`}>{s.value}</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Filters */}
@@ -74,18 +74,18 @@ export default function ServiceReports() {
           <Input
             placeholder="Search by report no., client, site..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9 bg-card"
-          />
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-card" />
+          
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40 bg-card">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            {STATUSES.map(s => (
-              <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
-            ))}
+            {STATUSES.map((s) =>
+            <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -95,18 +95,18 @@ export default function ServiceReports() {
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/30">
             <tr>
-              {['Report No.', 'Work Order No.', 'Client', 'Site', 'Reported By', 'Status', 'Date', ''].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
-              ))}
+              {['Report No.', 'Work Order No.', 'Client', 'Site', 'Reported By', 'Status', 'Date', ''].map((h) =>
+              <th key={h} className="text-left px-4 py-3 text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {isLoading ? (
-              <tr><td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">Loading reports…</td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">No reports found.</td></tr>
-            ) : filtered.map(r => (
-              <tr key={r.id} className="hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/reports/${r.id}`)}>
+            {isLoading ?
+            <tr><td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">Loading reports…</td></tr> :
+            filtered.length === 0 ?
+            <tr><td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">No reports found.</td></tr> :
+            filtered.map((r) =>
+            <tr key={r.id} className="hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/reports/${r.id}`)}>
                 <td className="px-4 py-3 font-mono text-primary text-xs">
                   <Link to={`/reports/${r.id}`} className="hover:underline">{r.running_number || '—'}</Link>
                 </td>
@@ -118,16 +118,16 @@ export default function ServiceReports() {
                 <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
                   {r.created_date ? format(new Date(r.created_date), 'dd MMM yyyy') : '—'}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 hidden">
                   <Link to={`/reports/${r.id}`}>
                     <Button variant="ghost" size="sm" className="text-xs">View →</Button>
                   </Link>
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
-    </div>
-  );
+    </div>);
+
 }
