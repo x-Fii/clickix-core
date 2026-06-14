@@ -106,7 +106,7 @@ export default function InstallationReportForm() {
     if (!file) return;
     setUploading(true);
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    set('supporting_photos', [...form.supporting_photos, file_url]);
+    setForm(f => ({ ...f, supporting_photos: [...(f.supporting_photos || []), file_url] }));
     setUploading(false);
     e.target.value = '';
   };
@@ -116,8 +116,9 @@ export default function InstallationReportForm() {
     if (!file) return;
     setUploading(true);
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    set('supporting_documents', [...form.supporting_documents, file_url]);
+    setForm(f => ({ ...f, supporting_documents: [...(f.supporting_documents || []), file_url] }));
     setUploading(false);
+    e.target.value = '';
   };
 
   const handlePhotoUpload = async (e, section, idx) => {
@@ -125,16 +126,24 @@ export default function InstallationReportForm() {
     if (!file) return;
     setUploading(true);
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    if (section === 'installed') {
-      const arr = [...form.equipment_installed];
+    const key = section === 'installed' ? 'equipment_installed' : 'equipment_decommissioned';
+    setForm(f => {
+      const arr = [...f[key]];
       arr[idx] = { ...arr[idx], photos: [...(arr[idx].photos || []), file_url] };
-      set('equipment_installed', arr);
-    } else {
-      const arr = [...form.equipment_decommissioned];
-      arr[idx] = { ...arr[idx], photos: [...(arr[idx].photos || []), file_url] };
-      set('equipment_decommissioned', arr);
-    }
+      return { ...f, [key]: arr };
+    });
     setUploading(false);
+    e.target.value = '';
+  };
+
+  const handleSignatureChange = async (dataUrl) => {
+    if (!dataUrl) { set('ack_signature', ''); return; }
+    // Convert base64 dataURL to a File and upload to avoid storing large blobs in the entity
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], 'signature.png', { type: 'image/png' });
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setForm(f => ({ ...f, ack_signature: file_url, ack_timestamp: new Date().toISOString() }));
   };
 
   const handleSubmit = (e) => {
@@ -395,10 +404,7 @@ export default function InstallationReportForm() {
             <Label>Signature</Label>
             <SignaturePad
               value={form.ack_signature}
-              onChange={sig => {
-                set('ack_signature', sig);
-                if (sig) set('ack_timestamp', new Date().toISOString());
-              }}
+              onChange={handleSignatureChange}
             />
           </div>
         </div>
