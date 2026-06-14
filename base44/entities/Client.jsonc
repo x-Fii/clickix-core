@@ -27,7 +27,13 @@
   "rls": {
     "create": {
       "user_condition": {
-        "role": "admin"
+        "role": {
+          "$in": [
+            "admin",
+            "L1",
+            "L2"
+          ]
+        }
       }
     },
     "read": {
