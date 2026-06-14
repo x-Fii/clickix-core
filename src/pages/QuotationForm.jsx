@@ -59,6 +59,11 @@ export default function QuotationForm() {
     queryFn: () => base44.entities.ServiceReport.list('-created_date', 100),
   });
 
+  const { data: staff = [] } = useQuery({
+    queryKey: ['staff'],
+    queryFn: () => base44.entities.StaffMember.filter({ is_active: true }, 'name', 100),
+  });
+
   const saveMutation = useMutation({
     mutationFn: (data) => isEdit
       ? base44.entities.Quotation.update(id, data)
@@ -114,7 +119,14 @@ export default function QuotationForm() {
             <Field label="Quotation No."><Input value={form.quotation_number} onChange={e => setF('quotation_number', e.target.value)} className="bg-background font-mono" /></Field>
             <Field label="Date"><Input type="date" value={form.quotation_date} onChange={e => setF('quotation_date', e.target.value)} className="bg-background" /></Field>
             <Field label="Valid Until"><Input type="date" value={form.valid_until} onChange={e => setF('valid_until', e.target.value)} className="bg-background" /></Field>
-            <Field label="Prepared By"><Input value={form.prepared_by} onChange={e => setF('prepared_by', e.target.value)} className="bg-background" placeholder="Staff name" /></Field>
+            <Field label="Prepared By">
+              <Select value={form.prepared_by || undefined} onValueChange={v => setF('prepared_by', v)}>
+                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select staff..." /></SelectTrigger>
+                <SelectContent className="max-h-60 overflow-y-auto">
+                  {staff.map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Status">
               <Select value={form.status} onValueChange={v => setF('status', v)}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue /></SelectTrigger>
