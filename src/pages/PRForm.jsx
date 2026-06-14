@@ -58,7 +58,7 @@ export default function PRForm() {
     queryFn: async () => {
       const pr = await base44.entities.PurchaseRequisition.get(id);
       setForm({ ...pr });
-      setItems(pr.items?.length ? pr.items : [{ item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
+      setItems(pr.items?.length ? pr.items.map(it => ({ ...it, unit_cost: it.unit_cost?.toString() ?? '', quantity: it.quantity?.toString() ?? '1' })) : [{ item_no: 1, description: '', category: '', quantity: '1', unit_cost: '', total: 0 }]);
       return pr;
     },
     enabled: isEdit,
@@ -479,8 +479,8 @@ export default function PRForm() {
                   <td style={{ padding: '8px 10px', fontWeight: '500' }}>{item.description || '—'}</td>
                   <td style={{ padding: '8px 10px', color: '#64748b' }}>{item.category || '—'}</td>
                   <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{item.quantity}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{(item.unit_cost || 0).toFixed(2)}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace' }}>{(item.total || 0).toFixed(2)}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace' }}>{((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
