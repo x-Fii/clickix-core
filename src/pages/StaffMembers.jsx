@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 const ROLES = ['Admin', 'L1', 'L2'];
 const ROLE_COLORS = { Admin: 'text-amber-400 bg-amber-500/15', L1: 'text-blue-400 bg-blue-500/15', L2: 'text-indigo-400 bg-indigo-500/15' };
-const empty = { name: '', staff_id: '', email: '', phone: '', role: 'L1', is_active: true };
+const empty = { name: '', staff_id: '', email: '', phone: '', department: '', role: 'L1', is_active: true };
 
 export default function StaffMembers() {
   const queryClient = useQueryClient();
@@ -70,15 +70,15 @@ export default function StaffMembers() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              {['Name', 'Staff ID', 'Role', 'Email', 'Phone', 'Active', ''].map(h => (
+              {['Name', 'Staff ID', 'Department', 'Role', 'Email', 'Phone', 'Active', ''].map(h => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {isLoading && <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">Loading...</td></tr>}
+            {isLoading && <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">Loading...</td></tr>}
             {!isLoading && filtered.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-16">
+              <tr><td colSpan={8} className="text-center py-16">
                 <UserCog size={36} className="mx-auto text-muted-foreground/30 mb-3" />
                 <p className="text-sm text-muted-foreground">No staff found.</p>
               </td></tr>
@@ -87,6 +87,7 @@ export default function StaffMembers() {
               <tr key={s.id} className="hover:bg-muted/30 transition-colors group">
                 <td className="px-5 py-3.5 font-medium text-sm">{s.name}</td>
                 <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">{s.staff_id}</td>
+                <td className="px-5 py-3.5 text-sm text-muted-foreground">{s.department || '—'}</td>
                 <td className="px-5 py-3.5">
                   <span className={cn('px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium', ROLE_COLORS[s.role] || 'bg-muted text-muted-foreground')}>{s.role}</span>
                 </td>
@@ -111,7 +112,7 @@ export default function StaffMembers() {
         <DialogContent className="bg-card border-border max-w-md">
           <DialogHeader><DialogTitle>{editId ? 'Edit Staff Member' : 'Add Staff Member'}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
-            {[['Full Name', 'name', true], ['Staff ID', 'staff_id', true], ['Email', 'email'], ['Phone', 'phone']].map(([label, key, req]) => (
+            {[['Full Name', 'name', true], ['Staff ID', 'staff_id', true], ['Department', 'department'], ['Email', 'email'], ['Phone', 'phone']].map(([label, key, req]) => (
               <div key={key} className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">{label}{req && <span className="text-red-400 ml-1">*</span>}</Label>
                 <Input value={form[key]} onChange={e => setF(key, e.target.value)} className="bg-background" />
