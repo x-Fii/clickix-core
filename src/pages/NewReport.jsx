@@ -53,9 +53,9 @@ export default function NewReport() {
   });
   const [affectedItems, setAffectedItems] = useState([emptyItem()]);
 
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
-  const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
-  const { data: staffList = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list(), staleTime: 0 });
+  const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list(), staleTime: 0 });
+  const { data: staffList = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list(), staleTime: 0 });
 
   const filteredSites = sites.filter(s => !form.client_id || s.client_id === form.client_id);
   const l1Staff = staffList.filter(s => s.role === 'L1' || s.role === 'Admin');
