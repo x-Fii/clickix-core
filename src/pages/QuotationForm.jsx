@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -41,14 +42,14 @@ export default function QuotationForm() {
     notes: '',
     tax_percent: 8,
   });
-  const [items, setItems] = useState([{ description: '', quantity: 1, unit_cost: 0, total: 0 }]);
+  const [items, setItems] = useState([{ description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
 
   useQuery({
     queryKey: ['quotation', id],
     queryFn: async () => {
       const q = await base44.entities.Quotation.get(id);
       setForm({ ...q, tax_percent: q.tax_percent ?? 8 });
-      setItems(q.items?.length ? q.items : [{ description: '', quantity: 1, unit_cost: 0, total: 0 }]);
+      setItems(q.items?.length ? q.items.map(it => ({ taxable: true, ...it })) : [{ description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
       return q;
     },
     enabled: isEdit,
@@ -94,7 +95,8 @@ export default function QuotationForm() {
   };
 
   const subtotal = items.reduce((s, it) => s + (it.total || 0), 0);
-  const taxAmt = subtotal * ((parseFloat(form.tax_percent) || 0) / 100);
+  const taxableSubtotal = items.reduce((s, it) => s + (it.taxable ? (it.total || 0) : 0), 0);
+  const taxAmt = taxableSubtotal * ((parseFloat(form.tax_percent) || 0) / 100);
   const grandTotal = subtotal + taxAmt;
 
   const handleSave = (status) => {
@@ -160,7 +162,7 @@ export default function QuotationForm() {
         <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between pb-3 mb-5 border-b border-border">
             <h3 className="font-semibold text-sm">Line Items</h3>
-            <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setItems(p => [...p, { description: '', quantity: 1, unit_cost: 0, total: 0 }])}>
+            <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setItems(p => [...p, { description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }])}>
               <Plus size={12} /> Add Item
             </Button>
           </div>
@@ -172,6 +174,7 @@ export default function QuotationForm() {
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20 pr-3">Qty</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-3">Unit Cost</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28">Total</th>
+                  <th className="text-center pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-16">Tax</th>
                   <th className="w-8"></th>
                 </tr>
               </thead>
@@ -182,6 +185,9 @@ export default function QuotationForm() {
                     <td className="py-2 pr-3"><Input type="number" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" min="1" /></td>
                     <td className="py-2 pr-3"><Input type="number" value={item.unit_cost} onChange={e => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.01" /></td>
                     <td className="py-2 text-right font-mono text-xs">{(item.total || 0).toFixed(2)}</td>
+                    <td className="py-2 text-center">
+                      <Checkbox checked={!!item.taxable} onCheckedChange={v => updateItem(i, 'taxable', !!v)} />
+                    </td>
                     <td className="py-2 pl-2">
                       <button onClick={() => setItems(p => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
                     </td>
