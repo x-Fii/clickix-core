@@ -6,7 +6,8 @@ import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, FileText } from 'lucide-react';
+import { Plus, Search, FileText, ClipboardList } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 
 const STATUSES = ['all', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'];
@@ -28,45 +29,46 @@ export default function ServiceReports() {
     return matchStatus && matchSearch;
   });
 
-  const pipelineCounts = STATUSES.filter(s => s !== 'all').map(s => ({
-    status: s,
-    count: reports.filter(r => r.status === s).length,
-  }));
+  const counts = {
+    all: reports.length,
+    resolved: reports.filter(r => r.status === 'resolved').length,
+    escalated: reports.filter(r => r.status === 'escalated').length,
+    complete: reports.filter(r => r.status === 'complete').length,
+  };
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-semibold font-heading">Service Reports</h1>
-          <p className="text-sm text-muted-foreground mt-1">{reports.length} total reports</p>
+          <h1 className="text-2xl font-semibold font-heading flex items-center gap-2">
+            <ClipboardList size={22} className="text-primary" /> Service Reports
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">L1 remote support &amp; L2 onsite service records</p>
         </div>
         <Link to="/reports/new">
-          <Button className="gap-2">
-            <Plus size={16} /> New Report
-          </Button>
+          <Button className="gap-2"><Plus size={16} /> New Report</Button>
         </Link>
       </div>
 
-      {/* Pipeline summary */}
-      <div className="flex gap-2 flex-wrap">
-        {pipelineCounts.map(({ status, count }) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(statusFilter === status ? 'all' : status)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors ${
-              statusFilter === status ? 'border-primary/50 bg-primary/10' : 'border-border bg-card hover:border-primary/30'
-            }`}
-          >
-            <StatusBadge status={status} />
-            <span className="text-foreground font-semibold">{count}</span>
-          </button>
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total', value: counts.all, color: 'text-foreground' },
+          { label: 'Resolved', value: counts.resolved, color: 'text-emerald-400' },
+          { label: 'Escalated', value: counts.escalated, color: 'text-amber-400' },
+          { label: 'Complete', value: counts.complete, color: 'text-blue-400' },
+        ].map(s => (
+          <div key={s.label} className="bg-card border border-border rounded-xl p-4">
+            <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">{s.label}</p>
+            <p className={`text-2xl font-bold font-mono mt-1 ${s.color}`}>{s.value}</p>
+          </div>
         ))}
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by report no., client, site..."
@@ -89,42 +91,32 @@ export default function ServiceReports() {
 
       {/* Table */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left px-5 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Report No.</th>
-              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Client</th>
-              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Site</th>
-              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Reported By</th>
-              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Date</th>
-              <th className="px-4 py-3" />
+        <table className="w-full text-sm">
+          <thead className="border-b border-border bg-muted/30">
+            <tr>
+              {['Report No.', 'Client', 'Site', 'Reported By', 'Status', 'Date', ''].map(h => (
+                <th key={h} className="text-left px-4 py-3 text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">Loading reports...</td></tr>
+              <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">Loading reports…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-16">
-                  <FileText size={32} className="mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-sm text-muted-foreground">No reports found</p>
-                  <Link to="/reports/new" className="text-primary text-sm hover:underline mt-1 inline-block">Create first report →</Link>
-                </td>
-              </tr>
+              <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">No reports found.</td></tr>
             ) : filtered.map(r => (
-              <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-5 py-3.5">
-                  <span className="font-mono text-xs text-primary">{r.running_number}</span>
+              <tr key={r.id} className="hover:bg-muted/20 transition-colors">
+                <td className="px-4 py-3 font-mono text-primary text-xs">
+                  <Link to={`/reports/${r.id}`} className="hover:underline">{r.running_number || '—'}</Link>
                 </td>
-                <td className="px-4 py-3.5 text-sm">{r.client_name || '—'}</td>
-                <td className="px-4 py-3.5 text-sm text-muted-foreground hidden md:table-cell">{r.site_name || '—'}</td>
-                <td className="px-4 py-3.5 text-sm text-muted-foreground hidden lg:table-cell">{r.reported_by || '—'}</td>
-                <td className="px-4 py-3.5"><StatusBadge status={r.status} /></td>
-                <td className="px-4 py-3.5 text-xs font-mono text-muted-foreground hidden lg:table-cell">
+                <td className="px-4 py-3 font-medium text-xs">{r.client_name || '—'}</td>
+                <td className="px-4 py-3 text-xs text-muted-foreground">{r.site_name || '—'}</td>
+                <td className="px-4 py-3 text-xs text-muted-foreground">{r.reported_by || '—'}</td>
+                <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
                   {r.created_date ? format(new Date(r.created_date), 'dd MMM yyyy') : '—'}
                 </td>
-                <td className="px-4 py-3.5">
+                <td className="px-4 py-3">
                   <Link to={`/reports/${r.id}`}>
                     <Button variant="ghost" size="sm" className="text-xs">View →</Button>
                   </Link>
