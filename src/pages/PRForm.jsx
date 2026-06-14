@@ -265,7 +265,13 @@ export default function PRForm() {
             <Field label="Requester Name">
               <Select value={form.requester_name || undefined} onValueChange={v => {
                 const s = staff.find(m => m.name === v);
-                setForm(f => ({ ...f, requester_name: v, requester_email: s?.email || f.requester_email, requester_phone: s?.phone || f.requester_phone }));
+                setForm(f => ({
+                  ...f,
+                  requester_name: v,
+                  requester_department: s?.department || f.requester_department,
+                  requester_email: s?.email || f.requester_email,
+                  requester_phone: s?.phone || f.requester_phone,
+                }));
               }}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select staff..." /></SelectTrigger>
                 <SelectContent className="max-h-60 overflow-y-auto">
