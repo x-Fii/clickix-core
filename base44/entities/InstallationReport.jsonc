@@ -46,6 +46,9 @@
     "installation_date": {
       "type": "string"
     },
+    "installation_finish_date": {
+      "type": "string"
+    },
     "attended_staff_name": {
       "type": "string"
     },

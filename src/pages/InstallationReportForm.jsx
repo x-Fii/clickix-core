@@ -39,7 +39,7 @@ export default function InstallationReportForm() {
     client_id: '', client_name: '',
     site_id: '', site_name: '', site_location: '',
     reported_by: '',
-    scheduled_date: '', installation_date: '', attend_time: '',
+    scheduled_date: '', installation_date: '', installation_finish_date: '', attend_time: '',
     attended_staff_name: '', attended_staff_id: '', attended_staff_email: '',
     work_order_number: '', site_pic_name: '',
     equipment_installed: [blankInstalled()],
@@ -253,6 +253,10 @@ export default function InstallationReportForm() {
             <div className="space-y-1">
               <Label>Actual Installation Date</Label>
               <Input type="date" value={form.installation_date} onChange={e => set('installation_date', e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Installation Finish Date</Label>
+              <Input type="date" value={form.installation_finish_date} onChange={e => set('installation_finish_date', e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Attend Time</Label>
