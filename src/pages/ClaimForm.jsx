@@ -81,6 +81,11 @@ export default function ClaimForm() {
     enabled: isEdit,
   });
 
+  const { data: staff = [] } = useQuery({
+    queryKey: ['staff'],
+    queryFn: () => base44.entities.StaffMember.list(),
+  });
+
   const { data: prs = [] } = useQuery({
     queryKey: ['purchase-requisitions'],
     queryFn: () => base44.entities.PurchaseRequisition.list('-created_date', 100),
@@ -328,7 +333,17 @@ export default function ClaimForm() {
         <div className="bg-card border border-border rounded-xl p-6">
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Claimant Details</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Field label="Claimant Name"><Input value={form.claimant_name} onChange={e => setF('claimant_name', e.target.value)} className="bg-background" placeholder="Full name" /></Field>
+            <Field label="Claimant Name">
+              <Select value={form.claimant_name || undefined} onValueChange={v => {
+                const s = staff.find(m => m.name === v);
+                setForm(f => ({ ...f, claimant_name: v, claimant_department: s?.department || f.claimant_department, claimant_email: s?.email || f.claimant_email, claimant_phone: s?.phone || f.claimant_phone }));
+              }}>
+                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select staff..." /></SelectTrigger>
+                <SelectContent className="max-h-60 overflow-y-auto">
+                  {staff.map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Department"><Input value={form.claimant_department} onChange={e => setF('claimant_department', e.target.value)} className="bg-background" /></Field>
             <Field label="Email"><Input type="email" value={form.claimant_email} onChange={e => setF('claimant_email', e.target.value)} className="bg-background" /></Field>
             <Field label="Phone"><Input value={form.claimant_phone} onChange={e => setF('claimant_phone', e.target.value)} className="bg-background" /></Field>
