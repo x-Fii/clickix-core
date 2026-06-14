@@ -120,25 +120,25 @@ export default function InstallationReports() {
                   <td className="px-4 py-3">
                     <Badge variant="outline" className={`text-[10px] ${sc.className}`}>{sc.label}</Badge>
                   </td>
-                  <td className="px-4 py-3 hidden">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <button onClick={() => setDeleteId(r.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Report</AlertDialogTitle>
-                          <AlertDialogDescription>Are you sure you want to delete {r.report_number}? This cannot be undone.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)}>Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </td>
+                  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  
                 </tr>);
 
             })}
