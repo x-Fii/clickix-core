@@ -178,7 +178,10 @@ export default function InstallationReportForm() {
             </div>
             <div className="space-y-1">
               <Label>Reported By</Label>
-              <Input value={form.reported_by} onChange={e => set('reported_by', e.target.value)} placeholder="Name" />
+              <Select value={form.reported_by || undefined} onValueChange={v => set('reported_by', v)}>
+                <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
+                <SelectContent>{staff.filter(s => s.is_active).map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}</SelectContent>
+              </Select>
             </div>
           </div>
         </div>
