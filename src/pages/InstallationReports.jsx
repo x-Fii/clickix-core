@@ -31,8 +31,7 @@ export default function InstallationReports() {
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['installation-reports'],
-    queryFn: () => base44.entities.InstallationReport.list('-created_date', 200),
-    staleTime: 0,
+    queryFn: () => base44.entities.InstallationReport.list('-created_date', 200)
   });
 
   const deleteMutation = useMutation({

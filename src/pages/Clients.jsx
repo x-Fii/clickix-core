@@ -24,7 +24,6 @@ export default function Clients() {
   const save = useMutation({
     mutationFn: (data) => editId ? base44.entities.Client.update(editId, data) : base44.entities.Client.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); setOpen(false); toast.success(editId ? 'Client updated' : 'Client added'); },
-    onError: (err) => { toast.error(`Failed to save client: ${err?.message || 'Permission denied'}`); },
   });
 
   const remove = useMutation({

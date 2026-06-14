@@ -12,7 +12,6 @@ export default function Dashboard() {
   const { data: reports = [] } = useQuery({
     queryKey: ['service-reports'],
     queryFn: () => base44.entities.ServiceReport.list('-created_date', 500),
-    staleTime: 0,
   });
 
   // KPIs

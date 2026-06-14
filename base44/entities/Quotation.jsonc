@@ -86,56 +86,5 @@
   },
   "required": [
     "quotation_number"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": {
-          "$in": [
-            "admin",
-            "L1",
-            "L2"
-          ]
-        }
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.prepared_by": "{{user.full_name}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.prepared_by": "{{user.full_name}}",
-          "data.status": "draft"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "data.prepared_by": "{{user.full_name}}",
-          "data.status": "draft"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }
