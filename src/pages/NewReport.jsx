@@ -159,6 +159,9 @@ export default function NewReport() {
             <Field label="L1 Report Number">
               <Input value={form.running_number} readOnly className="bg-muted font-mono text-xs" />
             </Field>
+            <Field label="Response ID">
+              <Input value={form.l1_attended_staff_id} onChange={e => setF('l1_attended_staff_id', e.target.value)} className="bg-background font-mono" placeholder="Response ID" />
+            </Field>
             <Field label="Date">
               <Input type="date" value={form.l1_date} onChange={e => setF('l1_date', e.target.value)} className="bg-background" />
             </Field>
@@ -170,14 +173,11 @@ export default function NewReport() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Staff Email">
-              <Input value={form.l1_attended_staff_email} onChange={e => setF('l1_attended_staff_email', e.target.value)} placeholder="staff@clickix.com" className="bg-background" />
-            </Field>
-            <Field label="Staff ID">
-              <Input value={form.l1_attended_staff_id} onChange={e => setF('l1_attended_staff_id', e.target.value)} className="bg-background" readOnly={!!form.l1_attended_staff_id} />
-            </Field>
             <Field label="Staff Name">
               <Input value={form.l1_attended_staff_name} onChange={e => setF('l1_attended_staff_name', e.target.value)} className="bg-background" />
+            </Field>
+            <Field label="Staff Email">
+              <Input value={form.l1_attended_staff_email} onChange={e => setF('l1_attended_staff_email', e.target.value)} placeholder="staff@clickix.com" className="bg-background" />
             </Field>
           </div>
 
