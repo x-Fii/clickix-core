@@ -94,21 +94,22 @@ export default function ServiceReports() {
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/30">
             <tr>
-              {['Report No.', 'Client', 'Site', 'Reported By', 'Status', 'Date', ''].map(h => (
+              {['Report No.', 'Work Order No.', 'Client', 'Site', 'Reported By', 'Status', 'Date', ''].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">Loading reports…</td></tr>
+              <tr><td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">Loading reports…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="py-12 text-center text-muted-foreground text-sm">No reports found.</td></tr>
+              <tr><td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">No reports found.</td></tr>
             ) : filtered.map(r => (
               <tr key={r.id} className="hover:bg-muted/20 transition-colors">
                 <td className="px-4 py-3 font-mono text-primary text-xs">
                   <Link to={`/reports/${r.id}`} className="hover:underline">{r.running_number || '—'}</Link>
                 </td>
+                <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.l2_work_order_number || '—'}</td>
                 <td className="px-4 py-3 font-medium text-xs">{r.client_name || '—'}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{r.site_name || '—'}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{r.reported_by || '—'}</td>
