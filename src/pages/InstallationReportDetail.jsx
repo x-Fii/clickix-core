@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Pencil, CheckCircle, FileText, Package, PackageMinus } from 'lucide-react';
+import { ArrowLeft, Pencil, CheckCircle, FileText, Package, PackageMinus, Download } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const STATUS_CONFIG = {
   pending:    { label: 'Pending',    className: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
@@ -34,6 +36,32 @@ export default function InstallationReportDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const pdfRef = useRef(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!pdfRef.current) return;
+    setExportingPdf(true);
+    try {
+      const canvas = await html2canvas(pdfRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      let y = 0;
+      let remaining = imgH;
+      while (remaining > 0) {
+        pdf.addImage(imgData, 'PNG', 0, -y, imgW, imgH);
+        remaining -= pageH;
+        if (remaining > 0) { pdf.addPage(); y += pageH; }
+      }
+      pdf.save(`${report.report_number}.pdf`);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['installation-report', id],
@@ -91,6 +119,9 @@ export default function InstallationReportDetail() {
               <CheckCircle size={14} className="mr-1" /> Mark Complete
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={exportingPdf}>
+            <Download size={14} className="mr-1" /> {exportingPdf ? 'Exporting…' : 'Export PDF'}
+          </Button>
           <Button size="sm" asChild>
             <Link to={`/installation/${id}/edit`}><Pencil size={14} className="mr-1" /> Edit</Link>
           </Button>
@@ -188,6 +219,105 @@ export default function InstallationReportDetail() {
           </div>
         </div>
       )}
+
+      {/* Hidden PDF Template */}
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', background: '#fff', color: '#000', fontFamily: 'Arial, sans-serif', fontSize: '12px' }} ref={pdfRef}>
+        {/* Header */}
+        <div style={{ background: '#1e3a5f', color: '#fff', padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: '20px', fontWeight: '700', letterSpacing: '1px' }}>CLICK IX SDN BHD</div>
+            <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px' }}>Installation Report</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '16px', fontWeight: '700' }}>{report.report_number}</div>
+            <div style={{ fontSize: '10px', opacity: 0.8, marginTop: '4px', textTransform: 'uppercase' }}>{tc.label}</div>
+            <div style={{ marginTop: '6px', background: report.status === 'completed' ? '#16a34a' : '#3b82f6', padding: '2px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', display: 'inline-block' }}>{sc.label}</div>
+          </div>
+        </div>
+
+        <div style={{ padding: '24px 32px' }}>
+          {/* Info Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '14px' }}>
+              <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '10px', letterSpacing: '0.05em' }}>Client & Site</div>
+              {[['Client', report.client_name], ['Site / Outlet', report.site_name], ['Location', report.site_location], ['Site PIC', report.site_pic_name]].filter(([,v]) => v).map(([l, v]) => (
+                <div key={l} style={{ marginBottom: '6px' }}><span style={{ color: '#6b7280', fontSize: '10px' }}>{l}: </span><span style={{ fontWeight: '600' }}>{v}</span></div>
+              ))}
+            </div>
+            <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '14px' }}>
+              <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '10px', letterSpacing: '0.05em' }}>Schedule & Attendance</div>
+              {[['Scheduled Date', report.scheduled_date], ['Installation Date', report.installation_date], ['Attend Time', report.attend_time], ['Technician', report.attended_staff_name], ['Quotation No.', report.work_order_number], ['Reported By', report.reported_by]].filter(([,v]) => v).map(([l, v]) => (
+                <div key={l} style={{ marginBottom: '6px' }}><span style={{ color: '#6b7280', fontSize: '10px' }}>{l}: </span><span style={{ fontWeight: '600' }}>{v}</span></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Equipment */}
+          {equipment && equipment.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', color: '#1e3a5f', marginBottom: '10px', borderBottom: '2px solid #1e3a5f', paddingBottom: '4px' }}>
+                {report.report_type === 'commissioning' ? 'Equipment Installed' : 'Equipment Decommissioned'}
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr style={{ background: '#f3f4f6' }}>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>#</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Type</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Name / Model</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Serial Number</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>
+                      {report.report_type === 'commissioning' ? 'Notes' : 'Reason'}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {equipment.map((item, i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                      <td style={{ padding: '8px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
+                      <td style={{ padding: '8px', border: '1px solid #e5e7eb' }}>{item.device_type}</td>
+                      <td style={{ padding: '8px', border: '1px solid #e5e7eb' }}>{item.device_name}</td>
+                      <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontFamily: 'monospace' }}>{item.serial_number}</td>
+                      <td style={{ padding: '8px', border: '1px solid #e5e7eb' }}>{item.notes || item.reason_for_decommission}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Technician Notes */}
+          {report.technician_notes && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', color: '#1e3a5f', marginBottom: '8px', borderBottom: '2px solid #1e3a5f', paddingBottom: '4px' }}>Technician Notes</div>
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{report.technician_notes}</div>
+            </div>
+          )}
+
+          {/* Acknowledgement */}
+          {(report.ack_name || report.ack_phone) && (
+            <div style={{ marginTop: '24px', borderTop: '2px solid #e5e7eb', paddingTop: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '4px' }}>Acknowledged By</div>
+                <div style={{ fontWeight: '600' }}>{report.ack_name}</div>
+                <div style={{ color: '#6b7280' }}>{report.ack_phone}</div>
+                {report.ack_timestamp && <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>{new Date(report.ack_timestamp).toLocaleString()}</div>}
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '4px' }}>Signature</div>
+                <div style={{ border: '1px solid #e5e7eb', height: '60px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '10px' }}>
+                  {report.ack_signature ? <img src={report.ack_signature} alt="sig" style={{ maxHeight: '56px' }} /> : 'No signature captured'}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div style={{ marginTop: '32px', borderTop: '1px solid #e5e7eb', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9ca3af' }}>
+            <span>Generated on {new Date().toLocaleDateString()}</span>
+            <span>Click IX Sdn Bhd — Confidential</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
