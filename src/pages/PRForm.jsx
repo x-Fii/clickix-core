@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge, FileEdit } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -116,6 +116,30 @@ export default function PRForm() {
         })));
       }
     }
+  };
+
+  const handleCreateDraftQuotation = async () => {
+    const genQNum = () => `QT-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 900 + 100)}`;
+    const newQ = await base44.entities.Quotation.create({
+      quotation_number: genQNum(),
+      quotation_date: format(new Date(), 'yyyy-MM-dd'),
+      status: 'draft',
+      sr_id: form.sr_id || '',
+      sr_number: form.sr_number || '',
+      client_name: form.client_name || '',
+      site_name: form.site_name || '',
+      items: items.filter(it => it.description).map(it => ({
+        description: it.description,
+        quantity: parseFloat(it.quantity) || 1,
+        unit_cost: parseFloat(it.unit_cost) || 0,
+        total: (parseFloat(it.quantity) || 0) * (parseFloat(it.unit_cost) || 0),
+      })),
+      subtotal: grandTotal,
+      grand_total: grandTotal,
+    });
+    setForm(f => ({ ...f, quotation_id: newQ.id, quotation_number: newQ.quotation_number }));
+    queryClient.invalidateQueries({ queryKey: ['quotations'] });
+    toast.success(`Draft quotation ${newQ.quotation_number} created`);
   };
 
   const handleSRSelect = (srId) => {
@@ -267,12 +291,20 @@ export default function PRForm() {
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Linked Documents</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Quotation">
-              <Select value={form.quotation_id || undefined} onValueChange={handleQuotationSelect}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select quotation..." /></SelectTrigger>
-                <SelectContent className="max-h-60 overflow-y-auto">
-                  {quotations.slice(0, 100).map(q => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={form.quotation_id || undefined} onValueChange={handleQuotationSelect}>
+                  <SelectTrigger className="bg-background text-sm flex-1"><SelectValue placeholder="Select existing quotation..." /></SelectTrigger>
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    {quotations.slice(0, 100).map(q => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="sm" onClick={handleCreateDraftQuotation} className="gap-1 text-xs whitespace-nowrap text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">
+                  <FileEdit size={12} /> New Draft
+                </Button>
+              </div>
+              {form.quotation_number && (
+                <p className="text-xs text-muted-foreground mt-1 font-mono">Linked: {form.quotation_number}</p>
+              )}
             </Field>
             <Field label="Service Report">
               <Select value={form.sr_id || undefined} onValueChange={handleSRSelect}>
