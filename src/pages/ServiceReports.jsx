@@ -118,11 +118,11 @@ export default function ServiceReports() {
                 <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
                   {r.created_date ? format(new Date(r.created_date), 'dd MMM yyyy') : '—'}
                 </td>
-                <td className="px-4 py-3 hidden">
-                  <Link to={`/reports/${r.id}`}>
-                    <Button variant="ghost" size="sm" className="text-xs">View →</Button>
-                  </Link>
-                </td>
+                
+
+
+
+              
               </tr>
             )}
           </tbody>
