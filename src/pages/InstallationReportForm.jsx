@@ -173,7 +173,7 @@ export default function InstallationReportForm() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Work Order Number</Label>
+              <Label>Quotation Number</Label>
               <Input value={form.work_order_number} onChange={e => set('work_order_number', e.target.value)} placeholder="WO-XXXX" />
             </div>
             <div className="space-y-1">
