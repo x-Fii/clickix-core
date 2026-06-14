@@ -193,7 +193,7 @@ export default function ClaimForm() {
 
   const addItem = () => setItems(p => [...p, { item_no: p.length + 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
 
-  const grandTotal = items.reduce((s, it) => s + (it.total || 0), 0);
+  const grandTotal = items.reduce((s, it) => s + (parseFloat(it.total) || 0), 0);
 
   const handleSave = (status) => {
     saveMutation.mutate({ ...form, items, subtotal: grandTotal, grand_total: grandTotal, status: status || form.status });
@@ -545,8 +545,8 @@ export default function ClaimForm() {
                   <td style={{ padding: '8px 10px', fontWeight: '500' }}>{item.description || '—'}</td>
                   <td style={{ padding: '8px 10px', color: '#64748b' }}>{item.category || '—'}</td>
                   <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{item.quantity}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{(item.unit_cost || 0).toFixed(2)}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace' }}>{(item.total || 0).toFixed(2)}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace' }}>{(parseFloat(item.total) || 0).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
