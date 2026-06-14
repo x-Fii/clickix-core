@@ -694,6 +694,18 @@ export default function ReportDetail() {
                 </div>
               ))}
             </div>
+            {report.l1_remarks && (
+              <div style={{ marginBottom: '10px', padding: '10px 12px', background: '#fefce8', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Remarks / Notes</p>
+                <p style={{ fontSize: '11px', color: '#0f172a', margin: 0 }}>{report.l1_remarks}</p>
+              </div>
+            )}
+            {report.l1_remarks && (
+              <div style={{ marginBottom: '10px', padding: '10px 12px', background: '#fefce8', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Remarks / Notes</p>
+                <p style={{ fontSize: '11px', color: '#0f172a', margin: 0 }}>{report.l1_remarks}</p>
+              </div>
+            )}
             {(report.l1_affected_items || []).length > 0 && (
               <div>
                 <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Affected Items</p>

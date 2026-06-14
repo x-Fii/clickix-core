@@ -49,6 +49,7 @@ export default function NewReport() {
     client_id: '', client_name: '',
     site_id: '', site_name: '', site_location: '',
     l1_attended_staff_name: '', l1_attended_staff_id: '', l1_attended_staff_email: '',
+    l1_remarks: '',
   });
   const [affectedItems, setAffectedItems] = useState([emptyItem()]);
 
@@ -177,6 +178,13 @@ export default function NewReport() {
             </Field>
             <Field label="Staff Name">
               <Input value={form.l1_attended_staff_name} onChange={e => setF('l1_attended_staff_name', e.target.value)} className="bg-background" />
+            </Field>
+          </div>
+
+          {/* L1 Remarks */}
+          <div className="mb-6">
+            <Field label="Remarks / Notes">
+              <Textarea value={form.l1_remarks} onChange={e => setF('l1_remarks', e.target.value)} placeholder="Any additional remarks or notes for this L1 session..." className="bg-background resize-none" rows={3} />
             </Field>
           </div>
 

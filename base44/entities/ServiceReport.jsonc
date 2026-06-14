@@ -64,6 +64,9 @@
         }
       }
     },
+    "l1_remarks": {
+      "type": "string"
+    },
     "l1_status": {
       "type": "string",
       "enum": [
