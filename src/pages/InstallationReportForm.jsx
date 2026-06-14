@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import SignaturePad from '@/components/SignaturePad';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 
@@ -357,6 +358,16 @@ export default function InstallationReportForm() {
               <Label>Phone</Label>
               <Input value={form.ack_phone} onChange={e => set('ack_phone', e.target.value)} placeholder="Phone number" />
             </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Signature</Label>
+            <SignaturePad
+              value={form.ack_signature}
+              onChange={sig => {
+                set('ack_signature', sig);
+                if (sig) set('ack_timestamp', new Date().toISOString());
+              }}
+            />
           </div>
         </div>
 

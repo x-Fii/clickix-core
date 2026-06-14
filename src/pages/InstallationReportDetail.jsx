@@ -193,7 +193,7 @@ export default function InstallationReportDetail() {
       )}
 
       {/* Acknowledgement */}
-      {(report.ack_name || report.ack_phone) && (
+      {(report.ack_name || report.ack_phone || report.ack_signature) && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-3">
           <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">Acknowledgement</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -201,6 +201,12 @@ export default function InstallationReportDetail() {
             <Field label="Phone" value={report.ack_phone} />
           </div>
           {report.ack_timestamp && <Field label="Timestamp" value={new Date(report.ack_timestamp).toLocaleString()} />}
+          {report.ack_signature && (
+            <div>
+              <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider mb-1">Signature</p>
+              <img src={report.ack_signature} alt="Signature" className="max-w-xs h-24 object-contain border border-border rounded bg-white p-1" />
+            </div>
+          )}
         </div>
       )}
 
