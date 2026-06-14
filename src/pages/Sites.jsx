@@ -11,7 +11,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Pencil, Trash2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
-const empty = { client_id: '', client_name: '', site_name: '', site_location: '', pic_name: '', pic_phone: '', notes: '' };
+const MY_STATES = ['Johor','Kedah','Kelantan','Melaka','Negeri Sembilan','Pahang','Perak','Perlis','Pulau Pinang','Sabah','Sarawak','Selangor','Terengganu','Kuala Lumpur','Labuan','Putrajaya'];
+const REGIONS = ['Central','Northern','Southern','East Coast','East Malaysia'];
+
+const empty = { client_id: '', client_name: '', site_name: '', site_location: '', state: '', region: '', pic_name: '', pic_phone: '', notes: '' };
 
 export default function Sites() {
   const queryClient = useQueryClient();
@@ -110,6 +113,22 @@ export default function Sites() {
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Select client" /></SelectTrigger>
                 <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent>
               </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">State</Label>
+                <Select value={form.state || undefined} onValueChange={v => setF('state', v)}>
+                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select state..." /></SelectTrigger>
+                  <SelectContent className="max-h-60">{MY_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Region</Label>
+                <Select value={form.region || undefined} onValueChange={v => setF('region', v)}>
+                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select region..." /></SelectTrigger>
+                  <SelectContent>{REGIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
             {[['Site Name', 'site_name', true], ['Site Location', 'site_location'], ['PIC Name', 'pic_name'], ['PIC Phone', 'pic_phone']].map(([label, key, req]) => (
               <div key={key} className="space-y-1.5">

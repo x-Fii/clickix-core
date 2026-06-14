@@ -14,6 +14,12 @@
     "site_location": {
       "type": "string"
     },
+    "state": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
     "pic_name": {
       "type": "string"
     },
