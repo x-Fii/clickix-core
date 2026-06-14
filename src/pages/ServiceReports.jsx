@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 const STATUSES = ['all', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'];
 
 export default function ServiceReports() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -105,7 +106,7 @@ export default function ServiceReports() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">No reports found.</td></tr>
             ) : filtered.map(r => (
-              <tr key={r.id} className="hover:bg-muted/20 transition-colors">
+              <tr key={r.id} className="hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/reports/${r.id}`)}>
                 <td className="px-4 py-3 font-mono text-primary text-xs">
                   <Link to={`/reports/${r.id}`} className="hover:underline">{r.running_number || '—'}</Link>
                 </td>
