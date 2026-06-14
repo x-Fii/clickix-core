@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -67,7 +67,7 @@ export default function ClaimForm() {
   const [items, setItems] = useState([
     { item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }
   ]);
-  const [prItemSelection, setPrItemSelection] = useState(null); // PR items for selection modal
+
 
   // Load existing claim
   useQuery({
@@ -125,8 +125,16 @@ export default function ClaimForm() {
         purpose: pr.purpose_of_purchase || '',
         approved_by: pr.approved_by || '',
       }));
-      // Show PR item selection UI
-      if (pr.items?.length) setPrItemSelection(pr.items.map(it => ({ ...it, selected: true })));
+      if (pr.items?.length) {
+        setItems(pr.items.map((it, i) => ({
+          item_no: i + 1,
+          description: it.description || '',
+          category: it.category || '',
+          quantity: it.quantity || 1,
+          unit_cost: it.unit_cost || 0,
+          total: it.total || (it.quantity || 1) * (it.unit_cost || 0),
+        })));
+      }
       return pr;
     },
     enabled: !!fromPrId && !isEdit,
@@ -166,23 +174,18 @@ export default function ClaimForm() {
         purpose: pr.purpose_of_purchase || '',
         approved_by: pr.approved_by || '',
       }));
-      if (pr.items?.length) setPrItemSelection(pr.items.map(it => ({ ...it, selected: true })));
+      if (pr.items?.length) {
+        setItems(pr.items.map((it, i) => ({
+          item_no: i + 1,
+          description: it.description || '',
+          category: it.category || '',
+          quantity: it.quantity || 1,
+          unit_cost: it.unit_cost || 0,
+          total: it.total || (it.quantity || 1) * (it.unit_cost || 0),
+        })));
+        toast.success(`${pr.items.length} items imported from PR`);
+      }
     }
-  };
-
-  const applyPRItems = () => {
-    if (!prItemSelection) return;
-    const selected = prItemSelection.filter(it => it.selected).map((it, i) => ({
-      item_no: i + 1,
-      description: it.description || '',
-      category: it.category || '',
-      quantity: it.quantity || 1,
-      unit_cost: it.unit_cost || 0,
-      total: it.total || 0,
-    }));
-    setItems(selected.length ? selected : [{ item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
-    setPrItemSelection(null);
-    toast.success('Items imported from PR');
   };
 
   const updateItem = (i, field, val) => {
@@ -270,38 +273,7 @@ export default function ClaimForm() {
         )}
       </div>
 
-      {/* PR Item Selection Banner */}
-      {prItemSelection && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <GitMerge size={16} className="text-amber-400" />
-              <p className="text-sm font-semibold text-amber-400">Select items to include in this claim</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="text-xs" onClick={() => setPrItemSelection(null)}>Skip</Button>
-              <Button size="sm" className="text-xs bg-amber-500 hover:bg-amber-600 text-white" onClick={applyPRItems}>Apply Selected Items</Button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            {prItemSelection.map((item, i) => (
-              <label key={i} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${item.selected ? 'bg-amber-500/10 border-amber-500/30' : 'bg-card border-border opacity-60'}`}>
-                <input
-                  type="checkbox"
-                  checked={item.selected}
-                  onChange={e => setPrItemSelection(prev => prev.map((it, idx) => idx === i ? { ...it, selected: e.target.checked } : it))}
-                  className="rounded"
-                />
-                <span className="text-xs font-mono text-muted-foreground w-5">{i + 1}</span>
-                <span className="text-sm flex-1">{item.description}</span>
-                <span className="text-xs text-muted-foreground">{item.category}</span>
-                <span className="text-xs font-mono">Qty: {item.quantity}</span>
-                <span className="text-xs font-mono text-primary">MYR {(item.total || 0).toFixed(2)}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
+
 
       <div className="space-y-6">
         {/* Document Header */}
