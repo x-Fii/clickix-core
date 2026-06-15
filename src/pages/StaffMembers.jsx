@@ -29,11 +29,13 @@ export default function StaffMembers() {
   const save = useMutation({
     mutationFn: (data) => editId ? base44.entities.StaffMember.update(editId, data) : base44.entities.StaffMember.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['staff'] }); setOpen(false); toast.success(editId ? 'Staff updated' : 'Staff added'); },
+    onError: (err) => { toast.error(err?.message?.includes('403') || err?.status === 403 ? 'Only admin users can manage staff members.' : `Error: ${err?.message || 'Failed to save'}`); },
   });
 
   const remove = useMutation({
     mutationFn: (id) => base44.entities.StaffMember.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['staff'] }); setDeleteId(null); toast.success('Staff removed'); },
+    onError: (err) => { toast.error(err?.message?.includes('403') || err?.status === 403 ? 'Only admin users can manage staff members.' : `Error: ${err?.message || 'Failed to delete'}`); },
   });
 
   const openNew = () => { setForm(empty); setEditId(null); setOpen(true); };
