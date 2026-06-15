@@ -4,6 +4,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import StatusBadge from '@/components/StatusBadge';
 import { ClipboardList, CheckCircle, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
 import { format, subDays, startOfMonth } from 'date-fns';
+import ScheduleCalendarWidget from '@/components/ScheduleCalendarWidget';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444'];
 const DEVICE_COLORS = { PC: '#3b82f6', TV: '#10b981', 'Network Device': '#f59e0b', Cabling: '#8b5cf6', 'CMS Software': '#06b6d4', Other: '#6b7280' };
@@ -166,6 +167,9 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Schedule Calendar */}
+      <ScheduleCalendarWidget />
 
       {/* Recent Reports */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
