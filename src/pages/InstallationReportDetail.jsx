@@ -315,7 +315,7 @@ export default function InstallationReportDetail() {
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {item.photos.map((url, pi) => (
-                          <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '120px', height: '90px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                          <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '240px', height: '180px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
                         ))}
                       </div>
                     </div>
@@ -339,7 +339,7 @@ export default function InstallationReportDetail() {
               <div style={{ fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', color: '#1e3a5f', marginBottom: '10px', borderBottom: '2px solid #1e3a5f', paddingBottom: '4px' }}>Supporting Photos</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {report.supporting_photos.map((url, i) => (
-                  <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '140px', height: '105px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                  <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '280px', height: '210px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
                 ))}
               </div>
             </div>

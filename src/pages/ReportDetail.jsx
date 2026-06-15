@@ -767,7 +767,7 @@ export default function ReportDetail() {
                     {(item.photos || []).length > 0 && (
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {item.photos.map((url, pi) => (
-                          <img key={pi} src={url} alt={`photo-${pi}`} style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #bfdbfe' }} crossOrigin="anonymous" />
+                          <img key={pi} src={url} alt={`photo-${pi}`} style={{ width: '300px', height: '300px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #bfdbfe' }} crossOrigin="anonymous" />
                         ))}
                       </div>
                     )}
@@ -793,7 +793,7 @@ export default function ReportDetail() {
                     {(item.photos || []).length > 0 && (
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {item.photos.map((url, pi) => (
-                          <img key={pi} src={url} alt={`addon-${pi}`} style={{ width: '150px', height: '150px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e9d5ff' }} crossOrigin="anonymous" />
+                          <img key={pi} src={url} alt={`addon-${pi}`} style={{ width: '300px', height: '300px', objectFit: 'cover', borderRadius: '6px', border: '2px solid #e9d5ff' }} crossOrigin="anonymous" />
                         ))}
                       </div>
                     )}
@@ -844,7 +844,7 @@ export default function ReportDetail() {
                 const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
                 return isImage ? (
                   <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px', background: '#ecfeff', borderRadius: '6px', border: '1px solid #a5f3fc' }}>
-                    <img src={url} alt={`doc-${i+1}`} style={{ width: '150px', height: '120px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #67e8f9', flexShrink: 0 }} crossOrigin="anonymous" />
+                    <img src={url} alt={`doc-${i+1}`} style={{ width: '300px', height: '240px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #67e8f9', flexShrink: 0 }} crossOrigin="anonymous" />
                     <div>
                       <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Document {i + 1}</p>
                       <p style={{ fontSize: '10px', color: '#0891b2', margin: '0 0 4px', wordBreak: 'break-all' }}>{url}</p>
