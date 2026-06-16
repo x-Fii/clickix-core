@@ -155,7 +155,7 @@ export default function ScheduleCalendar() {
                       const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
                       return (
                         <div key={ri} className={cn('text-[10px] px-1.5 py-0.5 rounded border truncate font-mono', sc.pill)}>
-                          {r.running_number}
+                          {r.site_name || r.running_number}
                         </div>
                       );
                     })}
