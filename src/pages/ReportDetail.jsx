@@ -388,6 +388,7 @@ export default function ReportDetail() {
             <ReadField label="Site Name" value={report.site_name} />
             <ReadField label="Site Location" value={report.site_location} />
             <ReadField label="Reported By" value={report.reported_by} />
+            <ReadField label="DO Number" value={report.do_number} />
             <ReadField label="Report Date" value={report.l1_date} />
             <ReadField label="Created" value={report.created_date ? format(new Date(report.created_date), 'dd MMM yyyy HH:mm') : ''} />
           </div>
@@ -671,7 +672,7 @@ export default function ReportDetail() {
               <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Job Information</h3>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '12px' }}>
-              {[['Client', report.client_name], ['Site Name', report.site_name], ['Site Location', report.site_location], ['Reported By', report.reported_by], ['Report Date', report.l1_date], ['Created', report.created_date ? format(new Date(report.created_date), 'dd MMM yyyy') : '']].map(([k, v]) => (
+              {[['Client', report.client_name], ['Site Name', report.site_name], ['Site Location', report.site_location], ['Reported By', report.reported_by], ['DO Number', report.do_number], ['Report Date', report.l1_date], ['Created', report.created_date ? format(new Date(report.created_date), 'dd MMM yyyy') : '']].map(([k, v]) => (
                 <div key={k} style={{ padding: '8px 10px', background: '#f8fafc', borderRadius: '6px', borderLeft: '3px solid #3b82f6' }}>
                   <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
                   <p style={{ fontWeight: '600', color: '#0f172a', margin: 0, fontSize: '11px' }}>{v || '—'}</p>

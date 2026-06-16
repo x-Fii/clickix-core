@@ -35,6 +35,9 @@
     "reported_by": {
       "type": "string"
     },
+    "do_number": {
+      "type": "string"
+    },
     "l1_date": {
       "type": "string"
     },

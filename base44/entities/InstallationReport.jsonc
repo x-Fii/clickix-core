@@ -40,6 +40,9 @@
     "reported_by": {
       "type": "string"
     },
+    "do_number": {
+      "type": "string"
+    },
     "scheduled_date": {
       "type": "string"
     },

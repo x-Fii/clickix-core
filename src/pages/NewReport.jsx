@@ -49,6 +49,7 @@ export default function NewReport() {
     client_id: '', client_name: '',
     site_id: '', site_name: '', site_location: '',
     l1_attended_staff_name: '', l1_attended_staff_id: '', l1_attended_staff_email: '',
+    do_number: '',
     l1_remarks: '',
   });
   const [affectedItems, setAffectedItems] = useState([emptyItem()]);
@@ -145,6 +146,9 @@ export default function NewReport() {
             </Field>
             <Field label="Site Location">
               <Input value={form.site_location} onChange={e => setF('site_location', e.target.value)} placeholder="Address / location" className="bg-background" />
+            </Field>
+            <Field label="DO Number">
+              <Input value={form.do_number} onChange={e => setF('do_number', e.target.value)} placeholder="DO-XXXX" className="bg-background" />
             </Field>
             <Field label="Reported By" required>
               <Input value={form.reported_by} onChange={e => setF('reported_by', e.target.value)} placeholder="Name of reporter" className="bg-background" />

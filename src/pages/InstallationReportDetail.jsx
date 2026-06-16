@@ -147,6 +147,7 @@ export default function InstallationReportDetail() {
           <Field label="Installation Finish Date" value={report.installation_finish_date} />
           <Field label="Attend Time" value={report.attend_time} />
           <Field label="Technician" value={report.attended_staff_name} />
+          <Field label="DO Number" value={report.do_number} />
           <Field label="Work Order No." value={report.work_order_number} />
           <Field label="Reported By" value={report.reported_by} />
         </div>
@@ -269,7 +270,7 @@ export default function InstallationReportDetail() {
             </div>
             <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '14px' }}>
               <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '10px', letterSpacing: '0.05em' }}>Schedule & Attendance</div>
-              {[['Scheduled Date', report.scheduled_date], ['Installation Date', report.installation_date], ['Installation Finish Date', report.installation_finish_date], ['Attend Time', report.attend_time], ['Technician', report.attended_staff_name], ['Quotation No.', report.work_order_number], ['Reported By', report.reported_by]].filter(([,v]) => v).map(([l, v]) => (
+              {[['DO Number', report.do_number], ['Scheduled Date', report.scheduled_date], ['Installation Date', report.installation_date], ['Installation Finish Date', report.installation_finish_date], ['Attend Time', report.attend_time], ['Technician', report.attended_staff_name], ['Quotation No.', report.work_order_number], ['Reported By', report.reported_by]].filter(([,v]) => v).map(([l, v]) => (
                 <div key={l} style={{ marginBottom: '6px' }}><span style={{ color: '#6b7280', fontSize: '10px' }}>{l}: </span><span style={{ fontWeight: '600' }}>{v}</span></div>
               ))}
             </div>

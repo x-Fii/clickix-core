@@ -39,6 +39,7 @@ export default function InstallationReportForm() {
     client_id: '', client_name: '',
     site_id: '', site_name: '', site_location: '',
     reported_by: '',
+    do_number: '',
     scheduled_date: '', installation_date: '', installation_finish_date: '', attend_time: '',
     attended_staff_name: '', attended_staff_id: '', attended_staff_email: '',
     work_order_number: '', site_pic_name: '',
@@ -192,6 +193,10 @@ export default function InstallationReportForm() {
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>DO Number</Label>
+              <Input value={form.do_number} onChange={e => set('do_number', e.target.value)} placeholder="DO-XXXX" />
             </div>
             <div className="space-y-1">
               <Label>Quotation Number</Label>
