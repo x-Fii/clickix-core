@@ -25,8 +25,8 @@ export default function ScheduleCalendarWidget() {
       .map(r => ({
         id: r.id,
         date: new Date(r.l2_attend_date || r.scheduled_date),
-        label: r.client_name || r.running_number,
-        sub: r.site_name,
+        label: r.site_name || r.client_name || r.running_number,
+        sub: r.client_name,
         type: 'sr',
         href: `/reports/${r.id}`,
         status: r.status,
@@ -36,8 +36,8 @@ export default function ScheduleCalendarWidget() {
       .map(r => ({
         id: r.id,
         date: new Date(r.installation_date || r.scheduled_date),
-        label: r.client_name || r.report_number,
-        sub: r.site_name,
+        label: r.site_name || r.client_name || r.report_number,
+        sub: r.client_name,
         type: 'ir',
         href: `/installation/${r.id}`,
         status: r.status,
