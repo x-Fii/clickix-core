@@ -204,8 +204,8 @@ export default function ScheduleCalendar() {
                         <span className="text-xs font-mono text-primary font-semibold">{r.running_number}</span>
                         <StatusBadge status={r.status} size="sm" />
                       </div>
-                      <p className="text-xs font-medium truncate">{r.client_name || '—'}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{r.site_name || '—'}</p>
+                      <p className="text-xs font-medium truncate">{r.site_name || '—'}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{r.client_name || '—'}</p>
                       {r.l2_attended_staff_name && (
                         <p className="text-[11px] text-muted-foreground mt-1 truncate">👤 {r.l2_attended_staff_name}</p>
                       )}
@@ -235,8 +235,8 @@ export default function ScheduleCalendar() {
                       <span className="text-[11px] font-mono text-primary">{r.running_number}</span>
                       <span className="text-[10px] font-mono text-blue-400">{r.scheduled_date}</span>
                     </div>
-                    <p className="text-xs font-medium truncate mt-0.5">{r.client_name}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">{r.site_name}</p>
+                    <p className="text-xs font-medium truncate mt-0.5">{r.site_name}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{r.client_name}</p>
                   </Link>
                 ))}
               </div>
