@@ -99,7 +99,7 @@ export default function ScheduleCalendarWidget() {
                   </span>
                   <div className="space-y-0.5">
                     {dayEvents.slice(0, 3).map(ev => (
-                      <Link key={ev.id} to={ev.href} className={`block truncate text-[10px] px-1 py-0.5 rounded font-medium leading-tight ${ev.type === 'sr' ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30' : 'bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30'}`}>
+                      <Link key={ev.id} to={ev.href} className={`block truncate text-[10px] px-1 py-0.5 rounded font-medium leading-tight ${ev.type === 'sr' ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30' : 'bg-orange-500/20 text-white-300 hover:bg-orange-500/30'}`}>
                         {ev.label}
                       </Link>
                     ))}
