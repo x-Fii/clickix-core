@@ -93,7 +93,7 @@ export default function Sites() {
               <tr className="border-b border-border bg-muted/30">
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Site Name</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Client</th>
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden">Region</th>
+                
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">State</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Location</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">PIC</th>
@@ -121,7 +121,7 @@ export default function Sites() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{s.client_name || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground hidden">{s.region || '—'}</td>
+                    
                     <td className="px-4 py-3 text-xs text-muted-foreground">{s.state || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell max-w-[200px] truncate">{s.site_location || '—'}</td>
                     <td className="px-4 py-3 hidden lg:table-cell">
