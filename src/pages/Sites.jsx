@@ -112,7 +112,7 @@ export default function Sites() {
                     </tr>,
 
               <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors group">
-                    <td className="pl-4 pt-2 pb-2 pr-2">
+                    <td className="pt-2 pb-2 pr-1 pl-3">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-md bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
                           <MapPin size={11} className="text-indigo-400" />
