@@ -245,33 +245,46 @@ export default function InstallationReportDetail() {
       )}
 
       {/* Hidden PDF Template */}
-      <div style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', background: '#fff', color: '#000', fontFamily: 'Arial, sans-serif', fontSize: '12px' }} ref={pdfRef}>
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', background: '#fff', color: '#111827', fontFamily: 'Arial, sans-serif', fontSize: '12px' }} ref={pdfRef}>
         {/* Header */}
-        <div style={{ background: '#1e3a5f', color: '#fff', padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ background: '#2563eb', padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: '20px', fontWeight: '700', letterSpacing: '1px' }}>CLICK IX SDN BHD</div>
-            <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px' }}>Installation Report</div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', letterSpacing: '0.5px' }}>CLICK IX SDN BHD</div>
+            <div style={{ fontSize: '11px', color: '#bfdbfe', marginTop: '2px' }}>INSTALLATION REPORT</div>
+            <div style={{ fontSize: '10px', color: '#bfdbfe', marginTop: '2px', fontFamily: 'monospace' }}>{report.report_number}</div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '16px', fontWeight: '700' }}>{report.report_number}</div>
-            <div style={{ fontSize: '10px', opacity: 0.8, marginTop: '4px', textTransform: 'uppercase' }}>{tc.label}</div>
-            <div style={{ marginTop: '6px', background: report.status === 'completed' ? '#16a34a' : '#3b82f6', padding: '2px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: '600', display: 'inline-block' }}>{sc.label}</div>
+          <div style={{ textAlign: 'right', color: '#bfdbfe', fontSize: '10px' }}>
+            Generated: {new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' })}, {new Date().toLocaleTimeString()}
           </div>
         </div>
 
         <div style={{ padding: '24px 32px' }}>
-          {/* Info Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '14px' }}>
-              <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '10px', letterSpacing: '0.05em' }}>Client & Site</div>
-              {[['Client', report.client_name], ['Site / Outlet', report.site_name], ['Location', report.site_location], ['Site PIC', report.site_pic_name]].filter(([,v]) => v).map(([l, v]) => (
-                <div key={l} style={{ marginBottom: '6px' }}><span style={{ color: '#6b7280', fontSize: '10px' }}>{l}: </span><span style={{ fontWeight: '600' }}>{v}</span></div>
+          {/* Job Information */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Job Information</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+              {[['TECHNICIAN', report.attended_staff_name], ['TECHNICIAN EMAIL', report.attended_staff_email], ['STORE', report.site_name], ['LOCATION', report.site_location], ['DO NUMBER', report.do_number], ['WORK ORDER NUMBER', report.work_order_number], ['SITE PIC', report.site_pic_name], ['REPORTED BY', report.reported_by], ['CLIENT', report.client_name], ['REPORT TYPE', tc.label]].filter(([,v]) => v).map(([k, v]) => (
+                <div key={k}>
+                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
+                  <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>
+                </div>
               ))}
             </div>
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '14px' }}>
-              <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '10px', letterSpacing: '0.05em' }}>Schedule & Attendance</div>
-              {[['DO Number', report.do_number], ['Scheduled Date', report.scheduled_date], ['Installation Date', report.installation_date], ['Installation Finish Date', report.installation_finish_date], ['Attend Time', report.attend_time], ['Technician', report.attended_staff_name], ['Quotation No.', report.work_order_number], ['Reported By', report.reported_by]].filter(([,v]) => v).map(([l, v]) => (
-                <div key={l} style={{ marginBottom: '6px' }}><span style={{ color: '#6b7280', fontSize: '10px' }}>{l}: </span><span style={{ fontWeight: '600' }}>{v}</span></div>
+          </div>
+
+          {/* Schedule & Attendance */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Schedule & Attendance</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+              {[['SCHEDULED DATE', report.scheduled_date], ['INSTALLATION DATE', report.installation_date], ['INSTALLATION FINISH DATE', report.installation_finish_date], ['ATTEND TIME', report.attend_time], ['STATUS', sc.label]].filter(([,v]) => v).map(([k, v]) => (
+                <div key={k}>
+                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
+                  <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>
+                </div>
               ))}
             </div>
           </div>
@@ -279,8 +292,8 @@ export default function InstallationReportDetail() {
           {/* Equipment */}
           {equipment && equipment.length > 0 && (
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', color: '#1e3a5f', marginBottom: '10px', borderBottom: '2px solid #1e3a5f', paddingBottom: '4px' }}>
-                {report.report_type === 'commissioning' ? 'Equipment Installed' : 'Equipment Decommissioned'}
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>{report.report_type === 'commissioning' ? 'Equipment Installed' : 'Equipment Decommissioned'}</span>
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                 <thead>
@@ -289,9 +302,7 @@ export default function InstallationReportDetail() {
                     <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Type</th>
                     <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Name / Model</th>
                     <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Serial Number</th>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>
-                      {report.report_type === 'commissioning' ? 'Notes' : 'Reason'}
-                    </th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>{report.report_type === 'commissioning' ? 'Notes' : 'Reason'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -306,14 +317,11 @@ export default function InstallationReportDetail() {
                   ))}
                 </tbody>
               </table>
-              {/* Equipment photos */}
               {equipment.some(item => item.photos && item.photos.length > 0) && (
                 <div style={{ marginTop: '12px' }}>
                   {equipment.map((item, i) => item.photos && item.photos.length > 0 && (
                     <div key={i} style={{ marginBottom: '10px' }}>
-                      <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '6px', fontWeight: '600' }}>
-                        Item {i + 1} — {item.device_name} Photos:
-                      </div>
+                      <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '6px', fontWeight: '600' }}>Item {i + 1} — {item.device_name} Photos:</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {item.photos.map((url, pi) => (
                           <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '240px', height: '180px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
@@ -329,15 +337,19 @@ export default function InstallationReportDetail() {
           {/* Technician Notes */}
           {report.technician_notes && (
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', color: '#1e3a5f', marginBottom: '8px', borderBottom: '2px solid #1e3a5f', paddingBottom: '4px' }}>Technician Notes</div>
-              <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{report.technician_notes}</div>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Technician Notes</span>
+              </div>
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '12px' }}>{report.technician_notes}</div>
             </div>
           )}
 
           {/* Supporting Photos */}
           {report.supporting_photos && report.supporting_photos.length > 0 && (
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontWeight: '700', fontSize: '11px', textTransform: 'uppercase', color: '#1e3a5f', marginBottom: '10px', borderBottom: '2px solid #1e3a5f', paddingBottom: '4px' }}>Supporting Photos</div>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Photo Evidence</span>
+              </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {report.supporting_photos.map((url, i) => (
                   <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '280px', height: '210px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
@@ -346,30 +358,27 @@ export default function InstallationReportDetail() {
             </div>
           )}
 
-          {/* Acknowledgement */}
+          {/* Client Signature */}
           {(report.ack_name || report.ack_phone || report.ack_signature) && (
-            <div style={{ marginTop: '24px', borderTop: '2px solid #e5e7eb', paddingTop: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '4px' }}>Acknowledged By</div>
-                <div style={{ fontWeight: '600' }}>{report.ack_name}</div>
-                <div style={{ color: '#6b7280' }}>{report.ack_phone}</div>
-                {report.ack_timestamp && <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>{new Date(report.ack_timestamp).toLocaleString()}</div>}
+            <div style={{ marginTop: '24px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '16px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Client Signature</span>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: '700', fontSize: '10px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '8px' }}>Signature</div>
-                {report.ack_signature
-                  ? <img src={report.ack_signature} alt="sig" crossOrigin="anonymous" style={{ maxHeight: '70px', maxWidth: '200px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', padding: '4px' }} />
-                  : <div style={{ border: '1px solid #e5e7eb', height: '60px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '10px' }}>No signature captured</div>
-                }
-              </div>
+              {report.ack_signature
+                ? <img src={report.ack_signature} alt="sig" crossOrigin="anonymous" style={{ maxHeight: '100px', maxWidth: '220px', display: 'block', marginBottom: '12px' }} />
+                : <div style={{ border: '1px solid #e5e7eb', height: '70px', width: '220px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '10px', marginBottom: '12px' }}>No signature captured</div>
+              }
+              <div style={{ fontSize: '13px', marginBottom: '4px' }}><strong>Name:</strong> {report.ack_name}</div>
+              <div style={{ fontSize: '13px', marginBottom: '4px' }}><strong>Phone:</strong> {report.ack_phone}</div>
+              {report.ack_timestamp && <div style={{ fontSize: '12px', color: '#6b7280' }}>Signed on: {new Date(report.ack_timestamp).toLocaleString()}</div>}
             </div>
           )}
+        </div>
 
-          {/* Footer */}
-          <div style={{ marginTop: '32px', borderTop: '1px solid #e5e7eb', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9ca3af' }}>
-            <span>Generated on {new Date().toLocaleDateString()}</span>
-            <span>Click IX Sdn Bhd — Confidential</span>
-          </div>
+        {/* Footer */}
+        <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 32px', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#9ca3af' }}>
+          <span>Page 1 of 1 | Installation Report</span>
+          <span>{report.report_number}</span>
         </div>
       </div>
     </div>
