@@ -367,10 +367,17 @@ export default function PRForm() {
                     <td className="py-2 pr-2 text-center text-xs text-muted-foreground font-mono">{i + 1}</td>
                     <td className="py-2 pr-2"><Input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8" placeholder="Item description" /></td>
                     <td className="py-2 pr-2">
-                      <Select value={item.category} onValueChange={v => updateItem(i, 'category', v)}>
-                        <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Category" /></SelectTrigger>
-                        <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                      </Select>
+                     {item.category === 'Other' || (item.category && !CATEGORIES.includes(item.category)) ? (
+                       <div className="flex gap-1">
+                         <Input value={item.category === 'Other' ? '' : item.category} onChange={e => updateItem(i, 'category', e.target.value || 'Other')} className="bg-background text-xs h-8" placeholder="Specify category..." autoFocus />
+                         <button onClick={() => updateItem(i, 'category', '')} className="text-muted-foreground hover:text-foreground text-xs px-1">✕</button>
+                       </div>
+                     ) : (
+                       <Select value={item.category || undefined} onValueChange={v => updateItem(i, 'category', v)}>
+                         <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Category" /></SelectTrigger>
+                         <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                       </Select>
+                     )}
                     </td>
                     <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" /></td>
                     <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.unit_cost} onChange={e => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" placeholder="0.00" /></td>
