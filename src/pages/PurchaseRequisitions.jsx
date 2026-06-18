@@ -251,9 +251,9 @@ export default function PurchaseRequisitions() {
                     <td className="px-4 py-3"><StatusBadge status={pr.status} /></td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-end">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hidden" onClick={() => navigate(`/pr/${pr.id}`)}>
-                          <Eye size={13} />
-                        </Button>
+                        
+
+                  
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeleteId(pr.id)}>
                           <Trash2 size={13} />
                         </Button>
