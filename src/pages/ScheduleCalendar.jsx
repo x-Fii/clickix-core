@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameDay, isSameMonth, addMonths, subMonths,
+  addWeeks, subWeeks, startOfWeek, endOfWeek,
   getDay, isToday, parseISO
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
@@ -28,7 +29,9 @@ function getReportDate(report) {
 }
 
 export default function ScheduleCalendar() {
+  const [view, setView] = useState('month'); // 'month' | 'week'
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
 
   const { data: reports = [], isLoading } = useQuery({
@@ -63,7 +66,7 @@ export default function ScheduleCalendar() {
   const calDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   // Pad start to Monday (0=Mon .. 6=Sun)
-  const startPad = (getDay(monthStart) + 6) % 7; // convert Sun=0 to Mon=0 offset
+  const startPad = (getDay(monthStart) + 6) % 7;
   const totalCells = Math.ceil((calDays.length + startPad) / 7) * 7;
 
   const cells = Array.from({ length: totalCells }, (_, i) => {
@@ -71,6 +74,11 @@ export default function ScheduleCalendar() {
     if (dayOffset < 0 || dayOffset >= calDays.length) return null;
     return calDays[dayOffset];
   });
+
+  // Weekly view days
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   const selectedDayStr = selectedDay ? format(selectedDay, 'yyyy-MM-dd') : null;
   const selectedReports = selectedDayStr ? (dateMap[selectedDayStr] || []) : [];
@@ -106,23 +114,39 @@ export default function ScheduleCalendar() {
           <p className="text-sm text-muted-foreground mt-1">Technician visits and maintenance deadlines</p>
         </div>
 
-        {/* Month navigation */}
-        <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2">
-          <button onClick={() => setCurrentMonth(m => subMonths(m, 1))} className="p-1 rounded hover:bg-muted transition-colors">
-            <ChevronLeft size={16} />
-          </button>
-          <span className="text-sm font-semibold font-mono w-32 text-center">
-            {format(currentMonth, 'MMMM yyyy')}
-          </span>
-          <button onClick={() => setCurrentMonth(m => addMonths(m, 1))} className="p-1 rounded hover:bg-muted transition-colors">
-            <ChevronRight size={16} />
-          </button>
-          <button
-            onClick={() => { setCurrentMonth(new Date()); setSelectedDay(new Date()); }}
-            className="ml-2 text-xs font-mono px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-          >
-            Today
-          </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* View toggle */}
+          <div className="flex items-center bg-muted rounded-lg p-1 text-xs font-mono">
+            <button
+              onClick={() => setView('month')}
+              className={cn('px-3 py-1 rounded transition-colors', view === 'month' ? 'bg-card text-foreground shadow' : 'text-muted-foreground hover:text-foreground')}
+            >Month</button>
+            <button
+              onClick={() => setView('week')}
+              className={cn('px-3 py-1 rounded transition-colors', view === 'week' ? 'bg-card text-foreground shadow' : 'text-muted-foreground hover:text-foreground')}
+            >Week</button>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2">
+            <button
+              onClick={() => view === 'month' ? setCurrentMonth(m => subMonths(m, 1)) : setCurrentWeek(w => subWeeks(w, 1))}
+              className="p-1 rounded hover:bg-muted transition-colors"
+            ><ChevronLeft size={16} /></button>
+            <span className="text-sm font-semibold font-mono w-40 text-center">
+              {view === 'month'
+                ? format(currentMonth, 'MMMM yyyy')
+                : `${format(weekStart, 'dd MMM')} – ${format(weekEnd, 'dd MMM yyyy')}`}
+            </span>
+            <button
+              onClick={() => view === 'month' ? setCurrentMonth(m => addMonths(m, 1)) : setCurrentWeek(w => addWeeks(w, 1))}
+              className="p-1 rounded hover:bg-muted transition-colors"
+            ><ChevronRight size={16} /></button>
+            <button
+              onClick={() => { setCurrentMonth(new Date()); setCurrentWeek(new Date()); setSelectedDay(new Date()); }}
+              className="ml-2 text-xs font-mono px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >Today</button>
+          </div>
         </div>
       </div>
 
@@ -138,51 +162,98 @@ export default function ScheduleCalendar() {
             ))}
           </div>
 
-          {/* Day cells */}
-          <div className="grid grid-cols-7">
-            {cells.map((day, i) => {
-              if (!day) return (
-                <div key={i} className="min-h-[120px] border-b border-r border-border/40 bg-muted/10" />
-              );
-              const key = format(day, 'yyyy-MM-dd');
-              const dayReports = dateMap[key] || [];
-              const isSelected = selectedDay && isSameDay(day, selectedDay);
-              const today = isToday(day);
-              const inMonth = isSameMonth(day, currentMonth);
-
-              return (
-                <button
-                  key={key}
-                  onClick={() => setSelectedDay(isSameDay(day, selectedDay) ? null : day)}
-                  className={cn(
-                    'min-h-[120px] border-b border-r border-border/40 p-2 text-left transition-colors relative',
-                    isSelected ? 'bg-primary/10 border-primary/30' : 'hover:bg-muted/40',
-                    !inMonth && 'opacity-30',
-                  )}
-                >
-                  <div className={cn(
-                    'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold mb-1.5 ml-auto',
-                    today ? 'bg-primary text-primary-foreground' : 'text-foreground',
-                  )}>
-                    {format(day, 'd')}
-                  </div>
-                  <div className="space-y-0.5">
-                    {dayReports.slice(0, 3).map((r, ri) => {
-                      const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
-                      return (
-                        <div key={ri} className={cn('text-[10px] px-1.5 py-0.5 rounded border truncate font-mono', sc.pill)}>
-                          {r._type === 'ir' ? '📦 ' : ''}{r.site_name || r.running_number || r.report_number}
-                        </div>
-                      );
-                    })}
-                    {dayReports.length > 3 && (
-                      <div className="text-[10px] text-muted-foreground px-1 font-mono">+{dayReports.length - 3} more</div>
+          {view === 'month' ? (
+            /* Monthly grid */
+            <div className="grid grid-cols-7">
+              {cells.map((day, i) => {
+                if (!day) return (
+                  <div key={i} className="min-h-[120px] border-b border-r border-border/40 bg-muted/10" />
+                );
+                const key = format(day, 'yyyy-MM-dd');
+                const dayReports = dateMap[key] || [];
+                const isSelected = selectedDay && isSameDay(day, selectedDay);
+                const today = isToday(day);
+                const inMonth = isSameMonth(day, currentMonth);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedDay(isSameDay(day, selectedDay) ? null : day)}
+                    className={cn(
+                      'min-h-[120px] border-b border-r border-border/40 p-2 text-left transition-colors relative',
+                      isSelected ? 'bg-primary/10 border-primary/30' : 'hover:bg-muted/40',
+                      !inMonth && 'opacity-30',
                     )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  >
+                    <div className={cn(
+                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold mb-1.5 ml-auto',
+                      today ? 'bg-primary text-primary-foreground' : 'text-foreground',
+                    )}>
+                      {format(day, 'd')}
+                    </div>
+                    <div className="space-y-0.5">
+                      {dayReports.slice(0, 3).map((r, ri) => {
+                        const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
+                        return (
+                          <div key={ri} className={cn('text-[10px] px-1.5 py-0.5 rounded border truncate font-mono', sc.pill)}>
+                            {r._type === 'ir' ? '📦 ' : ''}{r.site_name || r.running_number || r.report_number}
+                          </div>
+                        );
+                      })}
+                      {dayReports.length > 3 && (
+                        <div className="text-[10px] text-muted-foreground px-1 font-mono">+{dayReports.length - 3} more</div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            /* Weekly grid */
+            <div className="grid grid-cols-7">
+              {weekDays.map((day) => {
+                const key = format(day, 'yyyy-MM-dd');
+                const dayReports = dateMap[key] || [];
+                const isSelected = selectedDay && isSameDay(day, selectedDay);
+                const today = isToday(day);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedDay(isSameDay(day, selectedDay) ? null : day)}
+                    className={cn(
+                      'min-h-[300px] border-r border-border/40 p-2 text-left transition-colors',
+                      isSelected ? 'bg-primary/10' : 'hover:bg-muted/40',
+                    )}
+                  >
+                    <div className={cn(
+                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold mb-2 ml-auto',
+                      today ? 'bg-primary text-primary-foreground' : 'text-foreground',
+                    )}>
+                      {format(day, 'd')}
+                    </div>
+                    <div className="space-y-1">
+                      {dayReports.map((r, ri) => {
+                        const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
+                        return (
+                          <Link
+                            key={ri}
+                            to={r._type === 'ir' ? `/installation/${r.id}` : `/reports/${r.id}`}
+                            onClick={e => e.stopPropagation()}
+                            className={cn('block text-[10px] px-1.5 py-1 rounded border font-mono leading-tight', sc.pill)}
+                          >
+                            <div className="truncate">{r._type === 'ir' ? '📦 ' : ''}{r.site_name || r.running_number || r.report_number}</div>
+                            <div className="truncate text-muted-foreground">{r.client_name}</div>
+                          </Link>
+                        );
+                      })}
+                      {dayReports.length === 0 && (
+                        <p className="text-[10px] text-muted-foreground/40 font-mono text-center pt-4">—</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right panel */}
