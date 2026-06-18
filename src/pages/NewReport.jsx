@@ -15,11 +15,9 @@ const emptyItem = () => ({ device_type: '', device_name: '', issue_description: 
 
 const generateRunningNumber = () => {
   const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  const t = String(Date.now()).slice(-4);
-  return `CIX-${y}${m}${d}-${t}`;
+  const y = String(now.getFullYear()).slice(-2);
+  const seq = String(Math.floor(Math.random() * 9000) + 1000);
+  return `SR${y}-${seq}`;
 };
 
 const SectionHeader = ({ title, subtitle }) => (
