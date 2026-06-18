@@ -194,7 +194,7 @@ export default function ScheduleCalendar() {
                       {dayReports.slice(0, 3).map((r, ri) => {
                         const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
                         return (
-                          <div key={ri} className={cn('text-[10px] px-1.5 py-0.5 rounded border truncate font-mono', sc.pill)}>
+                          <div key={ri} className={cn('text-[10px] px-1.5 py-0.5 rounded border break-words font-mono', sc.pill)}>
                             {r._type === 'ir' ? '📦 ' : ''}{r.site_name || r.running_number || r.report_number}
                           </div>
                         );
