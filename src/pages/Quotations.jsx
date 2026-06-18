@@ -101,9 +101,9 @@ export default function Quotations() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 hidden" onClick={() => navigate(`/quotations/${q.id}`)}>
-                        <Eye size={13} />
-                      </Button>
+                      
+
+                  
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeleteId(q.id)}>
                         <Trash2 size={13} />
                       </Button>
