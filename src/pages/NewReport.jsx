@@ -58,7 +58,17 @@ export default function NewReport() {
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
   const { data: staffList = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
 
-  const filteredSites = sites.filter(s => !form.client_id || s.client_id === form.client_id);
+  const [siteRegionFilter, setSiteRegionFilter] = useState('');
+  const [siteStateFilter, setSiteStateFilter] = useState('');
+
+  const regionOptions = [...new Set(sites.map(s => s.region).filter(Boolean))].sort();
+  const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
+
+  const filteredSites = sites.filter(s =>
+    (!form.client_id || s.client_id === form.client_id) &&
+    (!siteRegionFilter || s.region === siteRegionFilter) &&
+    (!siteStateFilter || s.state === siteStateFilter)
+  );
   const l1Staff = staffList.filter(s => s.role === 'L1' || s.role === 'Admin');
 
   const createReport = useMutation({
@@ -136,11 +146,25 @@ export default function NewReport() {
                 </SelectContent>
               </Select>
             </Field>
+            <Field label="Region">
+              <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
+                <SelectTrigger className="bg-background"><SelectValue placeholder="All regions" /></SelectTrigger>
+                <SelectContent>{regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+              </Select>
+              {siteRegionFilter && <button type="button" onClick={() => { setSiteRegionFilter(''); setSiteStateFilter(''); }} className="text-xs text-muted-foreground hover:text-foreground mt-1">✕ Clear</button>}
+            </Field>
+            <Field label="State">
+              <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
+                <SelectTrigger className="bg-background"><SelectValue placeholder="All states" /></SelectTrigger>
+                <SelectContent>{stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+              {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground mt-1">✕ Clear</button>}
+            </Field>
             <Field label="Site Name" required>
-              <Select value={form.site_id} onValueChange={handleSiteChange} disabled={!form.client_id}>
+              <Select value={form.site_id} onValueChange={handleSiteChange}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Select site" /></SelectTrigger>
                 <SelectContent>
-                  {filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}</SelectItem>)}
+                  {filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}{s.state ? ` — ${s.state}` : ''}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
