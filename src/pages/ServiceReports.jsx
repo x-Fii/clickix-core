@@ -32,9 +32,13 @@ export default function ServiceReports() {
 
   const counts = {
     all: reports.length,
+    reported: reports.filter((r) => r.status === 'reported').length,
     resolved: reports.filter((r) => r.status === 'resolved').length,
     escalated: reports.filter((r) => r.status === 'escalated').length,
-    complete: reports.filter((r) => r.status === 'complete').length
+    quote: reports.filter((r) => r.status === 'quote').length,
+    approved: reports.filter((r) => r.status === 'approved').length,
+    schedule: reports.filter((r) => r.status === 'schedule').length,
+    complete: reports.filter((r) => r.status === 'complete').length,
   };
 
   return (
@@ -53,13 +57,17 @@ export default function ServiceReports() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {[
-        { label: 'Total', value: counts.all, color: 'text-foreground' },
-        { label: 'Resolved', value: counts.resolved, color: 'text-emerald-400' },
+        { label: 'Total',     value: counts.all,      color: 'text-foreground' },
+        { label: 'Reported',  value: counts.reported,  color: 'text-slate-400' },
+        { label: 'Resolved',  value: counts.resolved,  color: 'text-teal-400' },
         { label: 'Escalated', value: counts.escalated, color: 'text-amber-400' },
-        { label: 'Complete', value: counts.complete, color: 'text-blue-400' }].
-        map((s) =>
+        { label: 'Quote',     value: counts.quote,     color: 'text-yellow-400' },
+        { label: 'Approved',  value: counts.approved,  color: 'text-purple-400' },
+        { label: 'Schedule',  value: counts.schedule,  color: 'text-blue-400' },
+        { label: 'Complete',  value: counts.complete,  color: 'text-emerald-400' },
+        ].map((s) =>
         <div key={s.label} className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">{s.label}</p>
             <p className={`text-2xl font-bold font-mono mt-1 ${s.color}`}>{s.value}</p>
