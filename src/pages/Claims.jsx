@@ -226,7 +226,7 @@ export default function Claims() {
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-end">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hidden" onClick={() => navigate(`/claims/${c.id}`)}><Eye size={13} /></Button>
+                        
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeleteId(c.id)}><Trash2 size={13} /></Button>
                       </div>
                     </td>
