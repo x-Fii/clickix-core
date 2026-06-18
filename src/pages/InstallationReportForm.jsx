@@ -69,7 +69,17 @@ export default function InstallationReportForm() {
     if (existing) setForm({ ...form, ...existing });
   }, [existing]);
 
-  const filteredSites = sites.filter(s => !form.client_id || s.client_id === form.client_id);
+  const [siteRegionFilter, setSiteRegionFilter] = useState('');
+  const [siteStateFilter, setSiteStateFilter] = useState('');
+
+  const regionOptions = [...new Set(sites.map(s => s.region).filter(Boolean))].sort();
+  const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
+
+  const filteredSites = sites.filter(s =>
+    (!form.client_id || s.client_id === form.client_id) &&
+    (!siteRegionFilter || s.region === siteRegionFilter) &&
+    (!siteStateFilter || s.state === siteStateFilter)
+  );
 
   const mutation = useMutation({
     mutationFn: data => isEdit
@@ -227,13 +237,33 @@ export default function InstallationReportForm() {
               </Select>
             </div>
             <div className="space-y-1">
+              <Label>Region</Label>
+              <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
+                <SelectTrigger><SelectValue placeholder="All regions" /></SelectTrigger>
+                <SelectContent>
+                  {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {siteRegionFilter && <button type="button" onClick={() => { setSiteRegionFilter(''); setSiteStateFilter(''); }} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
+            </div>
+            <div className="space-y-1">
+              <Label>State</Label>
+              <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
+                <SelectTrigger><SelectValue placeholder="All states" /></SelectTrigger>
+                <SelectContent>
+                  {stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
+            </div>
+            <div className="space-y-1">
               <Label>Site / Outlet</Label>
               <Select value={form.site_id} onValueChange={v => {
                 const s = sites.find(x => x.id === v);
                 setForm(f => ({ ...f, site_id: v, site_name: s?.site_name || '', site_location: s?.site_location || '' }));
               }}>
                 <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
-                <SelectContent>{filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}</SelectItem>)}</SelectContent>
+                <SelectContent>{filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}{s.state ? ` — ${s.state}` : ''}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
