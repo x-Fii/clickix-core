@@ -36,15 +36,26 @@ export default function ScheduleCalendar() {
     queryFn: () => base44.entities.ServiceReport.list('-created_date', 500),
   });
 
-  // Build a map: dateStr -> reports[]
+  const { data: installationReports = [], isLoading: isLoadingIR } = useQuery({
+    queryKey: ['installation-reports'],
+    queryFn: () => base44.entities.InstallationReport.list('-created_date', 500),
+  });
+
+  // Build a map: dateStr -> events[] (service reports + installation reports)
   const dateMap = {};
   reports.forEach(r => {
     const dateStr = getReportDate(r);
     if (!dateStr) return;
-    // normalize to yyyy-MM-dd
     const key = dateStr.slice(0, 10);
     if (!dateMap[key]) dateMap[key] = [];
-    dateMap[key].push(r);
+    dateMap[key].push({ ...r, _type: 'sr' });
+  });
+  installationReports.forEach(r => {
+    const dateStr = r.scheduled_date || r.installation_date || r.created_date;
+    if (!dateStr) return;
+    const key = dateStr.slice(0, 10);
+    if (!dateMap[key]) dateMap[key] = [];
+    dateMap[key].push({ ...r, _type: 'ir' });
   });
 
   const monthStart = startOfMonth(currentMonth);
@@ -73,9 +84,14 @@ export default function ScheduleCalendar() {
     { status: 'quote', label: 'Quotation' },
   ];
 
-  // Upcoming scheduled visits (next 30 days)
-  const upcoming = reports
+  // Upcoming scheduled visits (next 30 days) — both SR and IR
+  const upcomingSR = reports
     .filter(r => r.status === 'schedule' && r.scheduled_date)
+    .map(r => ({ ...r, _type: 'sr' }));
+  const upcomingIR = installationReports
+    .filter(r => r.status === 'scheduled' && r.scheduled_date)
+    .map(r => ({ ...r, _type: 'ir' }));
+  const upcoming = [...upcomingSR, ...upcomingIR]
     .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
     .slice(0, 10);
 
@@ -155,7 +171,7 @@ export default function ScheduleCalendar() {
                       const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
                       return (
                         <div key={ri} className={cn('text-[10px] px-1.5 py-0.5 rounded border truncate font-mono', sc.pill)}>
-                          {r.site_name || r.running_number}
+                          {r._type === 'ir' ? '📦 ' : ''}{r.site_name || r.running_number || r.report_number}
                         </div>
                       );
                     })}
@@ -197,17 +213,25 @@ export default function ScheduleCalendar() {
                   {selectedReports.map(r => (
                     <Link
                       key={r.id}
-                      to={`/reports/${r.id}`}
+                      to={r._type === 'ir' ? `/installation/${r.id}` : `/reports/${r.id}`}
                       className="block p-3 bg-muted/40 rounded-lg border border-border hover:border-primary/40 transition-colors"
                     >
                       <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="text-xs font-mono text-primary font-semibold">{r.running_number}</span>
+                        <span className="text-xs font-mono text-primary font-semibold">
+                          {r._type === 'ir' ? r.report_number : r.running_number}
+                        </span>
                         <StatusBadge status={r.status} size="sm" />
                       </div>
                       <p className="text-xs font-medium truncate">{r.site_name || '—'}</p>
                       <p className="text-[11px] text-muted-foreground truncate">{r.client_name || '—'}</p>
-                      {r.l2_attended_staff_name && (
+                      {r._type === 'ir' && r.attended_staff_name && (
+                        <p className="text-[11px] text-muted-foreground mt-1 truncate">👤 {r.attended_staff_name}</p>
+                      )}
+                      {r._type === 'sr' && r.l2_attended_staff_name && (
                         <p className="text-[11px] text-muted-foreground mt-1 truncate">👤 {r.l2_attended_staff_name}</p>
+                      )}
+                      {r._type === 'ir' && (
+                        <p className="text-[10px] text-purple-400 font-mono mt-0.5">📦 Installation</p>
                       )}
                     </Link>
                   ))}
@@ -219,25 +243,26 @@ export default function ScheduleCalendar() {
           {/* Upcoming scheduled visits */}
           <div className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider mb-3">Upcoming Scheduled</p>
-            {isLoading ? (
+            {isLoading || isLoadingIR ? (
               <div className="flex justify-center py-4"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
             ) : upcoming.length === 0 ? (
               <p className="text-xs text-muted-foreground">No scheduled visits.</p>
             ) : (
               <div className="space-y-2">
                 {upcoming.map(r => (
-                  <Link
-                    key={r.id}
-                    to={`/reports/${r.id}`}
-                    className="block p-2.5 bg-muted/40 rounded-lg border border-border hover:border-blue-400/50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-[11px] font-mono text-primary">{r.running_number}</span>
-                      <span className="text-[10px] font-mono text-blue-400">{r.scheduled_date}</span>
-                    </div>
-                    <p className="text-xs font-medium truncate mt-0.5">{r.site_name}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">{r.client_name}</p>
-                  </Link>
+                <Link
+                  key={r.id}
+                  to={r._type === 'ir' ? `/installation/${r.id}` : `/reports/${r.id}`}
+                  className="block p-2.5 bg-muted/40 rounded-lg border border-border hover:border-blue-400/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[11px] font-mono text-primary">{r._type === 'ir' ? r.report_number : r.running_number}</span>
+                    <span className="text-[10px] font-mono text-blue-400">{r.scheduled_date}</span>
+                  </div>
+                  <p className="text-xs font-medium truncate mt-0.5">{r.site_name}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{r.client_name}</p>
+                  {r._type === 'ir' && <p className="text-[10px] text-purple-400 font-mono">📦 Installation</p>}
+                </Link>
                 ))}
               </div>
             )}
