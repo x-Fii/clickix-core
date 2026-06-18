@@ -18,6 +18,7 @@
         "pending",
         "scheduled",
         "completed",
+        "billed",
         "cancelled"
       ],
       "default": "pending"

@@ -16,6 +16,7 @@ const STATUS_CONFIG = {
   pending: { label: 'Pending', className: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
   scheduled: { label: 'Scheduled', className: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
   completed: { label: 'Completed', className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+  billed: { label: 'Billed', className: 'bg-pink-500/20 text-pink-300 border-pink-500/30' },
   cancelled: { label: 'Cancelled', className: 'bg-red-500/20 text-red-300 border-red-500/30' }
 };
 
@@ -48,7 +49,9 @@ export default function InstallationReports() {
     all: reports.length,
     pending: reports.filter((r) => r.status === 'pending').length,
     scheduled: reports.filter((r) => r.status === 'scheduled').length,
-    completed: reports.filter((r) => r.status === 'completed').length
+    completed: reports.filter((r) => r.status === 'completed').length,
+    billed: reports.filter((r) => r.status === 'billed').length,
+    cancelled: reports.filter((r) => r.status === 'cancelled').length
   };
 
   return (
@@ -67,12 +70,14 @@ export default function InstallationReports() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
         { label: 'Total', value: counts.all, color: 'text-foreground' },
         { label: 'Pending', value: counts.pending, color: 'text-slate-400' },
         { label: 'Scheduled', value: counts.scheduled, color: 'text-blue-400' },
-        { label: 'Completed', value: counts.completed, color: 'text-emerald-400' }].
+        { label: 'Completed', value: counts.completed, color: 'text-emerald-400' },
+        { label: 'Billed', value: counts.billed, color: 'text-pink-400' },
+        { label: 'Cancelled', value: counts.cancelled, color: 'text-red-400' }].
         map((s) =>
         <div key={s.label} className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">{s.label}</p>

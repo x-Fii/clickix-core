@@ -13,6 +13,7 @@ const STATUS_CONFIG = {
   pending:    { label: 'Pending',    className: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
   scheduled:  { label: 'Scheduled',  className: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
   completed:  { label: 'Completed',  className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+  billed:     { label: 'Billed',     className: 'bg-pink-500/20 text-pink-300 border-pink-500/30' },
   cancelled:  { label: 'Cancelled',  className: 'bg-red-500/20 text-red-300 border-red-500/30' },
 };
 
@@ -82,6 +83,15 @@ export default function InstallationReportDetail() {
     },
   });
 
+  const markBilledMutation = useMutation({
+    mutationFn: () => base44.entities.InstallationReport.update(id, { status: 'billed' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['installation-report', id]);
+      queryClient.invalidateQueries(['installation-reports']);
+      toast({ title: 'Report marked as billed' });
+    },
+  });
+
   if (isLoading) return (
     <div className="flex justify-center items-center h-64">
       <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -114,9 +124,14 @@ export default function InstallationReportDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {report.status !== 'completed' && report.status !== 'cancelled' && (
+          {report.status !== 'completed' && report.status !== 'cancelled' && report.status !== 'billed' && (
             <Button variant="outline" size="sm" onClick={() => markCompleteMutation.mutate()} disabled={markCompleteMutation.isPending}>
               <CheckCircle size={14} className="mr-1" /> Mark Complete
+            </Button>
+          )}
+          {report.status === 'completed' && (
+            <Button variant="outline" size="sm" onClick={() => markBilledMutation.mutate()} disabled={markBilledMutation.isPending}>
+              <CheckCircle size={14} className="mr-1" /> Mark Billed
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={exportingPdf}>
