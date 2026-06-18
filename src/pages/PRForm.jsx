@@ -21,7 +21,8 @@ const Field = ({ label, children }) => (
   </div>
 );
 
-const genPRNumber = () => `PR-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 900 + 100)}`;
+const genPRNumber = () => `PR${format(new Date(), 'yy')}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
+
 
 export default function PRForm() {
   const { id } = useParams();
