@@ -279,7 +279,7 @@ export default function Dashboard() {
             <p className="p-6 text-center text-sm text-muted-foreground">No reports yet. Create the first service report to get started.</p>
           ) : recentReports.map(r => (
             <a key={r.id} href={`/reports/${r.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-muted/50 transition-colors">
-              <span className="font-mono text-xs text-muted-foreground w-28 flex-shrink-0">{r.running_number}</span>
+              <span className="font-mono text-xs text-muted-foreground w-20 flex-shrink-0">{r.running_number}</span>
               <span className="text-sm font-medium min-w-0 flex-1 break-words">{r.client_name || '—'}</span>
               <span className="text-sm text-muted-foreground min-w-0 flex-1 break-words hidden md:block">{r.site_name || '—'}</span>
               <StatusBadge status={r.status} />
