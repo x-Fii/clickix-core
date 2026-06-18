@@ -15,11 +15,9 @@ const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', '
 
 function generateReportNumber() {
   const now = new Date();
-  const y = now.getFullYear().toString().slice(-2);
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  return `IR-${y}${m}${d}-${rand}`;
+  const y = String(now.getFullYear()).slice(-2);
+  const seq = String(Math.floor(Math.random() * 9000) + 1000);
+  return `IR${y}-${seq}`;
 }
 
 const blankInstalled = () => ({ device_type: '', device_name: '', serial_number: '', notes: '', photos: [] });
