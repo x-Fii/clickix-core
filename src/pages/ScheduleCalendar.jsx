@@ -142,7 +142,7 @@ export default function ScheduleCalendar() {
           <div className="grid grid-cols-7">
             {cells.map((day, i) => {
               if (!day) return (
-                <div key={i} className="min-h-[90px] border-b border-r border-border/40 bg-muted/10" />
+                <div key={i} className="min-h-[120px] border-b border-r border-border/40 bg-muted/10" />
               );
               const key = format(day, 'yyyy-MM-dd');
               const dayReports = dateMap[key] || [];
@@ -155,13 +155,13 @@ export default function ScheduleCalendar() {
                   key={key}
                   onClick={() => setSelectedDay(isSameDay(day, selectedDay) ? null : day)}
                   className={cn(
-                    'min-h-[90px] border-b border-r border-border/40 p-1.5 text-left transition-colors relative',
+                    'min-h-[120px] border-b border-r border-border/40 p-2 text-left transition-colors relative',
                     isSelected ? 'bg-primary/10 border-primary/30' : 'hover:bg-muted/40',
                     !inMonth && 'opacity-30',
                   )}
                 >
                   <div className={cn(
-                    'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold mb-1',
+                    'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold mb-1.5 ml-auto',
                     today ? 'bg-primary text-primary-foreground' : 'text-foreground',
                   )}>
                     {format(day, 'd')}
