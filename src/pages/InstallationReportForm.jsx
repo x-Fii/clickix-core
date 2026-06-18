@@ -269,13 +269,29 @@ export default function InstallationReportForm() {
             </div>
             <div className="space-y-1">
               <Label>Technician</Label>
-              <Select value={form.attended_staff_id} onValueChange={v => {
-                const s = staff.find(x => x.id === v);
-                setForm(f => ({ ...f, attended_staff_id: v, attended_staff_name: s?.name || '', attended_staff_email: s?.email || '' }));
-              }}>
-                <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
-                <SelectContent>{staff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-              </Select>
+              <div className="border border-input rounded-md bg-background p-2 space-y-1 max-h-36 overflow-y-auto">
+                {staff.length === 0 && <p className="text-xs text-muted-foreground">No staff found</p>}
+                {staff.map(s => {
+                  const selectedIds = form.attended_staff_id ? form.attended_staff_id.split(',').filter(Boolean) : [];
+                  const checked = selectedIds.includes(s.id);
+                  return (
+                    <label key={s.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5">
+                      <input type="checkbox" checked={checked} onChange={() => {
+                        const next = checked ? selectedIds.filter(id => id !== s.id) : [...selectedIds, s.id];
+                        const selected = staff.filter(x => next.includes(x.id));
+                        setForm(f => ({
+                          ...f,
+                          attended_staff_id: next.join(','),
+                          attended_staff_name: selected.map(x => x.name).join(', '),
+                          attended_staff_email: selected.map(x => x.email || '').join(', '),
+                        }));
+                      }} className="accent-primary" />
+                      <span className="text-sm">{s.name}</span>
+                      {s.staff_id && <span className="text-xs text-muted-foreground font-mono">({s.staff_id})</span>}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
