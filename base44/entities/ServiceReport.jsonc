@@ -14,7 +14,8 @@
         "quote",
         "approved",
         "schedule",
-        "complete"
+        "complete",
+        "billed"
       ]
     },
     "client_id": {

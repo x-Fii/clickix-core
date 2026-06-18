@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
-const L2_FLOW = ['escalated', 'quote', 'approved', 'schedule', 'complete'];
+const L2_FLOW = ['escalated', 'quote', 'approved', 'schedule', 'complete', 'billed'];
 
 const SectionHeader = ({ title, subtitle }) => (
   <div className="pb-3 mb-5 border-b border-border">
@@ -280,7 +280,7 @@ export default function ReportDetail() {
   };
 
   const statusIdx = L2_FLOW.indexOf(report.status);
-  const isReadOnly = report.status === 'complete' && !editing;
+  const isReadOnly = (report.status === 'complete' || report.status === 'billed') && !editing;
 
   return (
     <div className="p-6 max-w-4xl mx-auto pb-20">
@@ -379,8 +379,13 @@ export default function ReportDetail() {
                 ✓ Mark Complete
               </Button>
             )}
-            {/* Save Draft for non-complete statuses */}
-            {report.status !== 'complete' && (
+            {report.status === 'complete' && (
+              <Button size="sm" onClick={() => advanceStatus('billed')} className="bg-pink-600 hover:bg-pink-700">
+                💰 Mark Billed
+              </Button>
+            )}
+            {/* Save Draft for non-complete/billed statuses */}
+            {report.status !== 'complete' && report.status !== 'billed' && (
               <Button variant="outline" size="sm" onClick={saveL2} disabled={updateReport.isPending}>
                 <Save size={14} className="mr-2" /> {updateReport.isPending ? 'Saving...' : 'Save Draft'}
               </Button>

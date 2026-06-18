@@ -7,7 +7,8 @@ const statusConfig = {
   quote: { label: 'Quote', cls: 'bg-purple-500/15 text-purple-400 border-purple-500/25' },
   approved: { label: 'Approved', cls: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/25' },
   schedule: { label: 'Scheduled', cls: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/25' },
-  complete: { label: 'Complete', cls: 'bg-green-500/15 text-green-400 border-green-500/25' }
+  complete: { label: 'Complete', cls: 'bg-green-500/15 text-green-400 border-green-500/25' },
+  billed: { label: 'Billed', cls: 'bg-pink-500/15 text-pink-400 border-pink-500/25' }
 };
 
 export default function StatusBadge({ status, size = 'sm' }) {
