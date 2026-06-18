@@ -112,12 +112,12 @@ export default function Sites() {
                     </tr>,
 
               <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors group">
-                    <td className="pr-4 pb-3 pl-4 pt-2">
+                    <td className="pl-4 pt-2 pb-2 pr-2">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-md bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
                           <MapPin size={11} className="text-indigo-400" />
                         </div>
-                        <span className="font-medium text-xs">{s.site_name}</span>
+                        <span className="font-medium text-sm">{s.site_name}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{s.client_name || '—'}</td>
