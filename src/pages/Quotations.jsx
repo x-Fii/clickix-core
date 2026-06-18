@@ -95,7 +95,7 @@ export default function Quotations() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">{q.quotation_date ? format(new Date(q.quotation_date), 'dd MMM yyyy') : '—'}</td>
                   <td className="px-4 py-3 text-right font-mono text-sm">{q.grand_total != null ? q.grand_total.toFixed(2) : '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2.5 py-0.5 text-[11px] font-mono border rounded-full ${statusColors[q.status] || statusColors.draft}`}>
+                    <span className={`inline-flex justify-center w-20 py-0.5 text-[11px] font-mono border rounded-full ${statusColors[q.status] || statusColors.draft}`}>
                       {q.status?.charAt(0).toUpperCase() + q.status?.slice(1)}
                     </span>
                   </td>
