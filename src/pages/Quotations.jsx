@@ -87,7 +87,7 @@ export default function Quotations() {
             <tbody>
               {filtered.map(q => (
                 <tr key={q.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-primary">{q.quotation_number}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-primary cursor-pointer hover:underline" onClick={() => navigate(`/quotations/${q.id}`)}>{q.quotation_number}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     {q.sr_number ? <span className="font-mono text-blue-400">{q.sr_number}</span> : q.ir_number ? <span className="font-mono text-indigo-400">{q.ir_number}</span> : '—'}
                   </td>
