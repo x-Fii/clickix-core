@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import StatusBadge from '@/components/StatusBadge';
-import { ClipboardList, CheckCircle, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
-import { format, subDays, startOfMonth } from 'date-fns';
+import { ClipboardList, CheckCircle, AlertTriangle, Clock, TrendingUp, Users } from 'lucide-react';
+import { format, subDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import ScheduleCalendarWidget from '@/components/ScheduleCalendarWidget';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444'];
@@ -56,6 +57,52 @@ export default function Dashboard() {
   });
 
   const recentReports = reports.slice(0, 8);
+
+  // Staff performance
+  const [perfMonth, setPerfMonth] = useState(format(new Date(), 'yyyy-MM'));
+
+  const { data: installReports = [] } = useQuery({
+    queryKey: ['installation-reports'],
+    queryFn: () => base44.entities.InstallationReport.list('-created_date', 500),
+  });
+
+  const staffPerfData = (() => {
+    const [year, month] = perfMonth.split('-').map(Number);
+    const monthStart = startOfMonth(new Date(year, month - 1));
+    const monthEnd = endOfMonth(new Date(year, month - 1));
+    const inMonth = (dateStr) => {
+      if (!dateStr) return false;
+      const d = new Date(dateStr.slice(0, 10));
+      return d >= monthStart && d <= monthEnd;
+    };
+
+    const staffMap = {};
+    // Count SR L1
+    reports.forEach(r => {
+      if (inMonth(r.l1_date) && r.l1_attended_staff_name) {
+        const key = r.l1_attended_staff_name;
+        if (!staffMap[key]) staffMap[key] = { name: key, sr_l1: 0, sr_l2: 0, ir: 0 };
+        staffMap[key].sr_l1++;
+      }
+      if (inMonth(r.l2_attend_date) && r.l2_attended_staff_name) {
+        const key = r.l2_attended_staff_name;
+        if (!staffMap[key]) staffMap[key] = { name: key, sr_l1: 0, sr_l2: 0, ir: 0 };
+        staffMap[key].sr_l2++;
+      }
+    });
+    // Count IR
+    installReports.forEach(r => {
+      if (inMonth(r.installation_date) && r.attended_staff_name) {
+        const key = r.attended_staff_name;
+        if (!staffMap[key]) staffMap[key] = { name: key, sr_l1: 0, sr_l2: 0, ir: 0 };
+        staffMap[key].ir++;
+      }
+    });
+
+    return Object.values(staffMap)
+      .map(s => ({ ...s, total: s.sr_l1 + s.sr_l2 + s.ir }))
+      .sort((a, b) => b.total - a.total);
+  })();
 
   const kpis = [
     { label: 'Total Reports', value: total, icon: ClipboardList, color: 'text-blue-400' },
@@ -165,6 +212,57 @@ export default function Dashboard() {
               <Area type="monotone" dataKey="jobs" stroke="#3b82f6" fill="url(#jobGrad)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Staff Performance */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <p className="text-sm font-medium flex items-center gap-2">
+            <Users size={14} className="text-primary" /> Staff Performance by Cases Attended
+          </p>
+          <input
+            type="month"
+            value={perfMonth}
+            onChange={e => setPerfMonth(e.target.value)}
+            className="text-xs font-mono bg-muted border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+        {staffPerfData.length === 0 ? (
+          <div className="flex items-center justify-center h-[180px] text-muted-foreground text-sm">No staff activity for this month.</div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={staffPerfData} barSize={20}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="sr_l1" name="SR L1" stackId="a" fill="#3b82f6" />
+                <Bar dataKey="sr_l2" name="SR L2" stackId="a" fill="#8b5cf6" />
+                <Bar dataKey="ir" name="Installation" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="space-y-2">
+              {staffPerfData.map((s, i) => (
+                <div key={s.name} className="flex items-center gap-3 p-2.5 bg-muted/30 rounded-lg">
+                  <span className="text-xs font-mono text-muted-foreground w-5 text-right">{i + 1}.</span>
+                  <span className="text-sm font-medium flex-1 truncate">{s.name}</span>
+                  <div className="flex items-center gap-2 text-xs font-mono">
+                    {s.sr_l1 > 0 && <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">L1: {s.sr_l1}</span>}
+                    {s.sr_l2 > 0 && <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">L2: {s.sr_l2}</span>}
+                    {s.ir > 0 && <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">IR: {s.ir}</span>}
+                    <span className="px-2 py-0.5 rounded bg-primary/20 text-primary font-semibold">{s.total}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />SR L1 (Remote)</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block" />SR L2 (Onsite)</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />Installation</span>
         </div>
       </div>
 
