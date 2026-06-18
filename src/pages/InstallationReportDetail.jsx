@@ -17,8 +17,8 @@ const STATUS_CONFIG = {
 };
 
 const TYPE_CONFIG = {
-  commissioning:    { label: 'Commissioning',   className: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
-  decommissioning:  { label: 'Decommissioning', className: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+  commissioning:    { label: 'Open',   className: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+  decommissioning:  { label: 'Close', className: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
 };
 
 function Field({ label, value }) {
