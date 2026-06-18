@@ -74,7 +74,7 @@ export default function ScheduleCalendarWidget() {
       {/* Legend */}
       <div className="flex gap-4 mb-3 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5"><Wrench size={11} className="text-blue-400" /> Service</div>
-        <div className="flex items-center gap-1.5"><Package size={11} className="text-indigo-400" /> Installation</div>
+        <div className="flex items-center gap-1.5"><Package size={11} className="text-orange-400" /> Installation</div>
       </div>
 
       {/* Day headers */}
