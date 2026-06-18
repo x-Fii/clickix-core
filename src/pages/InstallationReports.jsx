@@ -111,7 +111,7 @@ export default function InstallationReports() {
                     <Link to={`/installation/${r.id}`} className="hover:underline">{r.report_number || '—'}</Link>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant="outline" className={`text-[10px] ${tc.className}`}>{tc.label}</Badge>
+                    <Badge variant="outline" className={`text-[10px] w-16 flex justify-center ${tc.className}`}>{tc.label}</Badge>
                   </td>
                   <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.do_number || '—'}</td>
                   <td className="px-4 py-3 font-medium text-xs">{r.client_name || '—'}</td>
