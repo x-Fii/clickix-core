@@ -185,7 +185,7 @@ export default function ScheduleCalendar() {
                     )}
                   >
                     <div className={cn(
-                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold mb-1.5 ml-auto',
+                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold mb-1.5',
                       today ? 'bg-primary text-primary-foreground' : 'text-foreground',
                     )}>
                       {format(day, 'd')}
