@@ -278,12 +278,12 @@ export default function Dashboard() {
           {recentReports.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted-foreground">No reports yet. Create the first service report to get started.</p>
           ) : recentReports.map(r => (
-            <a key={r.id} href={`/reports/${r.id}`} className="flex items-center gap-4 px-5 py-3 hover:bg-muted/50 transition-colors">
-              <span className="font-mono text-xs text-muted-foreground w-36 flex-shrink-0">{r.running_number}</span>
-              <span className="text-sm flex-1 truncate">{r.client_name || '—'}</span>
-              <span className="text-sm text-muted-foreground flex-1 truncate hidden md:block">{r.site_name || '—'}</span>
+            <a key={r.id} href={`/reports/${r.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-muted/50 transition-colors">
+              <span className="font-mono text-xs text-muted-foreground w-28 flex-shrink-0">{r.running_number}</span>
+              <span className="text-sm font-medium min-w-0 flex-1 break-words">{r.client_name || '—'}</span>
+              <span className="text-sm text-muted-foreground min-w-0 flex-1 break-words hidden md:block">{r.site_name || '—'}</span>
               <StatusBadge status={r.status} />
-              <span className="text-xs text-muted-foreground hidden lg:block font-mono">{r.created_date ? format(new Date(r.created_date), 'dd MMM yy') : ''}</span>
+              <span className="text-xs text-muted-foreground hidden lg:block font-mono flex-shrink-0">{r.created_date ? format(new Date(r.created_date), 'dd MMM yy') : ''}</span>
             </a>
           ))}
         </div>
