@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, MapPin } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Phone, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MY_STATES = ['Johor','Kedah','Kelantan','Melaka','Negeri Sembilan','Pahang','Perak','Perlis','Pulau Pinang','Sabah','Sarawak','Selangor','Terengganu','Kuala Lumpur','Labuan','Putrajaya'];
@@ -52,7 +52,15 @@ export default function Sites() {
     save.mutate(form);
   };
 
-  const filtered = clientFilter === 'all' ? sites : sites.filter(s => s.client_id === clientFilter);
+  const filtered = (clientFilter === 'all' ? sites : sites.filter(s => s.client_id === clientFilter))
+    .slice()
+    .sort((a, b) => {
+      const regionCmp = (a.region || '').localeCompare(b.region || '');
+      if (regionCmp !== 0) return regionCmp;
+      const stateCmp = (a.state || '').localeCompare(b.state || '');
+      if (stateCmp !== 0) return stateCmp;
+      return (a.site_name || '').localeCompare(b.site_name || '');
+    });
 
   return (
     <div className="p-6 space-y-6">
@@ -71,36 +79,71 @@ export default function Sites() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isLoading && <div className="col-span-3 text-center py-12 text-muted-foreground text-sm">Loading...</div>}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        {isLoading && <div className="text-center py-12 text-muted-foreground text-sm">Loading...</div>}
         {!isLoading && filtered.length === 0 && (
-          <div className="col-span-3 text-center py-16">
+          <div className="text-center py-16">
             <MapPin size={40} className="mx-auto text-muted-foreground/30 mb-3" />
             <p className="text-muted-foreground text-sm">No sites found.</p>
           </div>
         )}
-        {filtered.map(s => (
-          <div key={s.id} className="bg-card border border-border rounded-xl p-5 group hover:border-primary/30 transition-colors">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center"><MapPin size={14} className="text-indigo-400" /></div>
-                <div>
-                  <h3 className="font-semibold text-sm">{s.site_name}</h3>
-                  <p className="text-[10px] text-muted-foreground font-mono">{s.client_name}</p>
-                </div>
-              </div>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}><Pencil size={12} /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setDeleteId(s.id)}><Trash2 size={12} /></Button>
-              </div>
-            </div>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              {s.site_location && <p>{s.site_location}</p>}
-              {s.pic_name && <p>PIC: {s.pic_name} {s.pic_phone ? `· ${s.pic_phone}` : ''}</p>}
-              {s.notes && <p className="truncate">{s.notes}</p>}
-            </div>
-          </div>
-        ))}
+        {!isLoading && filtered.length > 0 && (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Site Name</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Client</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Region</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">State</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Location</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">PIC</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s, i) => {
+                const showRegionHeader = i === 0 || filtered[i - 1].region !== s.region;
+                return [
+                  showRegionHeader && (
+                    <tr key={`region-${s.region}-${i}`} className="bg-muted/50">
+                      <td colSpan={7} className="px-4 py-2 text-xs font-mono font-semibold text-primary uppercase tracking-wider">
+                        {s.region || 'No Region'}
+                      </td>
+                    </tr>
+                  ),
+                  <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors group">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-md bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
+                          <MapPin size={11} className="text-indigo-400" />
+                        </div>
+                        <span className="font-medium text-sm">{s.site_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.client_name || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.region || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.state || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell max-w-[200px] truncate">{s.site_location || '—'}</td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {s.pic_name ? (
+                        <div className="text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1"><User size={10} /> {s.pic_name}</div>
+                          {s.pic_phone && <div className="flex items-center gap-1 mt-0.5"><Phone size={10} /> {s.pic_phone}</div>}
+                        </div>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}><Pencil size={12} /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setDeleteId(s.id)}><Trash2 size={12} /></Button>
+                      </div>
+                    </td>
+                  </tr>
+                ];
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
