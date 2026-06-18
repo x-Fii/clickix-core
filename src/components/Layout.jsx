@@ -3,17 +3,23 @@ import { LayoutDashboard, ClipboardList, Users, MapPin, UserCog, ChevronRight, C
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
-const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/reports', label: 'Service Reports', icon: ClipboardList },
-  { path: '/schedule', label: 'Schedule', icon: CalendarDays },
-  { path: '/installation', label: 'Installation Reports', icon: Wrench },
-  { path: '/quotations', label: 'Quotations', icon: FileText },
-  { path: '/pr', label: 'Purchase Requisitions', icon: ShoppingCart },
-  { path: '/claims', label: 'Claims', icon: Receipt },
-  { path: '/clients', label: 'Clients', icon: Users },
-  { path: '/sites', label: 'Sites', icon: MapPin },
-  { path: '/staff', label: 'Staff', icon: UserCog },
+const navSegments = [
+  [
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/schedule', label: 'Schedule', icon: CalendarDays },
+  ],
+  [
+    { path: '/reports', label: 'Service Reports', icon: ClipboardList },
+    { path: '/installation', label: 'Installation Reports', icon: Wrench },
+    { path: '/quotations', label: 'Quotations', icon: FileText },
+    { path: '/pr', label: 'Purchase Requisitions', icon: ShoppingCart },
+    { path: '/claims', label: 'Claims', icon: Receipt },
+  ],
+  [
+    { path: '/clients', label: 'Clients', icon: Users },
+    { path: '/sites', label: 'Sites', icon: MapPin },
+    { path: '/staff', label: 'Staff', icon: UserCog },
+  ],
 ];
 
 export default function Layout() {
@@ -44,29 +50,33 @@ export default function Layout() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ path, label, icon: Icon }) => {
-            const active = path === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(path);
-            return (
-              <Link
-                key={path}
-                to={path}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 group',
-                  active
-                    ? 'bg-primary/15 text-primary border border-primary/20'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                  collapsed && 'justify-center px-2'
-                )}
-                title={collapsed ? label : undefined}
-              >
-                <Icon size={16} className="flex-shrink-0" />
-                {!collapsed && <span className="font-medium">{label}</span>}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 p-2 overflow-y-auto">
+          {navSegments.map((segment, si) => (
+            <div key={si} className={cn('space-y-0.5', si > 0 && 'mt-2 pt-2 border-t border-border')}>
+              {segment.map(({ path, label, icon: Icon }) => {
+                const active = path === '/'
+                  ? location.pathname === '/'
+                  : location.pathname.startsWith(path);
+                return (
+                  <Link
+                    key={path}
+                    to={path}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 group',
+                      active
+                        ? 'bg-primary/15 text-primary border border-primary/20'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                      collapsed && 'justify-center px-2'
+                    )}
+                    title={collapsed ? label : undefined}
+                  >
+                    <Icon size={16} className="flex-shrink-0" />
+                    {!collapsed && <span className="font-medium">{label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Footer */}
