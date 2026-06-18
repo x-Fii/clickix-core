@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Plus, X, Save } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -117,14 +117,49 @@ export default function QuotationForm() {
     saveMutation.mutate({ ...form, items, subtotal, tax_amount: taxAmt, grand_total: grandTotal, status: status || form.status });
   };
 
+  const handleExportPDF = async () => {
+    toast.info('Generating PDF...');
+    const { default: jsPDF } = await import('jspdf');
+    const { default: html2canvas } = await import('html2canvas');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pw = pdf.internal.pageSize.getWidth();
+    const ph = pdf.internal.pageSize.getHeight();
+    const wrapper = document.getElementById('qt-pdf-area');
+    wrapper.style.display = 'block';
+    await new Promise(r => setTimeout(r, 100));
+    const el = document.getElementById('qt-pdf-content');
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
+    wrapper.style.display = 'none';
+    const imgData = canvas.toDataURL('image/png');
+    const imgW = pw;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    let yPos = 0;
+    let pageCount = 0;
+    while (yPos < imgH) {
+      if (pageCount > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH);
+      yPos += ph;
+      pageCount++;
+    }
+    pdf.save(`${form.quotation_number}.pdf`);
+    toast.success('PDF exported');
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto pb-20">
-      <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/quotations')}><ArrowLeft size={16} className="mr-2" /> Back</Button>
-        <div>
-          <h1 className="text-xl font-semibold">{isEdit ? 'Edit Quotation' : 'New Quotation'}</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{form.quotation_number}</p>
+      <div className="flex items-center justify-between mb-8 gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/quotations')}><ArrowLeft size={16} className="mr-2" /> Back</Button>
+          <div>
+            <h1 className="text-xl font-semibold">{isEdit ? 'Edit Quotation' : 'New Quotation'}</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{form.quotation_number}</p>
+          </div>
         </div>
+        {isEdit && (
+          <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
+            <Download size={14} /> PDF
+          </Button>
+        )}
       </div>
 
       <div className="space-y-6">
@@ -252,6 +287,127 @@ export default function QuotationForm() {
           <Button variant="outline" onClick={() => navigate('/quotations')}>Cancel</Button>
           <Button variant="outline" onClick={() => handleSave('draft')} disabled={saveMutation.isPending}><Save size={14} className="mr-2" /> Save Draft</Button>
           <Button onClick={() => handleSave('submitted')} disabled={saveMutation.isPending}>Submit Quotation</Button>
+        </div>
+      </div>
+
+      {/* Hidden PDF Template */}
+      <div id="qt-pdf-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#111827' }}>
+        <div id="qt-pdf-content" style={{ width: '794px', background: 'white' }}>
+          {/* Blue Header */}
+          <div style={{ background: '#2563eb', padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', letterSpacing: '0.5px' }}>CLICK IX SDN BHD</div>
+              <div style={{ fontSize: '11px', color: '#bfdbfe', marginTop: '2px' }}>QUOTATION</div>
+              <div style={{ fontSize: '10px', color: '#bfdbfe', marginTop: '2px', fontFamily: 'monospace' }}>{form.quotation_number}</div>
+            </div>
+            <div style={{ textAlign: 'right', color: '#bfdbfe', fontSize: '10px' }}>
+              Generated: {format(new Date(), 'dd/MM/yyyy, HH:mm:ss')}
+            </div>
+          </div>
+
+          <div style={{ padding: '24px 32px 32px' }}>
+            {/* Document Info */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Quotation Details</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
+                {[['DATE', form.quotation_date], ['VALID UNTIL', form.valid_until], ['PREPARED BY', form.prepared_by], ['STATUS', form.status ? form.status.charAt(0).toUpperCase() + form.status.slice(1) : '']].map(([k, v]) => (
+                  <div key={k}>
+                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
+                    <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Client & Site */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Client Information</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
+                {[['CLIENT', form.client_name], ['SITE', form.site_name], ['LOCATION', form.site_location], ['SR / IR REF', form.sr_number || form.ir_number]].map(([k, v]) => (
+                  <div key={k}>
+                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
+                    <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Items */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Line Items</span>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr style={{ background: '#f3f4f6' }}>
+                    {['#', 'Description', 'Qty', 'Unit Cost (MYR)', 'Total (MYR)'].map((h, i) => (
+                      <th key={h} style={{ padding: '7px 10px', textAlign: i > 1 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '50px' : i > 2 ? '110px' : 'auto' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+                      <td style={{ padding: '7px 10px', textAlign: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
+                      <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.description || '—'}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.quantity}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(item.total || 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+              <div style={{ minWidth: '240px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e5e7eb' }}>
+                  <span style={{ fontSize: '11px', color: '#6b7280' }}>Subtotal</span>
+                  <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#111827' }}>MYR {subtotal.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e5e7eb' }}>
+                  <span style={{ fontSize: '11px', color: '#6b7280' }}>Tax ({form.tax_percent || 0}%)</span>
+                  <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#111827' }}>MYR {taxAmt.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderTop: '2px solid #2563eb' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#111827' }}>Grand Total</span>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#2563eb', fontFamily: 'monospace' }}>MYR {grandTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            {form.notes && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>NOTES / TERMS</div>
+                <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.5' }}>{form.notes}</div>
+              </div>
+            )}
+
+            {/* Signature */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
+              {['Prepared By', 'Authorised By'].map(role => (
+                <div key={role}>
+                  <div style={{ height: '50px', borderBottom: '1px solid #9ca3af', marginBottom: '6px' }} />
+                  <p style={{ fontSize: '10px', color: '#6b7280', textAlign: 'center', margin: 0 }}>{role}</p>
+                  <p style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', margin: '2px 0 0' }}>
+                    {role === 'Prepared By' ? (form.prepared_by || '________________') : '________________'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 32px', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#9ca3af' }}>
+            <span>Click IX Sdn Bhd · Quotation</span>
+            <span>{form.quotation_number}</span>
+          </div>
         </div>
       </div>
     </div>

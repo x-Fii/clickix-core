@@ -442,128 +442,150 @@ export default function ClaimForm() {
       </div>
 
       {/* Hidden PDF Template */}
-      <div id="claim-pdf-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#0f172a' }}>
+      <div id="claim-pdf-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#111827' }}>
         {/* PAGE 1 */}
-        <div id="claim-pdf-page-1" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
-          <div style={{ background: '#0f172a', borderRadius: '8px', padding: '24px 28px', marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div id="claim-pdf-page-1" style={{ width: '794px', background: 'white' }}>
+          {/* Blue Header */}
+          <div style={{ background: '#2563eb', padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <h1 style={{ fontSize: '22px', fontWeight: '900', color: '#f8fafc', letterSpacing: '3px', margin: 0 }}>CLICK IX SDN BHD</h1>
-              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', letterSpacing: '1px' }}>CLAIM DOCUMENT</p>
+              <div style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', letterSpacing: '0.5px' }}>CLICK IX SDN BHD</div>
+              <div style={{ fontSize: '11px', color: '#bfdbfe', marginTop: '2px' }}>CLAIM DOCUMENT</div>
+              <div style={{ fontSize: '10px', color: '#bfdbfe', marginTop: '2px', fontFamily: 'monospace' }}>{form.claim_number}</div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ background: form.status === 'paid' ? '#14b8a6' : form.status === 'approved' ? '#10b981' : form.status === 'submitted' ? '#3b82f6' : form.status === 'rejected' ? '#ef4444' : '#64748b', color: 'white', fontWeight: '700', fontSize: '13px', padding: '4px 12px', borderRadius: '4px', fontFamily: 'monospace' }}>
-                {form.status?.toUpperCase()}
+            <div style={{ textAlign: 'right', color: '#bfdbfe', fontSize: '10px' }}>
+              Generated: {format(new Date(), 'dd/MM/yyyy, HH:mm:ss')}
+            </div>
+          </div>
+
+          <div style={{ padding: '24px 32px 32px' }}>
+            {/* Claimant */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Claimant Details</span>
               </div>
-              <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '6px', fontFamily: 'monospace' }}>{form.claim_number}</p>
-              <p style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>Date: {form.claim_date} · Type: {form.claim_type || '—'}</p>
-              <p style={{ fontSize: '9px', color: '#64748b' }}>Generated: {format(new Date(), 'dd MMM yyyy HH:mm')}</p>
-            </div>
-          </div>
-
-          {/* Claimant */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-              <div style={{ width: '4px', height: '16px', background: '#3b82f6', borderRadius: '2px' }} />
-              <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Claimant Details</h3>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
-              {[['Name', form.claimant_name], ['Department', form.claimant_department], ['Email', form.claimant_email], ['Phone', form.claimant_phone]].map(([k, v]) => (
-                <div key={k} style={{ padding: '8px 10px', background: '#eff6ff', borderRadius: '6px', borderLeft: '3px solid #60a5fa' }}>
-                  <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 3px' }}>{k}</p>
-                  <p style={{ fontWeight: '600', color: '#1e40af', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Linked Docs */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-              <div style={{ width: '4px', height: '16px', background: '#a855f7', borderRadius: '2px' }} />
-              <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Linked Documents</h3>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
-              {[['PR No.', form.pr_number], ['SR No.', form.sr_number], ['Client', form.client_name], ['Site', form.site_name]].map(([k, v]) => (
-                <div key={k} style={{ padding: '8px 10px', background: '#faf5ff', borderRadius: '6px', borderLeft: '3px solid #c084fc' }}>
-                  <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', margin: '0 0 3px' }}>{k}</p>
-                  <p style={{ fontWeight: '600', color: '#6b21a8', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Purpose */}
-          {form.purpose && (
-            <div style={{ padding: '10px 12px', background: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a', marginBottom: '20px' }}>
-              <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', margin: '0 0 4px' }}>Purpose</p>
-              <p style={{ fontSize: '11px', color: '#0f172a', margin: 0 }}>{form.purpose}</p>
-            </div>
-          )}
-
-          {/* Approval & Payment */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
-            {[['Approved By', form.approved_by], ['Approved Date', form.approved_date], ['Paid Date', form.paid_date], ['Payment Ref', form.payment_reference]].map(([k, v]) => (
-              <div key={k} style={{ padding: '8px 10px', background: '#ecfdf5', borderRadius: '6px', borderLeft: '3px solid #34d399' }}>
-                <p style={{ color: '#64748b', fontSize: '9px', textTransform: 'uppercase', margin: '0 0 3px' }}>{k}</p>
-                <p style={{ fontWeight: '600', color: '#065f46', margin: 0, fontSize: '11px' }}>{v || '—'}</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
+                {[['NAME', form.claimant_name], ['DEPARTMENT', form.claimant_department], ['EMAIL', form.claimant_email], ['PHONE', form.claimant_phone]].map(([k, v]) => (
+                  <div key={k}>
+                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
+                    <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Linked Docs */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Linked Documents</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
+                {[['PR NO.', form.pr_number], ['SR NO.', form.sr_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) => (
+                  <div key={k}>
+                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
+                    <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Purpose */}
+            {form.purpose && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>PURPOSE</div>
+                <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.5' }}>{form.purpose}</div>
+              </div>
+            )}
+
+            {/* Approval & Payment */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Approval & Payment</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
+                {[['APPROVED BY', form.approved_by], ['APPROVED DATE', form.approved_date], ['PAID DATE', form.paid_date], ['PAYMENT REF', form.payment_reference]].map(([k, v]) => (
+                  <div key={k}>
+                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
+                    <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 32px', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#9ca3af' }}>
+            <span>Page 1 of 2 | Claim Document</span>
+            <span>{form.claim_number}</span>
           </div>
         </div>
 
         {/* PAGE 2 — Items */}
-        <div id="claim-pdf-page-2" style={{ width: '794px', background: 'white', padding: '40px 40px 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-            <div style={{ width: '4px', height: '16px', background: '#0891b2', borderRadius: '2px' }} />
-            <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#164e63', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Claim Items</h3>
+        <div id="claim-pdf-page-2" style={{ width: '794px', background: 'white' }}>
+          <div style={{ background: '#2563eb', padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff' }}>CLICK IX SDN BHD</div>
+              <div style={{ fontSize: '11px', color: '#bfdbfe', marginTop: '2px' }}>CLAIM DOCUMENT</div>
+            </div>
+            <div style={{ textAlign: 'right', color: '#bfdbfe', fontSize: '10px' }}>{form.claim_number}</div>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
-            <thead>
-              <tr style={{ background: '#0f172a', color: 'white' }}>
-                {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total'].map((h, i) => (
-                  <th key={h} style={{ padding: '8px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafc' : '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
-                  <td style={{ padding: '8px 10px', textAlign: 'center', color: '#64748b', fontFamily: 'monospace', fontSize: '10px' }}>{i + 1}</td>
-                  <td style={{ padding: '8px 10px', fontWeight: '500' }}>{item.description || '—'}</td>
-                  <td style={{ padding: '8px 10px', color: '#64748b' }}>{item.category || '—'}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{item.quantity}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace' }}>{(parseFloat(item.total) || 0).toFixed(2)}</td>
+
+          <div style={{ padding: '24px 32px 32px' }}>
+            <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Claim Items</span>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
+              <thead>
+                <tr style={{ background: '#f3f4f6' }}>
+                  {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total'].map((h, i) => (
+                    <th key={h} style={{ padding: '7px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-            <div style={{ background: '#0f172a', borderRadius: '8px', padding: '12px 20px', minWidth: '200px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>Grand Total</span>
-              <span style={{ color: '#f8fafc', fontWeight: '900', fontSize: '16px', fontFamily: 'monospace' }}>MYR {grandTotal.toFixed(2)}</span>
-            </div>
-          </div>
-          {form.remarks && (
-            <div style={{ padding: '12px', background: '#fefce8', borderRadius: '6px', border: '1px solid #fde68a', marginBottom: '20px' }}>
-              <p style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', margin: '0 0 4px' }}>Remarks</p>
-              <p style={{ fontSize: '11px', color: '#0f172a', margin: 0 }}>{form.remarks}</p>
-            </div>
-          )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
-            {['Claimant', 'Approved By'].map(role => (
-              <div key={role}>
-                <div style={{ height: '50px', borderBottom: '1px solid #94a3b8', marginBottom: '6px' }} />
-                <p style={{ fontSize: '10px', color: '#64748b', textAlign: 'center', margin: 0 }}>{role}</p>
-                <p style={{ fontSize: '10px', color: '#94a3b8', textAlign: 'center', margin: '2px 0 0' }}>
-                  {role === 'Claimant' ? (form.claimant_name || '________________') : (form.approved_by || '________________')}
-                </p>
+              </thead>
+              <tbody>
+                {items.map((item, i) => (
+                  <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={{ padding: '7px 10px', textAlign: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
+                    <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.description || '—'}</td>
+                    <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.category || '—'}</td>
+                    <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.quantity}</td>
+                    <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
+                    <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.total) || 0).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+              <div style={{ minWidth: '220px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderTop: '2px solid #2563eb' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#111827' }}>Grand Total</span>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#2563eb', fontFamily: 'monospace' }}>MYR {grandTotal.toFixed(2)}</span>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {form.remarks && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>REMARKS</div>
+                <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.5' }}>{form.remarks}</div>
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
+              {['Claimant', 'Approved By'].map(role => (
+                <div key={role}>
+                  <div style={{ height: '50px', borderBottom: '1px solid #9ca3af', marginBottom: '6px' }} />
+                  <p style={{ fontSize: '10px', color: '#6b7280', textAlign: 'center', margin: 0 }}>{role}</p>
+                  <p style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', margin: '2px 0 0' }}>
+                    {role === 'Claimant' ? (form.claimant_name || '________________') : (form.approved_by || '________________')}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{ marginTop: '24px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#94a3b8' }}>
-            <span>Click IX Sdn Bhd · Claims System</span>
-            <span>{form.claim_number} · {format(new Date(), 'dd MMM yyyy')}</span>
+
+          <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 32px', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#9ca3af' }}>
+            <span>Page 2 of 2 | Claim Document</span>
+            <span>{form.claim_number}</span>
           </div>
         </div>
       </div>
