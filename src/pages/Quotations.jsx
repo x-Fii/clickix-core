@@ -9,14 +9,14 @@ import { format } from 'date-fns';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  AlertDialogHeader, AlertDialogTitle } from
+'@/components/ui/alert-dialog';
 
 const statusColors = {
   draft: 'bg-slate-500/15 text-slate-400 border-slate-500/25',
   submitted: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
   approved: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-  rejected: 'bg-red-500/15 text-red-400 border-red-500/25',
+  rejected: 'bg-red-500/15 text-red-400 border-red-500/25'
 };
 
 export default function Quotations() {
@@ -27,18 +27,18 @@ export default function Quotations() {
 
   const { data: quotations = [], isLoading } = useQuery({
     queryKey: ['quotations'],
-    queryFn: () => base44.entities.Quotation.list('-created_date'),
+    queryFn: () => base44.entities.Quotation.list('-created_date')
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Quotation.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['quotations'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['quotations'] })
   });
 
-  const filtered = quotations.filter(q =>
-    q.quotation_number?.toLowerCase().includes(search.toLowerCase()) ||
-    q.client_name?.toLowerCase().includes(search.toLowerCase()) ||
-    q.sr_number?.toLowerCase().includes(search.toLowerCase())
+  const filtered = quotations.filter((q) =>
+  q.quotation_number?.toLowerCase().includes(search.toLowerCase()) ||
+  q.client_name?.toLowerCase().includes(search.toLowerCase()) ||
+  q.sr_number?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -58,20 +58,20 @@ export default function Quotations() {
         <Input
           placeholder="Search by quotation no., client, or SR no..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="pl-9 bg-background"
-        />
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 bg-background" />
+        
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /></div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
+      {isLoading ?
+      <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /></div> :
+      filtered.length === 0 ?
+      <div className="text-center py-20 text-muted-foreground">
           <FileText size={32} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">No quotations found</p>
-        </div>
-      ) : (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        </div> :
+
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
@@ -85,8 +85,8 @@ export default function Quotations() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(q => (
-                <tr key={q.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
+              {filtered.map((q) =>
+            <tr key={q.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-primary cursor-pointer hover:underline" onClick={() => navigate(`/quotations/${q.id}`)}>{q.quotation_number}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     {q.sr_number ? <span className="font-mono text-blue-400">{q.sr_number}</span> : q.ir_number ? <span className="font-mono text-indigo-400">{q.ir_number}</span> : '—'}
@@ -101,7 +101,7 @@ export default function Quotations() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/quotations/${q.id}`)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 hidden" onClick={() => navigate(`/quotations/${q.id}`)}>
                         <Eye size={13} />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeleteId(q.id)}>
@@ -110,11 +110,11 @@ export default function Quotations() {
                     </div>
                   </td>
                 </tr>
-              ))}
+            )}
             </tbody>
           </table>
         </div>
-      )}
+      }
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
@@ -124,10 +124,10 @@ export default function Quotations() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { deleteMutation.mutate(deleteId); setDeleteId(null); }} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={() => {deleteMutation.mutate(deleteId);setDeleteId(null);}} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>);
+
 }
