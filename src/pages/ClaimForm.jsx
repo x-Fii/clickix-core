@@ -22,7 +22,7 @@ const Field = ({ label, children }) => (
   </div>
 );
 
-const genClaimNumber = () => `CLM-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 900 + 100)}`;
+const genClaimNumber = () => `CF${format(new Date(), 'yy')}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
 
 const STATUS_COLORS = {
   approved: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
