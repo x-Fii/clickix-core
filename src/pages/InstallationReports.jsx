@@ -119,7 +119,7 @@ export default function InstallationReports() {
                   <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.installation_date || r.scheduled_date || '—'}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{r.attended_staff_name || '—'}</td>
                   <td className="px-4 py-3">
-                    <Badge variant="outline" className={`text-[10px] ${sc.className}`}>{sc.label}</Badge>
+                    <Badge variant="outline" className={`text-[10px] w-20 flex justify-center ${sc.className}`}>{sc.label}</Badge>
                   </td>
                   
 
