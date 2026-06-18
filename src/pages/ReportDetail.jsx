@@ -146,9 +146,19 @@ export default function ReportDetail() {
     setUploadingStamp(false);
   };
 
-  const handleStaffSelect = (staffId) => {
-    const s = staffList.find(x => x.id === staffId);
-    if (s) setL2Form(f => ({ ...f, l2_attended_staff_name: s.name, l2_attended_staff_id: s.staff_id, l2_attended_staff_email: s.email || '' }));
+  const selectedStaffIds = l2Form.l2_attended_staff_ids ? l2Form.l2_attended_staff_ids.split(',').filter(Boolean) : (l2Form.l2_attended_staff_name ? [] : []);
+
+  const handleStaffToggle = (staffId) => {
+    const current = l2Form.l2_attended_staff_ids ? l2Form.l2_attended_staff_ids.split(',').filter(Boolean) : [];
+    const next = current.includes(staffId) ? current.filter(id => id !== staffId) : [...current, staffId];
+    const selected = l2Staff.filter(s => next.includes(s.id));
+    setL2Form(f => ({
+      ...f,
+      l2_attended_staff_ids: next.join(','),
+      l2_attended_staff_name: selected.map(s => s.name).join(', '),
+      l2_attended_staff_id: selected.map(s => s.staff_id).join(', '),
+      l2_attended_staff_email: selected.map(s => s.email || '').join(', '),
+    }));
   };
 
   // Save all L2 data including ack fields — works for both draft and completed reports
@@ -445,10 +455,24 @@ export default function ReportDetail() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Field label="Attended By (L2 Staff)">
-                  <Select onValueChange={handleStaffSelect} disabled={isReadOnly}>
-                    <SelectTrigger className="bg-background text-sm"><SelectValue placeholder={l2Form.l2_attended_staff_name || 'Select staff'} /></SelectTrigger>
-                    <SelectContent>{l2Staff.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
+                  {isReadOnly ? (
+                    <div className="text-sm py-1">{l2Form.l2_attended_staff_name || '—'}</div>
+                  ) : (
+                    <div className="border border-input rounded-md bg-background p-2 space-y-1 max-h-36 overflow-y-auto">
+                      {l2Staff.length === 0 && <p className="text-xs text-muted-foreground">No L2 staff found</p>}
+                      {l2Staff.map(s => {
+                        const checked = (l2Form.l2_attended_staff_ids || '').split(',').filter(Boolean).includes(s.id) ||
+                          (!l2Form.l2_attended_staff_ids && l2Form.l2_attended_staff_name?.includes(s.name));
+                        return (
+                          <label key={s.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5">
+                            <input type="checkbox" checked={checked} onChange={() => handleStaffToggle(s.id)} className="accent-primary" />
+                            <span className="text-sm">{s.name}</span>
+                            {s.staff_id && <span className="text-xs text-muted-foreground font-mono">({s.staff_id})</span>}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </Field>
                 <Field label="Staff ID"><Input value={l2Form.l2_attended_staff_id} onChange={e => setLF('l2_attended_staff_id', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
                 <Field label="Staff Email"><Input value={l2Form.l2_attended_staff_email} onChange={e => setLF('l2_attended_staff_email', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
