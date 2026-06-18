@@ -30,7 +30,7 @@ const STAT_CARDS = [
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
   return (
-    <span className={`inline-flex items-center justify-center w-24 py-0.5 text-[11px] font-mono border rounded-full ${cfg.cls}`}>
+    <span className={`inline-flex items-center justify-center w-24 text-[11px] font-mono border rounded-full ${cfg.cls}`}>
       {cfg.label}
     </span>);
 
@@ -248,8 +248,8 @@ export default function PurchaseRequisitions() {
                     <td className="px-4 py-3">{pr.requester_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.pr_date ? format(parseISO(pr.pr_date), 'dd MMM yyyy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{pr.grand_total != null ? pr.grand_total.toFixed(2) : '—'}</td>
-                    <td className="px-4 py-3"><StatusBadge status={pr.status} /></td>
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="pt-3 pb-3 pl-4"><StatusBadge status={pr.status} /></td>
+                    <td className="py-3 px-2" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-end">
                         
 
