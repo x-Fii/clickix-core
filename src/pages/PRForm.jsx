@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge, FileEdit } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge, FileEdit, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -401,7 +401,35 @@ export default function PRForm() {
 
         {/* Approval & Remarks */}
         <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Approval & Remarks</h3>
+          <div className="flex items-center justify-between pb-3 mb-5 border-b border-border">
+            <h3 className="font-semibold text-sm">Approval & Remarks</h3>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-red-400 border-red-500/30 hover:bg-red-500/10"
+                disabled={form.status === 'rejected' || saveMutation.isPending}
+                onClick={() => {
+                  setF('status', 'rejected');
+                  saveMutation.mutate({ ...form, status: 'rejected', items, subtotal: grandTotal, grand_total: grandTotal, approved_amount: parseFloat(form.approved_amount) || null });
+                }}>
+                <XCircle size={13} /> Reject
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={form.status === 'approved' || saveMutation.isPending}
+                onClick={() => {
+                  const today = format(new Date(), 'yyyy-MM-dd');
+                  setForm(f => ({ ...f, status: 'approved', approved_date: f.approved_date || today }));
+                  saveMutation.mutate({ ...form, status: 'approved', approved_date: form.approved_date || today, items, subtotal: grandTotal, grand_total: grandTotal, approved_amount: parseFloat(form.approved_amount) || null });
+                }}>
+                <CheckCircle size={13} /> Approve
+              </Button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Approved By"><Input value={form.approved_by} onChange={e => setF('approved_by', e.target.value)} className="bg-background" placeholder="Approver name" /></Field>
             <Field label="Approved Date"><Input type="date" value={form.approved_date} onChange={e => setF('approved_date', e.target.value)} className="bg-background" /></Field>
