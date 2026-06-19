@@ -49,6 +49,7 @@ export default function PRForm() {
     remarks: '',
     approved_by: '',
     approved_date: '',
+    approved_amount: '',
   });
   const [items, setItems] = useState([
     { item_no: 1, description: '', category: '', quantity: 1, unit_cost: '', total: 0 }
@@ -58,7 +59,7 @@ export default function PRForm() {
     queryKey: ['pr', id],
     queryFn: async () => {
       const pr = await base44.entities.PurchaseRequisition.get(id);
-      setForm({ ...pr });
+      setForm({ ...pr, approved_amount: pr.approved_amount != null ? pr.approved_amount.toString() : '' });
       setItems(pr.items?.length ? pr.items.map(it => ({ ...it, unit_cost: it.unit_cost?.toString() ?? '', quantity: it.quantity?.toString() ?? '1' })) : [{ item_no: 1, description: '', category: '', quantity: '1', unit_cost: '', total: 0 }]);
       return pr;
     },
@@ -164,7 +165,7 @@ export default function PRForm() {
   const grandTotal = items.reduce((s, it) => s + (parseFloat(it.unit_cost) || 0) * (parseFloat(it.quantity) || 0), 0);
 
   const handleSave = (status) => {
-    saveMutation.mutate({ ...form, items, subtotal: grandTotal, grand_total: grandTotal, status: status || form.status });
+    saveMutation.mutate({ ...form, items, subtotal: grandTotal, grand_total: grandTotal, status: status || form.status, approved_amount: parseFloat(form.approved_amount) || null });
   };
 
   const handleExportPDF = async () => {
@@ -404,6 +405,7 @@ export default function PRForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Approved By"><Input value={form.approved_by} onChange={e => setF('approved_by', e.target.value)} className="bg-background" placeholder="Approver name" /></Field>
             <Field label="Approved Date"><Input type="date" value={form.approved_date} onChange={e => setF('approved_date', e.target.value)} className="bg-background" /></Field>
+            <Field label="Approved Amount (MYR)"><Input type="text" inputMode="decimal" value={form.approved_amount} onChange={e => setF('approved_amount', e.target.value)} className="bg-background font-mono" placeholder="0.00" /></Field>
             <div className="md:col-span-2">
               <Field label="Remarks">
                 <Textarea value={form.remarks} onChange={e => setF('remarks', e.target.value)} className="bg-background resize-none" rows={2} placeholder="Additional notes..." />
@@ -489,7 +491,7 @@ export default function PRForm() {
                   <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Approval</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-                  {[['APPROVED BY', form.approved_by], ['APPROVED DATE', form.approved_date]].map(([k, v]) => (
+                  {[['APPROVED BY', form.approved_by], ['APPROVED DATE', form.approved_date], ['APPROVED AMOUNT', form.approved_amount ? `MYR ${parseFloat(form.approved_amount).toFixed(2)}` : null]].filter(([,v]) => v).map(([k, v]) => (
                     <div key={k}>
                       <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                       <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>

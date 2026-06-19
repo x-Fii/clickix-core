@@ -94,6 +94,9 @@
     "grand_total": {
       "type": "number"
     },
+    "approved_amount": {
+      "type": "number"
+    },
     "remarks": {
       "type": "string"
     },

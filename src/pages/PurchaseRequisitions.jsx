@@ -235,6 +235,7 @@ export default function PurchaseRequisitions() {
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Requester</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Date</th>
                   <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Total (MYR)</th>
+                  <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Approved (MYR)</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -248,6 +249,7 @@ export default function PurchaseRequisitions() {
                     <td className="px-4 py-3">{pr.requester_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.pr_date ? format(parseISO(pr.pr_date), 'dd MMM yyyy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{pr.grand_total != null ? pr.grand_total.toFixed(2) : '—'}</td>
+                    <td className="px-4 py-3 text-right font-mono text-sm text-emerald-400">{pr.approved_amount != null ? pr.approved_amount.toFixed(2) : '—'}</td>
                     <td className="pt-3 pb-3 pl-4"><StatusBadge status={pr.status} /></td>
                     <td className="py-3 px-1" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-end">
