@@ -208,23 +208,47 @@ export default function ClaimForm() {
   };
 
   const handleExportPDF = async () => {
-    toast.info('Generating PDF...');
-    const { default: jsPDF } = await import('jspdf');
-    const { default: html2canvas } = await import('html2canvas');
-    const wrapper = document.getElementById('claim-pdf-area');
-    wrapper.style.display = 'block';
-    await new Promise(r => setTimeout(r, 100));
-    const el = document.getElementById('claim-pdf-content');
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
-    wrapper.style.display = 'none';
-    const imgData = canvas.toDataURL('image/png');
-    const pxPerMm = canvas.width / 210;
-    const imgH = canvas.height / pxPerMm;
-    const pdf = new jsPDF('p', 'mm', [210, imgH]);
-    pdf.addImage(imgData, 'PNG', 0, 0, 210, imgH);
-    pdf.save(`${form.claim_number}.pdf`);
-    toast.success('PDF exported');
-  };
+  toast.info('Generating PDF...');
+  const { default: jsPDF } = await import('jspdf');
+  const { default: html2canvas } = await import('html2canvas');
+  
+  const wrapper = document.getElementById('claim-pdf-area');
+  wrapper.style.display = 'block';
+  await new Promise(r => setTimeout(r, 100));
+  
+  const el = document.getElementById('claim-pdf-content');
+  
+  // 1. Remove the fixed width: 794 configuration so html2canvas captures 
+  // the natural, unbroken bounds of the element.
+  const canvas = await html2canvas(el, { 
+    scale: 2, 
+    useCORS: true, 
+    backgroundColor: '#ffffff'
+  });
+  
+  wrapper.style.display = 'none';
+  const imgData = canvas.toDataURL('image/png');
+  
+  // 2. Map standard A4 width (210mm) to canvas width pixels
+  const targetWidthMm = 210;
+  const mmPerPx = targetWidthMm / canvas.width;
+  const targetHeightMm = canvas.height * mmPerPx; // Exact height needed for your continuous content
+  
+  // 3. FORCE jsPDF to initialize a custom canvas size that mirrors your exact height 
+  // The third parameter array [width, height] removes the multi-page split entirely.
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: [targetWidthMm, targetHeightMm]
+  });
+  
+  // 4. Draw image onto the single oversized page canvas
+  pdf.addImage(imgData, 'PNG', 0, 0, targetWidthMm, targetHeightMm, undefined, 'FAST');
+  
+  pdf.save(`${form.claim_number}.pdf`);
+  toast.success('PDF exported');
+};
+
 
   const handleSubmitToAdmin = async () => {
     const adminEmail = prompt('Enter admin email address:');
