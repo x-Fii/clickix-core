@@ -131,7 +131,7 @@ export default function PurchaseRequisitions() {
   };
 
   const totalValue = prs.reduce((s, p) => s + (p.grand_total || 0), 0);
-  const approvedValue = prs.filter((p) => p.status === 'approved').reduce((s, p) => s + (p.grand_total || 0), 0);
+  const approvedValue = prs.filter((p) => p.status === 'approved').reduce((s, p) => s + (p.approved_amount ?? p.grand_total ?? 0), 0);
 
   const filtered = prs.filter((p) => {
     const matchSearch = !search ||
