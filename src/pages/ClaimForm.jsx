@@ -212,42 +212,42 @@ export default function ClaimForm() {
   const { default: jsPDF } = await import('jspdf');
   const { default: html2canvas } = await import('html2canvas');
   
+  // Initialize standard A4 landscape/portrait sizing properties
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pw = pdf.internal.pageSize.getWidth();
+  const ph = pdf.internal.pageSize.getHeight();
+  
   const wrapper = document.getElementById('claim-pdf-area');
   wrapper.style.display = 'block';
   await new Promise(r => setTimeout(r, 100));
   
   const el = document.getElementById('claim-pdf-content');
-  
-  // 1. Remove the fixed width: 794 configuration so html2canvas captures 
-  // the natural, unbroken bounds of the element.
-  const canvas = await html2canvas(el, { 
-    scale: 2, 
-    useCORS: true, 
-    backgroundColor: '#ffffff'
-  });
-  
+  // Re-applied the explicit width threshold to maintain consistent text scaling across pages
+  const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
   wrapper.style.display = 'none';
+  
   const imgData = canvas.toDataURL('image/png');
+  const imgW = pw;
+  const imgH = (canvas.height * imgW) / canvas.width;
   
-  // 2. Map standard A4 width (210mm) to canvas width pixels
-  const targetWidthMm = 210;
-  const mmPerPx = targetWidthMm / canvas.width;
-  const targetHeightMm = canvas.height * mmPerPx; // Exact height needed for your continuous content
+  let yPos = 0;
+  let pageCount = 0;
   
-  // 3. FORCE jsPDF to initialize a custom canvas size that mirrors your exact height 
-  // The third parameter array [width, height] removes the multi-page split entirely.
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: [targetWidthMm, targetHeightMm]
-  });
-  
-  // 4. Draw image onto the single oversized page canvas
-  pdf.addImage(imgData, 'PNG', 0, 0, targetWidthMm, targetHeightMm, undefined, 'FAST');
+  // Safely loop and distribute the image chunks down the pages
+  while (yPos < imgH) {
+    if (pageCount > 0) {
+      pdf.addPage();
+    }
+    // 'FAST' memory allocation avoids canvas doubling and limits total document size
+    pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH, undefined, 'FAST');
+    yPos += ph;
+    pageCount++;
+  }
   
   pdf.save(`${form.claim_number}.pdf`);
   toast.success('PDF exported');
 };
+
 
 
   const handleSubmitToAdmin = async () => {
