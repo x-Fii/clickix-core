@@ -567,7 +567,7 @@ export default function ClaimForm() {
           </div>
 
           <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 32px', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#9ca3af' }}>
-            <span>Click IX Sdn Bhd · Claim Document</span>
+            <span>Click IX Sdn Bhd · Claim Document · {format(new Date(), 'dd/MM/yyyy')}</span>
             <span>{form.claim_number}</span>
           </div>
         </div>
