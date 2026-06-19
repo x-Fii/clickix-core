@@ -8,11 +8,24 @@
     "contact_person": {
       "type": "string"
     },
+    "pic_designation": {
+      "type": "string"
+    },
     "contact_email": {
       "type": "string"
     },
     "contact_phone": {
       "type": "string"
+    },
+    "company_website": {
+      "type": "string"
+    },
+    "sla": {
+      "type": "string",
+      "enum": [
+        "subscribe",
+        "on-demand"
+      ]
     },
     "address": {
       "type": "string"

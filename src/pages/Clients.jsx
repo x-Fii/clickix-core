@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Pencil, Trash2, Users, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const empty = { company_name: '', contact_person: '', contact_email: '', contact_phone: '', address: '', notes: '' };
+const empty = { company_name: '', contact_person: '', pic_designation: '', contact_email: '', contact_phone: '', company_website: '', sla: undefined, address: '', notes: '' };
 
 export default function Clients() {
   const queryClient = useQueryClient();
@@ -71,9 +72,11 @@ export default function Clients() {
               </div>
             </div>
             <div className="space-y-1 text-xs text-muted-foreground">
-              {c.contact_person && <p>Contact: {c.contact_person}</p>}
+              {c.contact_person && <p>Contact: {c.contact_person}{c.pic_designation ? ` · ${c.pic_designation}` : ''}</p>}
               {c.contact_email && <p>{c.contact_email}</p>}
               {c.contact_phone && <p>{c.contact_phone}</p>}
+              {c.company_website && <p className="truncate">{c.company_website}</p>}
+              {c.sla && <p className="capitalize">SLA: {c.sla}</p>}
               {c.address && <p className="truncate">{c.address}</p>}
             </div>
           </div>
@@ -84,12 +87,22 @@ export default function Clients() {
         <DialogContent className="bg-card border-border max-w-md">
           <DialogHeader><DialogTitle>{editId ? 'Edit Client' : 'Add New Client'}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
-            {[['Company Name', 'company_name', 'text', true], ['Contact Person', 'contact_person', 'text'], ['Contact Email', 'contact_email', 'email'], ['Contact Phone', 'contact_phone', 'text']].map(([label, key, type, req]) => (
+            {[['Company Name', 'company_name', 'text', true], ['Contact Person', 'contact_person', 'text'], ['PIC Designation', 'pic_designation', 'text'], ['Contact Email', 'contact_email', 'email'], ['Contact Phone', 'contact_phone', 'text'], ['Company Website', 'company_website', 'text']].map(([label, key, type, req]) => (
               <div key={key} className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">{label}{req && <span className="text-red-400 ml-1">*</span>}</Label>
                 <Input type={type} value={form[key]} onChange={e => setF(key, e.target.value)} className="bg-background" />
               </div>
             ))}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">SLA</Label>
+              <Select value={form.sla} onValueChange={v => setF('sla', v)}>
+                <SelectTrigger className="bg-background"><SelectValue placeholder="Select SLA type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="subscribe">Subscribe</SelectItem>
+                  <SelectItem value="on-demand">On-Demand</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Address</Label>
               <Textarea value={form.address} onChange={e => setF('address', e.target.value)} className="bg-background resize-none" rows={2} />
