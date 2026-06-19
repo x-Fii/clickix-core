@@ -216,22 +216,21 @@ export default function ClaimForm() {
     const ph = pdf.internal.pageSize.getHeight();
     const wrapper = document.getElementById('claim-pdf-area');
     wrapper.style.display = 'block';
-    for (const pageId of ['claim-pdf-page-1', 'claim-pdf-page-2']) {
-      const el = document.getElementById(pageId);
-      if (!el || el.offsetHeight < 5) continue;
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
-      const imgData = canvas.toDataURL('image/png');
-      const imgH = (canvas.height * pw) / canvas.width;
-      if (pdf.internal.getNumberOfPages() > 1 || pageId !== 'claim-pdf-page-1') pdf.addPage();
-      let remaining = imgH - ph;
-      pdf.addImage(imgData, 'PNG', 0, 0, pw, imgH);
-      while (remaining > 0) {
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, -(imgH - remaining), pw, imgH);
-        remaining -= ph;
-      }
-    }
+    await new Promise(r => setTimeout(r, 100));
+    const el = document.getElementById('claim-pdf-content');
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
     wrapper.style.display = 'none';
+    const imgData = canvas.toDataURL('image/png');
+    const imgW = pw;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    let yPos = 0;
+    let pageCount = 0;
+    while (yPos < imgH) {
+      if (pageCount > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH);
+      yPos += ph;
+      pageCount++;
+    }
     pdf.save(`${form.claim_number}.pdf`);
     toast.success('PDF exported');
   };
@@ -443,8 +442,7 @@ export default function ClaimForm() {
 
       {/* Hidden PDF Template */}
       <div id="claim-pdf-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#111827' }}>
-        {/* PAGE 1 */}
-        <div id="claim-pdf-page-1" style={{ width: '794px', background: 'white' }}>
+        <div id="claim-pdf-content" style={{ width: '794px', background: 'white' }}>
           {/* Blue Header */}
           <div style={{ background: '#2563eb', padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -510,55 +508,40 @@ export default function ClaimForm() {
                 ))}
               </div>
             </div>
-          </div>
 
-          <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 32px', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#9ca3af' }}>
-            <span>Page 1 of 2 | Claim Document</span>
-            <span>{form.claim_number}</span>
-          </div>
-        </div>
-
-        {/* PAGE 2 — Items */}
-        <div id="claim-pdf-page-2" style={{ width: '794px', background: 'white' }}>
-          <div style={{ background: '#2563eb', padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff' }}>CLICK IX SDN BHD</div>
-              <div style={{ fontSize: '11px', color: '#bfdbfe', marginTop: '2px' }}>CLAIM DOCUMENT</div>
-            </div>
-            <div style={{ textAlign: 'right', color: '#bfdbfe', fontSize: '10px' }}>{form.claim_number}</div>
-          </div>
-
-          <div style={{ padding: '24px 32px 32px' }}>
-            <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Claim Items</span>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
-              <thead>
-                <tr style={{ background: '#f3f4f6' }}>
-                  {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total'].map((h, i) => (
-                    <th key={h} style={{ padding: '7px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, i) => (
-                  <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '7px 10px', textAlign: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
-                    <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.description || '—'}</td>
-                    <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.category || '—'}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.quantity}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.total) || 0).toFixed(2)}</td>
+            {/* Items */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Claim Items</span>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
+                <thead>
+                  <tr style={{ background: '#f3f4f6' }}>
+                    {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total'].map((h, i) => (
+                      <th key={h} style={{ padding: '7px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map((item, i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '7px 10px', textAlign: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
+                      <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.description || '—'}</td>
+                      <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.category || '—'}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.quantity}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.total) || 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-              <div style={{ minWidth: '220px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderTop: '2px solid #2563eb' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#111827' }}>Grand Total</span>
-                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#2563eb', fontFamily: 'monospace' }}>MYR {grandTotal.toFixed(2)}</span>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                <div style={{ minWidth: '220px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderTop: '2px solid #2563eb' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#111827' }}>Grand Total</span>
+                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#2563eb', fontFamily: 'monospace' }}>MYR {grandTotal.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -584,7 +567,7 @@ export default function ClaimForm() {
           </div>
 
           <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px 32px', display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#9ca3af' }}>
-            <span>Page 2 of 2 | Claim Document</span>
+            <span>Click IX Sdn Bhd · Claim Document</span>
             <span>{form.claim_number}</span>
           </div>
         </div>
