@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StatusBadge from '@/components/StatusBadge';
 import SignaturePad from '@/components/SignaturePad';
-import { ArrowLeft, Download, Send, Plus, X, Upload, Edit2, Save } from 'lucide-react';
+import { ArrowLeft, Download, Send, Plus, X, Upload, Edit2, Save, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -57,6 +57,7 @@ export default function ReportDetail() {
   const [uploadingStamp, setUploadingStamp] = useState(false);
   const [jobDescPhotos, setJobDescPhotos] = useState([]);
   const [remarksPhotos, setRemarksPhotos] = useState([]);
+  const [summaryCopied, setSummaryCopied] = useState(false);
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['service-report', id],
@@ -476,7 +477,35 @@ export default function ReportDetail() {
 
           {/* L1 Session Summary */}
           <div className="mt-6 pt-5 border-t border-border">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-3">L1 Session Summary</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono">L1 Session Summary</p>
+              <button
+                onClick={() => {
+                  const lines = [
+                    `• Response ID: ${report.l1_attended_staff_id || '—'}`,
+                    `• Site Name: ${report.site_name || '—'}`,
+                    ...(report.l1_affected_sections?.length > 0
+                      ? report.l1_affected_sections.flatMap((sec, si) =>
+                          (sec.items || []).filter(i => i.device_type || i.issue_description).map(item =>
+                            `• Section: ${sec.section_name || `Section ${si + 1}`}${item.device_type ? ` — Device: ${item.device_type}${item.device_name ? ` (${item.device_name})` : ''}` : ''}${item.issue_description ? ` — Issue: ${item.issue_description}` : ''}`
+                          )
+                        )
+                      : (report.l1_affected_items || []).filter(i => i.device_type).map(item =>
+                          `• Device: ${item.device_type}${item.device_name ? ` (${item.device_name})` : ''}${item.issue_description ? ` — Issue: ${item.issue_description}` : ''}`
+                        )
+                    ),
+                    `• Remarks: ${report.l1_remarks || '—'}`,
+                  ];
+                  navigator.clipboard.writeText(lines.join('\n'));
+                  setSummaryCopied(true);
+                  setTimeout(() => setSummaryCopied(false), 2000);
+                }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border hover:bg-muted/50"
+              >
+                {summaryCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                {summaryCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
             <div className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs space-y-1 text-foreground leading-relaxed">
               <p>• <span className="text-muted-foreground">Response ID:</span> {report.l1_attended_staff_id || '—'}</p>
               <p>• <span className="text-muted-foreground">Site Name:</span> {report.site_name || '—'}</p>
