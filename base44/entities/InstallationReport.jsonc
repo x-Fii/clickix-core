@@ -71,6 +71,15 @@
     "site_pic_name": {
       "type": "string"
     },
+    "pre_job_assessment": {
+      "type": "string"
+    },
+    "pre_job_assessment_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "equipment_installed": {
       "type": "array",
       "items": {

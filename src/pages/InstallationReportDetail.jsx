@@ -203,10 +203,27 @@ export default function InstallationReportDetail() {
         </div>
       )}
 
-      {/* Technician Notes */}
+      {/* Pre-Job Site Assessment */}
+      {(report.pre_job_assessment || (report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0)) && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+          <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">Pre-Job Site Assessment</h2>
+          {report.pre_job_assessment && <p className="text-sm whitespace-pre-wrap">{report.pre_job_assessment}</p>}
+          {report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {report.pre_job_assessment_photos.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noreferrer">
+                  <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Post Job Technician Note */}
       {report.technician_notes && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-2">
-          <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">Technician Notes</h2>
+          <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">Post Job Technician Note</h2>
           <p className="text-sm whitespace-pre-wrap">{report.technician_notes}</p>
         </div>
       )}
@@ -351,11 +368,28 @@ export default function InstallationReportDetail() {
             </div>
           )}
 
-          {/* Technician Notes */}
+          {/* Pre-Job Site Assessment */}
+          {(report.pre_job_assessment || (report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0)) && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Pre-Job Site Assessment</span>
+              </div>
+              {report.pre_job_assessment && <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '12px', marginBottom: '10px' }}>{report.pre_job_assessment}</div>}
+              {report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {report.pre_job_assessment_photos.map((url, i) => (
+                    <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '200px', height: '160px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Post Job Technician Note */}
           {report.technician_notes && (
             <div style={{ marginBottom: '20px' }}>
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Technician Notes</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Post Job Technician Note</span>
               </div>
               <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '12px' }}>{report.technician_notes}</div>
             </div>
