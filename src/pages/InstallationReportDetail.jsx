@@ -75,6 +75,7 @@ export default function InstallationReportDetail() {
       status: 'completed',
       submitted: true,
       submitted_at: new Date().toISOString(),
+      ack_timestamp: new Date().toISOString(),
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(['installation-report', id]);
@@ -161,6 +162,7 @@ export default function InstallationReportDetail() {
           <Field label="Installation Date" value={report.installation_date} />
           <Field label="Installation Finish Date" value={report.installation_finish_date} />
           <Field label="Attend Time" value={report.attend_time} />
+          {report.ack_timestamp && <Field label="Completed At" value={new Date(report.ack_timestamp).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })} />}
           <Field label="Technician" value={report.attended_staff_name} />
           <Field label="DO Number" value={report.do_number} />
           <Field label="Work Order No." value={report.work_order_number} />

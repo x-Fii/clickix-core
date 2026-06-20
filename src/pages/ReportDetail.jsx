@@ -700,7 +700,7 @@ export default function ReportDetail() {
                   <Input value={ackPhone} onChange={e => setAckPhone(e.target.value)} placeholder="+60 12-xxx xxxx" className="bg-background" readOnly={isReadOnly} />
                 </Field>
                 {report.ack_timestamp && (
-                  <ReadField label="Acknowledged At" value={format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm')} />
+                  <ReadField label="Completed / Acknowledged At" value={format(new Date(report.ack_timestamp), 'dd MMM yyyy HH:mm:ss')} />
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
