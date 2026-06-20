@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, Users, Building2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Building2, Globe, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 
 const empty = { company_name: '', contact_person: '', pic_designation: '', contact_email: '', contact_phone: '', company_website: '', sla: undefined, address: '', notes: '' };
@@ -51,36 +51,68 @@ export default function Clients() {
         <Button onClick={openNew} className="gap-2"><Plus size={16} /> Add Client</Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isLoading && <div className="col-span-3 text-center py-12 text-muted-foreground text-sm">Loading...</div>}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        {isLoading && <div className="text-center py-12 text-muted-foreground text-sm">Loading...</div>}
         {!isLoading && clients.length === 0 && (
-          <div className="col-span-3 text-center py-16">
+          <div className="text-center py-16">
             <Building2 size={40} className="mx-auto text-muted-foreground/30 mb-3" />
             <p className="text-muted-foreground text-sm">No clients yet. Add your first client.</p>
           </div>
         )}
-        {clients.map(c => (
-          <div key={c.id} className="bg-card border border-border rounded-xl p-5 group hover:border-primary/30 transition-colors">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center"><Users size={14} className="text-primary" /></div>
-                <h3 className="font-semibold text-sm leading-tight">{c.company_name}</h3>
-              </div>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}><Pencil size={12} /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setDeleteId(c.id)}><Trash2 size={12} /></Button>
-              </div>
-            </div>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              {c.contact_person && <p>Contact: {c.contact_person}{c.pic_designation ? ` · ${c.pic_designation}` : ''}</p>}
-              {c.contact_email && <p>{c.contact_email}</p>}
-              {c.contact_phone && <p>{c.contact_phone}</p>}
-              {c.company_website && <p className="truncate">{c.company_website}</p>}
-              {c.sla && <p className="capitalize">SLA: {c.sla}</p>}
-              {c.address && <p className="truncate">{c.address}</p>}
-            </div>
-          </div>
-        ))}
+        {!isLoading && clients.length > 0 && (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Company</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Contact Person</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email / Phone</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Website</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">SLA</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.slice().sort((a, b) => (a.company_name || '').localeCompare(b.company_name || '')).map(c => (
+                <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors group">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center flex-shrink-0">
+                        <Users size={11} className="text-primary" />
+                      </div>
+                      <span className="font-medium text-sm">{c.company_name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
+                    {c.contact_person && <div>{c.contact_person}</div>}
+                    {c.pic_designation && <div className="text-muted-foreground/60">{c.pic_designation}</div>}
+                    {!c.contact_person && '—'}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
+                    {c.contact_email && <div>{c.contact_email}</div>}
+                    {c.contact_phone && <div className="flex items-center gap-1 mt-0.5"><Phone size={10} /> {c.contact_phone}</div>}
+                    {!c.contact_email && !c.contact_phone && '—'}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell max-w-[160px] truncate">
+                    {c.company_website ? <div className="flex items-center gap-1"><Globe size={10} /> {c.company_website}</div> : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {c.sla ? (
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium border ${c.sla === 'subscribe' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' : 'bg-amber-500/15 text-amber-400 border-amber-500/25'}`}>
+                        {c.sla === 'subscribe' ? 'Subscribe' : 'On-Demand'}
+                      </span>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}><Pencil size={12} /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setDeleteId(c.id)}><Trash2 size={12} /></Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
