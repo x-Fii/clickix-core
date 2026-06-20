@@ -50,6 +50,7 @@ export default function NewReport() {
     l1_attended_staff_name: '', l1_attended_staff_id: '', l1_attended_staff_email: '',
     do_number: '',
     l1_remarks: '',
+    whatsapp_response_id: '',
   });
   const [affectedSections, setAffectedSections] = useState([emptySection()]);
 
@@ -114,6 +115,7 @@ export default function NewReport() {
       ...form,
       l1_status: l1Status,
       status,
+      whatsapp_response_id: form.whatsapp_response_id,
       l1_affected_sections: affectedSections,
       l1_affected_items: allItems.filter(i => i.device_type),
       l1_submitted: true,
@@ -192,7 +194,7 @@ export default function NewReport() {
               <Input value={form.running_number} readOnly className="bg-muted font-mono text-xs" />
             </Field>
             <Field label="Whatsapp Response ID">
-              <Input value={form.l1_attended_staff_id} onChange={e => setF('l1_attended_staff_id', e.target.value)} className="bg-background font-mono" placeholder="Whatsapp Response ID" />
+              <Input value={form.whatsapp_response_id} onChange={e => setF('whatsapp_response_id', e.target.value)} className="bg-background font-mono" placeholder="Whatsapp Response ID" />
             </Field>
             <Field label="Date">
               <Input type="date" value={form.l1_date} onChange={e => setF('l1_date', e.target.value)} className="bg-background" />
@@ -278,7 +280,7 @@ export default function NewReport() {
         <div className="bg-card border border-border rounded-xl p-6">
           <SectionHeader title="L1 Session Summary" subtitle="Auto-generated summary based on information entered above" />
           <div className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs space-y-1 text-foreground leading-relaxed">
-            <p>• <span className="text-muted-foreground">Response ID:</span> {form.l1_attended_staff_id || <span className="italic text-muted-foreground">—</span>}</p>
+            <p>• <span className="text-muted-foreground">Response ID:</span> {form.whatsapp_response_id || <span className="italic text-muted-foreground">—</span>}</p>
             <p>• <span className="text-muted-foreground">Site Name:</span> {form.site_name || <span className="italic text-muted-foreground">—</span>}</p>
             {affectedSections.map((sec, si) =>
               sec.items.filter(i => i.device_type || i.issue_description).map((item, ii) => (

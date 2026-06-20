@@ -51,6 +51,9 @@
     "l1_attended_staff_email": {
       "type": "string"
     },
+    "whatsapp_response_id": {
+      "type": "string"
+    },
     "l1_affected_sections": {
       "type": "array",
       "items": {

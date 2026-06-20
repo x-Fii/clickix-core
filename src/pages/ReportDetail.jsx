@@ -420,7 +420,7 @@ export default function ReportDetail() {
             <ReadField label="Site Location" value={report.site_location} />
             <ReadField label="Reported By" value={report.reported_by} />
             <ReadField label="DO Number" value={report.do_number} />
-            <ReadField label="Response ID" value={report.l1_attended_staff_id} />
+            <ReadField label="Whatsapp Response ID" value={report.whatsapp_response_id} />
             <ReadField label="Report Date" value={report.l1_date} />
             <ReadField label="Created" value={report.created_date ? format(new Date(report.created_date), 'dd MMM yyyy HH:mm') : ''} />
           </div>
@@ -483,7 +483,7 @@ export default function ReportDetail() {
               <button
                 onClick={() => {
                   const lines = [
-                  `• Response ID: ${report.l1_attended_staff_id || '—'}`,
+                  `• Response ID: ${report.whatsapp_response_id || '—'}`,
                   `• Site Name: ${report.site_name || '—'}`,
                   ...(report.l1_affected_sections?.length > 0 ?
                   report.l1_affected_sections.flatMap((sec, si) =>
@@ -509,7 +509,7 @@ export default function ReportDetail() {
               </button>
             </div>
             <div className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs space-y-1 text-foreground leading-relaxed">
-              <p>• <span className="text-muted-foreground">Response ID:</span> {report.l1_attended_staff_id || '—'}</p>
+              <p>• <span className="text-muted-foreground">Response ID:</span> {report.whatsapp_response_id || '—'}</p>
               <p>• <span className="text-muted-foreground">Site Name:</span> {report.site_name || '—'}</p>
               {report.l1_affected_sections?.length > 0 ?
               report.l1_affected_sections.map((sec, si) =>
