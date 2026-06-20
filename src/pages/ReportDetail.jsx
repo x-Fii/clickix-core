@@ -473,6 +473,34 @@ export default function ReportDetail() {
               )}
             </div>
           )}
+
+          {/* L1 Session Summary */}
+          <div className="mt-6 pt-5 border-t border-border">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-3">L1 Session Summary</p>
+            <div className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs space-y-1 text-foreground leading-relaxed">
+              <p>• <span className="text-muted-foreground">Response ID:</span> {report.l1_attended_staff_id || '—'}</p>
+              <p>• <span className="text-muted-foreground">Site Name:</span> {report.site_name || '—'}</p>
+              {report.l1_affected_sections?.length > 0 ? (
+                report.l1_affected_sections.map((sec, si) =>
+                  (sec.items || []).filter(i => i.device_type || i.issue_description).map((item, ii) => (
+                    <p key={`${si}-${ii}`}>
+                      • <span className="text-muted-foreground">Section:</span> {sec.section_name || `Section ${si + 1}`}
+                      {item.device_type && <> — <span className="text-muted-foreground">Device:</span> {item.device_type}{item.device_name ? ` (${item.device_name})` : ''}</>}
+                      {item.issue_description && <> — <span className="text-muted-foreground">Issue:</span> {item.issue_description}</>}
+                    </p>
+                  ))
+                )
+              ) : (
+                (report.l1_affected_items || []).filter(i => i.device_type).map((item, i) => (
+                  <p key={i}>
+                    • <span className="text-muted-foreground">Device:</span> {item.device_type}{item.device_name ? ` (${item.device_name})` : ''}
+                    {item.issue_description && <> — <span className="text-muted-foreground">Issue:</span> {item.issue_description}</>}
+                  </p>
+                ))
+              )}
+              <p>• <span className="text-muted-foreground">Remarks:</span> {report.l1_remarks || '—'}</p>
+            </div>
+          </div>
         </div>
 
         {/* L2 Section */}
