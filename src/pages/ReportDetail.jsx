@@ -494,7 +494,8 @@ export default function ReportDetail() {
                   `• Device: ${item.device_type}${item.device_name ? ` (${item.device_name})` : ''}${item.issue_description ? ` — Issue: ${item.issue_description}` : ''}`
                   )),
 
-                  `• Remarks: ${report.l1_remarks || '—'}`];
+                  `• Remarks: ${report.l1_remarks || '—'}`,
+                  `• L1 Status: ${report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : '—'}`];
 
                   navigator.clipboard.writeText(lines.join('\n'));
                   setSummaryCopied(true);
@@ -528,6 +529,7 @@ export default function ReportDetail() {
               )
               }
               <p className="uppercase">• <span className="text-muted-foreground">Remarks:</span> {report.l1_remarks || '—'}</p>
+              <p>• <span className="text-muted-foreground">L1 Status:</span> <span className="font-bold">{report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : '—'}</span></p>
             </div>
           </div>
         </div>
