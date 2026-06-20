@@ -51,6 +51,34 @@
     "l1_attended_staff_email": {
       "type": "string"
     },
+    "l1_affected_sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "section_name": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "device_type": {
+                  "type": "string"
+                },
+                "device_name": {
+                  "type": "string"
+                },
+                "issue_description": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "l1_affected_items": {
       "type": "array",
       "items": {

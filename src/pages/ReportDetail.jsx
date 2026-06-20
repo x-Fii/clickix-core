@@ -80,7 +80,10 @@ export default function ReportDetail() {
         approved_date: r.approved_date || '',
         scheduled_date: r.scheduled_date || '',
       });
-      setL2Items(r.l2_items?.length ? r.l2_items : (r.l1_affected_items || []).map(i => ({ ...i, rectification_steps: '', photos: [] })));
+      const flatL1Items = r.l1_affected_sections
+        ? r.l1_affected_sections.flatMap(s => s.items || [])
+        : (r.l1_affected_items || []);
+      setL2Items(r.l2_items?.length ? r.l2_items : flatL1Items.map(i => ({ ...i, rectification_steps: '', photos: [] })));
       setL2Addons(r.l2_addon_items || []);
       setReplacements(r.l2_replacements || []);
       setSignature(r.ack_signature || '');
@@ -437,18 +440,37 @@ export default function ReportDetail() {
             <ReadField label="Report ID" value={report.running_number} />
             <ReadField label="L1 Status" value={report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : ''} />
           </div>
-          {(report.l1_affected_items || []).length > 0 && (
+          {(report.l1_affected_sections?.length > 0 || report.l1_affected_items?.length > 0) && (
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-3">Affected Items</p>
-              <div className="space-y-2">
-                {report.l1_affected_items.map((item, i) => (
-                  <div key={i} className="flex gap-3 p-3 bg-muted/30 rounded-lg text-sm">
-                    <span className="font-mono text-xs text-primary bg-primary/10 px-2 py-0.5 rounded flex-shrink-0 h-fit">{item.device_type}</span>
-                    <span className="font-medium flex-shrink-0">{item.device_name}</span>
-                    <span className="text-muted-foreground">{item.issue_description}</span>
-                  </div>
-                ))}
-              </div>
+              {report.l1_affected_sections?.length > 0 ? (
+                <div className="space-y-3">
+                  {report.l1_affected_sections.map((sec, si) => (
+                    <div key={si} className="border border-primary/20 rounded-lg p-3 space-y-2 bg-muted/10">
+                      <p className="text-xs font-semibold text-primary">{sec.section_name || `Section ${si + 1}`}</p>
+                      <div className="space-y-1.5 pl-2 border-l-2 border-border">
+                        {(sec.items || []).map((item, ii) => (
+                          <div key={ii} className="flex gap-3 p-2 bg-card rounded text-sm border border-border">
+                            <span className="font-mono text-xs text-primary bg-primary/10 px-2 py-0.5 rounded flex-shrink-0 h-fit">{item.device_type}</span>
+                            <span className="font-medium flex-shrink-0">{item.device_name}</span>
+                            <span className="text-muted-foreground">{item.issue_description}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {report.l1_affected_items.map((item, i) => (
+                    <div key={i} className="flex gap-3 p-3 bg-muted/30 rounded-lg text-sm">
+                      <span className="font-mono text-xs text-primary bg-primary/10 px-2 py-0.5 rounded flex-shrink-0 h-fit">{item.device_type}</span>
+                      <span className="font-medium flex-shrink-0">{item.device_name}</span>
+                      <span className="text-muted-foreground">{item.issue_description}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -783,14 +805,27 @@ export default function ReportDetail() {
                   <div style={{ fontSize: '12px', color: '#111827' }}>{report.l1_remarks}</div>
                 </div>
               )}
-              {(report.l1_affected_items || []).length > 0 && (
+              {(report.l1_affected_sections?.length > 0 || report.l1_affected_items?.length > 0) && (
                 <div style={{ marginTop: '10px' }}>
                   <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>AFFECTED HARDWARE</div>
-                  {report.l1_affected_items.map((item, i) => (
-                    <div key={i} style={{ fontSize: '12px', color: '#111827', marginBottom: '4px' }}>
-                      {item.device_type} — {item.device_name}{item.issue_description ? `: ${item.issue_description}` : ''}
-                    </div>
-                  ))}
+                  {report.l1_affected_sections?.length > 0 ? (
+                    report.l1_affected_sections.map((sec, si) => (
+                      <div key={si} style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#2563eb', marginBottom: '3px' }}>{sec.section_name || `Section ${si + 1}`}</div>
+                        {(sec.items || []).map((item, ii) => (
+                          <div key={ii} style={{ fontSize: '12px', color: '#111827', marginBottom: '2px', paddingLeft: '8px' }}>
+                            {item.device_type} — {item.device_name}{item.issue_description ? `: ${item.issue_description}` : ''}
+                          </div>
+                        ))}
+                      </div>
+                    ))
+                  ) : (
+                    (report.l1_affected_items || []).map((item, i) => (
+                      <div key={i} style={{ fontSize: '12px', color: '#111827', marginBottom: '4px' }}>
+                        {item.device_type} — {item.device_name}{item.issue_description ? `: ${item.issue_description}` : ''}
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const emptyItem = () => ({ device_type: '', device_name: '', issue_description: '' });
+const emptySection = () => ({ section_name: '', items: [emptyItem()] });
 
 const generateRunningNumber = () => {
   const now = new Date();
@@ -50,7 +51,7 @@ export default function NewReport() {
     do_number: '',
     l1_remarks: '',
   });
-  const [affectedItems, setAffectedItems] = useState([emptyItem()]);
+  const [affectedSections, setAffectedSections] = useState([emptySection()]);
 
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
@@ -94,22 +95,27 @@ export default function NewReport() {
     if (s) setForm(f => ({ ...f, l1_attended_staff_name: s.name, l1_attended_staff_id: s.staff_id, l1_attended_staff_email: s.email || '' }));
   };
 
-  const updateItem = (i, field, val) => setAffectedItems(prev => prev.map((item, idx) => idx === i ? { ...item, [field]: val } : item));
-  const addItem = () => setAffectedItems(prev => [...prev, emptyItem()]);
-  const removeItem = (i) => setAffectedItems(prev => prev.filter((_, idx) => idx !== i));
+  const addSection = () => setAffectedSections(prev => [...prev, emptySection()]);
+  const removeSection = (si) => setAffectedSections(prev => prev.filter((_, idx) => idx !== si));
+  const updateSectionName = (si, val) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, section_name: val } : s));
+  const addItemToSection = (si) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: [...s.items, emptyItem()] } : s));
+  const removeItemFromSection = (si, ii) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.filter((_, i) => i !== ii) } : s));
+  const updateSectionItem = (si, ii, field, val) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.map((item, i) => i === ii ? { ...item, [field]: val } : item) } : s));
 
   const handleSubmit = (l1Status) => {
     if (!form.client_id) { toast.error('Please select a client'); return; }
     if (!form.reported_by) { toast.error('Please enter reported by'); return; }
     if (!form.l1_attended_staff_name) { toast.error('Please select attending staff'); return; }
-    if (affectedItems.every(i => !i.device_type)) { toast.error('Please add at least one affected item'); return; }
+    const allItems = affectedSections.flatMap(s => s.items);
+    if (allItems.every(i => !i.device_type)) { toast.error('Please add at least one affected item'); return; }
 
     const status = l1Status === 'resolved' ? 'resolved' : 'escalated';
     createReport.mutate({
       ...form,
       l1_status: l1Status,
       status,
-      l1_affected_items: affectedItems.filter(i => i.device_type),
+      l1_affected_sections: affectedSections,
+      l1_affected_items: allItems.filter(i => i.device_type),
       l1_submitted: true,
       l1_submitted_at: new Date().toISOString(),
     });
@@ -214,30 +220,54 @@ export default function NewReport() {
             </Field>
           </div>
 
-          {/* Affected Items */}
+          {/* Affected Items — Sectioned */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Affected Hardware / Software</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-1 text-xs">
-                <Plus size={12} /> Add Item
+              <Button type="button" variant="outline" size="sm" onClick={addSection} className="gap-1 text-xs">
+                <Plus size={12} /> Add Section
               </Button>
             </div>
             <div className="space-y-3">
-              {affectedItems.map((item, i) => (
-                <div key={i} className="flex gap-2 items-start p-3 bg-muted/30 rounded-lg border border-border">
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <Select value={item.device_type} onValueChange={v => updateItem(i, 'device_type', v)}>
-                      <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Device Type" /></SelectTrigger>
-                      <SelectContent>{DEVICE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Input value={item.device_name} onChange={e => updateItem(i, 'device_name', e.target.value)} placeholder="Device name / ID" className="bg-background text-xs h-8" />
-                    <Input value={item.issue_description} onChange={e => updateItem(i, 'issue_description', e.target.value)} placeholder="Issue description" className="bg-background text-xs h-8" />
+              {affectedSections.map((sec, si) => (
+                <div key={si} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-muted/10">
+                  {/* Section header */}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={sec.section_name}
+                      onChange={e => updateSectionName(si, e.target.value)}
+                      placeholder="Section name (e.g. Level 1, Lobby)"
+                      className="bg-background text-xs h-8 font-semibold flex-1"
+                    />
+                    {affectedSections.length > 1 && (
+                      <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
-                  {affectedItems.length > 1 && (
-                    <button type="button" onClick={() => removeItem(i)} className="text-muted-foreground hover:text-destructive mt-1">
-                      <X size={14} />
-                    </button>
-                  )}
+                  {/* Items within section */}
+                  <div className="space-y-2 pl-2 border-l-2 border-border">
+                    {sec.items.map((item, ii) => (
+                      <div key={ii} className="flex gap-2 items-start p-2 bg-card rounded border border-border">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <Select value={item.device_type || undefined} onValueChange={v => updateSectionItem(si, ii, 'device_type', v)}>
+                            <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Device Type" /></SelectTrigger>
+                            <SelectContent>{DEVICE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                          </Select>
+                          <Input value={item.device_name} onChange={e => updateSectionItem(si, ii, 'device_name', e.target.value)} placeholder="Device name / ID" className="bg-background text-xs h-8" />
+                          <Input value={item.issue_description} onChange={e => updateSectionItem(si, ii, 'issue_description', e.target.value)} placeholder="Issue description" className="bg-background text-xs h-8" />
+                        </div>
+                        {sec.items.length > 1 && (
+                          <button type="button" onClick={() => removeItemFromSection(si, ii)} className="text-muted-foreground hover:text-destructive mt-1 shrink-0">
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <Button type="button" variant="ghost" size="sm" onClick={() => addItemToSection(si)} className="text-xs gap-1 h-7">
+                      <Plus size={11} /> Add Item
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
