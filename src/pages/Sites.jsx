@@ -7,8 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, MapPin, Phone, User } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Phone, User, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import StatusBadge from '@/components/StatusBadge';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 const MY_STATES = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'];
@@ -23,9 +28,12 @@ export default function Sites() {
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
   const [clientFilter, setClientFilter] = useState('all');
+  const [selectedSite, setSelectedSite] = useState(null);
 
   const { data: sites = [], isLoading } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
+  const { data: serviceReports = [] } = useQuery({ queryKey: ['service-reports'], queryFn: () => base44.entities.ServiceReport.list() });
+  const { data: installationReports = [] } = useQuery({ queryKey: ['installation-reports'], queryFn: () => base44.entities.InstallationReport.list() });
 
   const save = useMutation({
     mutationFn: (data) => editId ? base44.entities.Site.update(editId, data) : base44.entities.Site.create(data),
@@ -111,7 +119,7 @@ export default function Sites() {
                       </td>
                     </tr>,
 
-              <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors group">
+              <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors group cursor-pointer" onClick={() => setSelectedSite(s)}>
                     <td className="pt-2 pb-2 pr-1 pl-3">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-md bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
@@ -134,8 +142,8 @@ export default function Sites() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}><Pencil size={12} /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setDeleteId(s.id)}><Trash2 size={12} /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); openEdit(s); }}><Pencil size={12} /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={e => { e.stopPropagation(); setDeleteId(s.id); }}><Trash2 size={12} /></Button>
                       </div>
                     </td>
                   </tr>];
@@ -190,6 +198,128 @@ export default function Sites() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Site Detail Sheet */}
+      <Sheet open={!!selectedSite} onOpenChange={(o) => !o && setSelectedSite(null)}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto bg-card border-border">
+          {selectedSite && (() => {
+            const siteSRs = serviceReports.filter(r => r.site_id === selectedSite.id).sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+            const siteIRs = installationReports.filter(r => r.site_id === selectedSite.id).sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+            return (
+              <>
+                <SheetHeader className="mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-indigo-500/15 flex items-center justify-center">
+                      <MapPin size={16} className="text-indigo-400" />
+                    </div>
+                    <div>
+                      <SheetTitle className="text-lg">{selectedSite.site_name}</SheetTitle>
+                      <p className="text-xs text-muted-foreground">{selectedSite.client_name} · {selectedSite.state || 'No state'}</p>
+                    </div>
+                  </div>
+                </SheetHeader>
+
+                <Tabs defaultValue="info">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="info">Site Info</TabsTrigger>
+                    <TabsTrigger value="history">
+                      Site History
+                      {(siteSRs.length + siteIRs.length) > 0 && (
+                        <span className="ml-1.5 bg-primary/20 text-primary text-[10px] font-mono px-1.5 py-0.5 rounded">
+                          {siteSRs.length + siteIRs.length}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="info" className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        ['Client', selectedSite.client_name],
+                        ['Region', selectedSite.region],
+                        ['State', selectedSite.state],
+                        ['Location', selectedSite.site_location],
+                        ['PIC Name', selectedSite.pic_name],
+                        ['PIC Phone', selectedSite.pic_phone],
+                      ].map(([label, val]) => (
+                        <div key={label}>
+                          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">{label}</p>
+                          <p className="text-sm">{val || <span className="text-muted-foreground/40">—</span>}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedSite.notes && (
+                      <div>
+                        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
+                        <p className="text-sm text-muted-foreground">{selectedSite.notes}</p>
+                      </div>
+                    )}
+                    <Button variant="outline" size="sm" className="gap-2 mt-2" onClick={() => { setSelectedSite(null); openEdit(selectedSite); }}>
+                      <Pencil size={12} /> Edit Site
+                    </Button>
+                  </TabsContent>
+
+                  <TabsContent value="history" className="space-y-5">
+                    {/* Service Reports */}
+                    <div>
+                      <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Service Reports ({siteSRs.length})</p>
+                      {siteSRs.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4 bg-muted/20 rounded-lg">No service reports for this site.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {siteSRs.map(r => (
+                            <Link key={r.id} to={`/reports/${r.id}`} onClick={() => setSelectedSite(null)}
+                              className="flex items-center justify-between p-3 bg-muted/20 hover:bg-muted/40 rounded-lg border border-border transition-colors group">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="font-mono text-xs text-primary shrink-0">{r.running_number}</span>
+                                <div className="min-w-0">
+                                  <p className="text-xs text-muted-foreground truncate">{r.l1_date || (r.created_date ? format(new Date(r.created_date), 'dd MMM yyyy') : '—')}</p>
+                                  {r.l1_attended_staff_name && <p className="text-xs text-muted-foreground/60 truncate">Staff: {r.l1_attended_staff_name}</p>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <StatusBadge status={r.status} size="sm" />
+                                <ExternalLink size={12} className="text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Installation Reports */}
+                    <div>
+                      <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Installation Reports ({siteIRs.length})</p>
+                      {siteIRs.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4 bg-muted/20 rounded-lg">No installation reports for this site.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {siteIRs.map(r => (
+                            <Link key={r.id} to={`/installation/${r.id}`} onClick={() => setSelectedSite(null)}
+                              className="flex items-center justify-between p-3 bg-muted/20 hover:bg-muted/40 rounded-lg border border-border transition-colors group">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="font-mono text-xs text-orange-400 shrink-0">{r.report_number}</span>
+                                <div className="min-w-0">
+                                  <p className="text-xs text-muted-foreground truncate">{r.installation_date || (r.created_date ? format(new Date(r.created_date), 'dd MMM yyyy') : '—')}</p>
+                                  {r.report_type && <p className="text-xs text-muted-foreground/60 capitalize">{r.report_type}</p>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <StatusBadge status={r.status} size="sm" />
+                                <ExternalLink size={12} className="text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent className="bg-card border-border">
