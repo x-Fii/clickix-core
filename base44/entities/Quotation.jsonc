@@ -53,6 +53,12 @@
       "items": {
         "type": "object",
         "properties": {
+          "item_code": {
+            "type": "string"
+          },
+          "item_type": {
+            "type": "string"
+          },
           "description": {
             "type": "string"
           },
@@ -64,6 +70,9 @@
           },
           "total": {
             "type": "number"
+          },
+          "taxable": {
+            "type": "boolean"
           }
         }
       }

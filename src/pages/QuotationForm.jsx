@@ -12,6 +12,27 @@ import { ArrowLeft, Plus, X, Save, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
+// Combobox-style input: pick from list or type freely
+const ItemTypeInput = ({ value, onChange, types }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="bg-background text-xs h-8"
+        placeholder="Type..."
+        list="item-type-options"
+      />
+      <datalist id="item-type-options">
+        {types.map(t => <option key={t} value={t} />)}
+      </datalist>
+    </div>
+  );
+};
+
 const Field = ({ label, children }) => (
   <div className="space-y-1.5">
     <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">{label}</Label>
@@ -44,14 +65,15 @@ export default function QuotationForm() {
     notes: '',
     tax_percent: 8,
   });
-  const [items, setItems] = useState([{ description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
+  const [items, setItems] = useState([{ item_code: '', item_type: '', description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
+  const ITEM_TYPES = ['Hardware', 'Software', 'Services', 'Other'];
 
   useQuery({
     queryKey: ['quotation', id],
     queryFn: async () => {
       const q = await base44.entities.Quotation.get(id);
       setForm({ ...q, tax_percent: q.tax_percent ?? 8 });
-      setItems(q.items?.length ? q.items.map(it => ({ taxable: true, ...it })) : [{ description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
+      setItems(q.items?.length ? q.items.map(it => ({ item_code: '', item_type: '', taxable: true, ...it })) : [{ item_code: '', item_type: '', description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
       return q;
     },
     enabled: isEdit,
@@ -221,7 +243,7 @@ export default function QuotationForm() {
         <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between pb-3 mb-5 border-b border-border">
             <h3 className="font-semibold text-sm">Line Items</h3>
-            <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setItems(p => [...p, { description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }])}>
+            <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setItems(p => [...p, { item_code: '', item_type: '', description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }])}>
               <Plus size={12} /> Add Item
             </Button>
           </div>
@@ -229,17 +251,23 @@ export default function QuotationForm() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
+                  <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-24 pr-2">Code</th>
+                  <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-32 pr-2">Type</th>
                   <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider pr-3">Description</th>
-                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20 pr-3">Qty</th>
+                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-16 pr-3">Qty</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-3">Unit Cost</th>
-                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28">Total</th>
-                  <th className="text-center pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-16">Tax</th>
+                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-24">Total</th>
+                  <th className="text-center pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-12">Tax</th>
                   <th className="w-8"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((item, i) => (
                   <tr key={i}>
+                    <td className="py-2 pr-2"><Input value={item.item_code || ''} onChange={e => updateItem(i, 'item_code', e.target.value)} className="bg-background text-xs h-8 font-mono" placeholder="Code" /></td>
+                    <td className="py-2 pr-2">
+                      <ItemTypeInput value={item.item_type || ''} onChange={v => updateItem(i, 'item_type', v)} types={ITEM_TYPES} />
+                    </td>
                     <td className="py-2 pr-3"><Input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8" placeholder="Item description" /></td>
                     <td className="py-2 pr-3"><Input type="number" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" min="1" /></td>
                     <td className="py-2 pr-3"><Input type="number" value={item.unit_cost} onChange={e => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.01" /></td>
@@ -344,8 +372,8 @@ export default function QuotationForm() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                 <thead>
                   <tr style={{ background: '#f3f4f6' }}>
-                    {['#', 'Description', 'Qty', 'Unit Cost (MYR)', 'Total (MYR)'].map((h, i) => (
-                      <th key={h} style={{ padding: '7px 10px', textAlign: i > 1 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '50px' : i > 2 ? '110px' : 'auto' }}>{h}</th>
+                    {['#', 'Code', 'Type', 'Description', 'Qty', 'Unit Cost (MYR)', 'Total (MYR)'].map((h, i) => (
+                      <th key={h} style={{ padding: '7px 10px', textAlign: i > 3 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '25px' : i === 1 ? '60px' : i === 2 ? '70px' : i === 4 ? '40px' : i > 4 ? '90px' : 'auto' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -353,6 +381,8 @@ export default function QuotationForm() {
                   {items.map((item, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
                       <td style={{ padding: '7px 10px', textAlign: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
+                      <td style={{ padding: '7px 10px', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{item.item_code || '—'}</td>
+                      <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.item_type || '—'}</td>
                       <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.description || '—'}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.quantity}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
