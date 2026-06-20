@@ -155,11 +155,12 @@ export default function ReportDetail() {
     setUploadingStamp(false);
   };
 
-  const selectedStaffIds = l2Form.l2_attended_staff_ids ? l2Form.l2_attended_staff_ids.split(',').filter(Boolean) : (l2Form.l2_attended_staff_name ? [] : []);
-
   const handleStaffToggle = (staffId) => {
-    const current = l2Form.l2_attended_staff_ids ? l2Form.l2_attended_staff_ids.split(',').filter(Boolean) : [];
-    const next = current.includes(staffId) ? current.filter(id => id !== staffId) : [...current, staffId];
+    // Seed IDs from name match if not yet set
+    const existingIds = l2Form.l2_attended_staff_ids
+      ? l2Form.l2_attended_staff_ids.split(',').filter(Boolean)
+      : l2Staff.filter(s => l2Form.l2_attended_staff_name?.split(',').map(n => n.trim()).includes(s.name)).map(s => s.id);
+    const next = existingIds.includes(staffId) ? existingIds.filter(id => id !== staffId) : [...existingIds, staffId];
     const selected = l2Staff.filter(s => next.includes(s.id));
     setL2Form(f => ({
       ...f,
@@ -192,7 +193,6 @@ export default function ReportDetail() {
   };
 
   const handleComplete = () => {
-    if (!ackName || !ackPhone) { toast.error('Acknowledgement name and phone are required'); return; }
     updateReport.mutate({
       ...l2Form,
       l2_items: l2Items,
@@ -542,8 +542,9 @@ export default function ReportDetail() {
                     <div className="border border-input rounded-md bg-background p-2 space-y-1 max-h-36 overflow-y-auto">
                       {l2Staff.length === 0 && <p className="text-xs text-muted-foreground">No L2 staff found</p>}
                       {l2Staff.map(s => {
-                        const checked = (l2Form.l2_attended_staff_ids || '').split(',').filter(Boolean).includes(s.id) ||
-                          (!l2Form.l2_attended_staff_ids && l2Form.l2_attended_staff_name?.includes(s.name));
+                        const checked = l2Form.l2_attended_staff_ids
+                          ? l2Form.l2_attended_staff_ids.split(',').filter(Boolean).includes(s.id)
+                          : (l2Form.l2_attended_staff_name?.split(',').map(n => n.trim()).includes(s.name) ?? false);
                         return (
                           <label key={s.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5">
                             <input type="checkbox" checked={checked} onChange={() => handleStaffToggle(s.id)} className="accent-primary" />
