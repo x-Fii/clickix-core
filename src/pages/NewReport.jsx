@@ -191,7 +191,7 @@ export default function NewReport() {
             <Field label="L1 Report Number">
               <Input value={form.running_number} readOnly className="bg-muted font-mono text-xs" />
             </Field>
-            <Field label="Response ID">
+            <Field label="Staff ID">
               <Input value={form.l1_attended_staff_id} onChange={e => setF('l1_attended_staff_id', e.target.value)} className="bg-background font-mono" placeholder="Response ID" />
             </Field>
             <Field label="Date">
