@@ -274,6 +274,25 @@ export default function NewReport() {
           </div>
         </div>
 
+        {/* L1 Summary Statement */}
+        <div className="bg-card border border-border rounded-xl p-6">
+          <SectionHeader title="L1 Session Summary" subtitle="Auto-generated summary based on information entered above" />
+          <div className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs space-y-1 text-foreground leading-relaxed">
+            <p>• <span className="text-muted-foreground">Response ID:</span> {form.l1_attended_staff_id || <span className="italic text-muted-foreground">—</span>}</p>
+            <p>• <span className="text-muted-foreground">Site Name:</span> {form.site_name || <span className="italic text-muted-foreground">—</span>}</p>
+            {affectedSections.map((sec, si) =>
+              sec.items.filter(i => i.device_type || i.issue_description).map((item, ii) => (
+                <p key={`${si}-${ii}`}>
+                  • <span className="text-muted-foreground">Section:</span> {sec.section_name || `Section ${si + 1}`}
+                  {item.device_type && <> — <span className="text-muted-foreground">Device:</span> {item.device_type}{item.device_name ? ` (${item.device_name})` : ''}</>}
+                  {item.issue_description && <> — <span className="text-muted-foreground">Issue:</span> {item.issue_description}</>}
+                </p>
+              ))
+            )}
+            <p>• <span className="text-muted-foreground">Remarks:</span> {form.l1_remarks || <span className="italic text-muted-foreground">—</span>}</p>
+          </div>
+        </div>
+
         {/* Status Actions */}
         <div className="bg-card border border-border rounded-xl p-6">
           <SectionHeader title="L1 Resolution" subtitle="Mark the outcome of this remote support session" />
