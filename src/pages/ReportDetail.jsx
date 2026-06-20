@@ -420,6 +420,7 @@ export default function ReportDetail() {
             <ReadField label="Site Location" value={report.site_location} />
             <ReadField label="Reported By" value={report.reported_by} />
             <ReadField label="DO Number" value={report.do_number} />
+            <ReadField label="Response ID" value={report.l1_attended_staff_id} />
             <ReadField label="Report Date" value={report.l1_date} />
             <ReadField label="Created" value={report.created_date ? format(new Date(report.created_date), 'dd MMM yyyy HH:mm') : ''} />
           </div>
