@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge, FileEdit, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge, FileEdit, CheckCircle, XCircle, FileDown } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -54,6 +56,8 @@ export default function PRForm() {
   const [items, setItems] = useState([
     { item_no: 1, description: '', category: '', quantity: 1, unit_cost: '', total: 0 }
   ]);
+  const [importModal, setImportModal] = useState(false);
+  const [importTypeFilter, setImportTypeFilter] = useState([]);
 
   useQuery({
     queryKey: ['pr', id],
@@ -161,6 +165,35 @@ export default function PRForm() {
   };
 
   const addItem = () => setItems(p => [...p, { item_no: p.length + 1, description: '', category: '', quantity: 1, unit_cost: '', total: 0 }]);
+
+  const openImportModal = () => {
+    setImportTypeFilter([]);
+    setImportModal(true);
+  };
+
+  const handleImportFromQuotation = () => {
+    const linked = quotations.find(q => q.id === form.quotation_id);
+    if (!linked?.items?.length) { toast.error('No quotation linked or quotation has no items'); return; }
+    let toImport = linked.items;
+    if (importTypeFilter.length > 0) {
+      toImport = toImport.filter(it => importTypeFilter.includes(it.item_type || ''));
+    }
+    if (!toImport.length) { toast.error('No items match the selected types'); return; }
+    setItems(prev => {
+      const base = prev.filter(it => it.description); // keep existing non-empty
+      const newItems = toImport.map((it, i) => ({
+        item_no: base.length + i + 1,
+        description: it.description || '',
+        category: it.item_type || it.category || '',
+        quantity: it.quantity || 1,
+        unit_cost: it.unit_cost?.toString() || '',
+        total: it.total || 0,
+      }));
+      return [...base, ...newItems].map((it, i) => ({ ...it, item_no: i + 1 }));
+    });
+    setImportModal(false);
+    toast.success(`Imported ${toImport.length} item(s) from quotation`);
+  };
 
   const grandTotal = items.reduce((s, it) => s + (parseFloat(it.unit_cost) || 0) * (parseFloat(it.quantity) || 0), 0);
 
@@ -345,9 +378,16 @@ export default function PRForm() {
               <h3 className="font-semibold text-sm">Items List</h3>
               <p className="text-xs text-muted-foreground mt-0.5">List of items to be purchased</p>
             </div>
-            <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addItem}>
-              <Plus size={12} /> Add Item
-            </Button>
+            <div className="flex gap-2">
+              {form.quotation_id && (
+                <Button variant="outline" size="sm" className="gap-1 text-xs text-blue-400 border-blue-500/30 hover:bg-blue-500/10" onClick={openImportModal}>
+                  <FileDown size={12} /> Import from Quotation
+                </Button>
+              )}
+              <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addItem}>
+                <Plus size={12} /> Add Item
+              </Button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -448,6 +488,53 @@ export default function PRForm() {
           <Button onClick={() => handleSave('submitted')} disabled={saveMutation.isPending}>Submit PR</Button>
         </div>
       </div>
+
+      {/* Import from Quotation Modal */}
+      <Dialog open={importModal} onOpenChange={setImportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Import Items from Quotation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Select item types to import, or leave all unchecked to import everything.
+            </p>
+            {(() => {
+              const linked = quotations.find(q => q.id === form.quotation_id);
+              const types = [...new Set((linked?.items || []).map(it => it.item_type || '').filter(Boolean))];
+              return types.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Filter by Type</p>
+                  {types.map(t => (
+                    <div key={t} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`type-${t}`}
+                        checked={importTypeFilter.includes(t)}
+                        onCheckedChange={checked => setImportTypeFilter(prev =>
+                          checked ? [...prev, t] : prev.filter(x => x !== t)
+                        )}
+                      />
+                      <label htmlFor={`type-${t}`} className="text-sm cursor-pointer">{t}</label>
+                    </div>
+                  ))}
+                  {importTypeFilter.length > 0 && (
+                    <p className="text-xs text-muted-foreground">Will import only: {importTypeFilter.join(', ')}</p>
+                  )}
+                  {importTypeFilter.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No filter — all items will be imported</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Items in this quotation have no type assigned — all will be imported.</p>
+              );
+            })()}
+            <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <Button variant="outline" size="sm" onClick={() => setImportModal(false)}>Cancel</Button>
+              <Button size="sm" onClick={handleImportFromQuotation}>Import</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Hidden PDF Template */}
       <div id="pr-pdf-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#111827' }}>
