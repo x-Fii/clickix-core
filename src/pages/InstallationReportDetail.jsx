@@ -105,7 +105,8 @@ export default function InstallationReportDetail() {
 
   const sc = STATUS_CONFIG[report.status] || STATUS_CONFIG.pending;
   const tc = TYPE_CONFIG[report.report_type] || TYPE_CONFIG.commissioning;
-  const equipment = report.report_type === 'commissioning' ? report.equipment_installed : report.equipment_decommissioned;
+  const equipment = report.report_type === 'decommissioning' ? report.equipment_decommissioned : null;
+  const equipmentSections = report.report_type === 'commissioning' ? (report.equipment_sections || []) : [];
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -170,13 +171,46 @@ export default function InstallationReportDetail() {
         </div>
       </div>
 
-      {/* Equipment */}
+      {/* Equipment Installed — sectioned (commissioning) */}
+      {equipmentSections.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+          <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+            <Package size={14} /> Equipment Installed
+          </h2>
+          {equipmentSections.map((sec, si) => (
+            <div key={si} className="border border-primary/20 rounded-lg p-4 space-y-3 bg-muted/10">
+              <p className="text-sm font-semibold text-primary">{sec.section_name || `Section ${si + 1}`}</p>
+              <div className="space-y-3 pl-2 border-l-2 border-border">
+                {(sec.items || []).map((item, ii) => (
+                  <div key={ii} className="border border-border rounded-lg p-3 bg-card space-y-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <Field label="Device Type" value={item.device_type} />
+                      <Field label="Device Name" value={item.device_name} />
+                      <Field label="Serial Number" value={item.serial_number} />
+                      {item.notes && <Field label="Notes" value={item.notes} />}
+                    </div>
+                    {item.photos && item.photos.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.photos.map((url, pi) => (
+                          <a key={pi} href={url} target="_blank" rel="noreferrer">
+                            <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Equipment Decommissioned (flat) */}
       {equipment && equipment.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            {report.report_type === 'commissioning'
-              ? <><Package size={14} /> Equipment Installed</>
-              : <><PackageMinus size={14} /> Equipment Decommissioned</>}
+            <PackageMinus size={14} /> Equipment Decommissioned
           </h2>
           <div className="space-y-4">
             {equipment.map((item, i) => (
@@ -185,7 +219,6 @@ export default function InstallationReportDetail() {
                   <Field label="Device Type" value={item.device_type} />
                   <Field label="Device Name" value={item.device_name} />
                   <Field label="Serial Number" value={item.serial_number} />
-                  {item.notes && <Field label="Notes" value={item.notes} />}
                   {item.reason_for_decommission && <Field label="Reason" value={item.reason_for_decommission} />}
                 </div>
                 {item.photos && item.photos.length > 0 && (
@@ -323,11 +356,63 @@ export default function InstallationReportDetail() {
             </div>
           </div>
 
-          {/* Equipment */}
+          {/* Equipment Installed — sectioned (commissioning) */}
+          {equipmentSections.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Equipment Installed</span>
+              </div>
+              {equipmentSections.map((sec, si) => (
+                <div key={si} style={{ marginBottom: '16px' }}>
+                  <div style={{ background: '#f0f9ff', borderLeft: '3px solid #60a5fa', padding: '5px 10px', marginBottom: '8px', fontWeight: '700', fontSize: '11px', color: '#1d4ed8' }}>
+                    {sec.section_name || `Section ${si + 1}`}
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                    <thead>
+                      <tr style={{ background: '#f3f4f6' }}>
+                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>#</th>
+                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Type</th>
+                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Name / Model</th>
+                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Serial Number</th>
+                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(sec.items || []).map((item, ii) => (
+                        <tr key={ii} style={{ background: ii % 2 === 0 ? '#fff' : '#f9fafb' }}>
+                          <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{ii + 1}</td>
+                          <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.device_type}</td>
+                          <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.device_name}</td>
+                          <td style={{ padding: '7px', border: '1px solid #e5e7eb', fontFamily: 'monospace' }}>{item.serial_number}</td>
+                          <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.notes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {(sec.items || []).some(item => item.photos && item.photos.length > 0) && (
+                    <div style={{ marginTop: '10px' }}>
+                      {sec.items.map((item, ii) => item.photos && item.photos.length > 0 && (
+                        <div key={ii} style={{ marginBottom: '8px' }}>
+                          <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '5px', fontWeight: '600' }}>{item.device_name} Photos:</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {item.photos.map((url, pi) => (
+                              <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '220px', height: '165px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Equipment Decommissioned (flat) */}
           {equipment && equipment.length > 0 && (
             <div style={{ marginBottom: '20px' }}>
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>{report.report_type === 'commissioning' ? 'Equipment Installed' : 'Equipment Decommissioned'}</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Equipment Decommissioned</span>
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                 <thead>
@@ -336,7 +421,7 @@ export default function InstallationReportDetail() {
                     <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Type</th>
                     <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Name / Model</th>
                     <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Serial Number</th>
-                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>{report.report_type === 'commissioning' ? 'Notes' : 'Reason'}</th>
+                    <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Reason</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -346,25 +431,11 @@ export default function InstallationReportDetail() {
                       <td style={{ padding: '8px', border: '1px solid #e5e7eb' }}>{item.device_type}</td>
                       <td style={{ padding: '8px', border: '1px solid #e5e7eb' }}>{item.device_name}</td>
                       <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontFamily: 'monospace' }}>{item.serial_number}</td>
-                      <td style={{ padding: '8px', border: '1px solid #e5e7eb' }}>{item.notes || item.reason_for_decommission}</td>
+                      <td style={{ padding: '8px', border: '1px solid #e5e7eb' }}>{item.reason_for_decommission}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {equipment.some(item => item.photos && item.photos.length > 0) && (
-                <div style={{ marginTop: '12px' }}>
-                  {equipment.map((item, i) => item.photos && item.photos.length > 0 && (
-                    <div key={i} style={{ marginBottom: '10px' }}>
-                      <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '6px', fontWeight: '600' }}>Item {i + 1} — {item.device_name} Photos:</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {item.photos.map((url, pi) => (
-                          <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '240px', height: '180px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 

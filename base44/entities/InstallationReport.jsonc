@@ -80,6 +80,43 @@
         "type": "string"
       }
     },
+    "equipment_sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "section_name": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "device_type": {
+                  "type": "string"
+                },
+                "device_name": {
+                  "type": "string"
+                },
+                "serial_number": {
+                  "type": "string"
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "photos": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "equipment_installed": {
       "type": "array",
       "items": {
