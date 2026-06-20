@@ -55,6 +55,8 @@ export default function ReportDetail() {
   const [supportingDocs, setSupportingDocs] = useState([]);
   const [companyStamp, setCompanyStamp] = useState('');
   const [uploadingStamp, setUploadingStamp] = useState(false);
+  const [jobDescPhotos, setJobDescPhotos] = useState([]);
+  const [remarksPhotos, setRemarksPhotos] = useState([]);
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['service-report', id],
@@ -86,6 +88,8 @@ export default function ReportDetail() {
       setAckPhone(r.ack_phone || '');
       setSupportingDocs(r.supporting_documents || []);
       setCompanyStamp(r.ack_company_stamp || '');
+      setJobDescPhotos(r.l2_job_description_photos || []);
+      setRemarksPhotos(r.l2_remarks_photos || []);
       return r;
     },
     enabled: !!id,
@@ -125,6 +129,8 @@ export default function ReportDetail() {
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     if (type === 'l2item') updateL2Item(index, 'photos', [...(l2Items[index].photos || []), file_url]);
     if (type === 'addon') updateAddon(index, 'photos', [...(l2Addons[index].photos || []), file_url]);
+    if (type === 'jobdesc') setJobDescPhotos(prev => [...prev, file_url]);
+    if (type === 'remarks') setRemarksPhotos(prev => [...prev, file_url]);
     setUploadingPhoto(null);
   };
 
@@ -173,6 +179,8 @@ export default function ReportDetail() {
       ack_signature: signature,
       ack_name: ackName,
       ack_phone: ackPhone,
+      l2_job_description_photos: jobDescPhotos,
+      l2_remarks_photos: remarksPhotos,
     });
   };
 
@@ -188,6 +196,8 @@ export default function ReportDetail() {
       l2_addon_items: l2Addons,
       l2_replacements: replacements,
       supporting_documents: supportingDocs,
+      l2_job_description_photos: jobDescPhotos,
+      l2_remarks_photos: remarksPhotos,
       status: 'complete',
       ack_signature: signature,
       ack_company_stamp: companyStamp,
@@ -223,6 +233,8 @@ export default function ReportDetail() {
       ...l2Items.flatMap(item => item.photos || []),
       ...l2Addons.flatMap(item => item.photos || []),
       ...supportingDocs.filter(url => url.match(/\.(jpg|jpeg|png|gif|webp)$/i)),
+      ...jobDescPhotos,
+      ...remarksPhotos,
       ...(signature ? [signature] : []),
       ...(companyStamp ? [companyStamp] : []),
     ];
@@ -446,16 +458,58 @@ export default function ReportDetail() {
           <>
             <div className="bg-card border border-border rounded-xl p-6">
               <SectionHeader title="L2 Onsite Support — Job Details" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="md:col-span-2">
-                  <Field label="Job Description / Work Detail">
+              <div className="grid grid-cols-1 gap-4 mb-4">
+                <div>
+                  <Field label="Pre-Job Site Assessment">
                     <Textarea value={l2Form.l2_job_description} onChange={e => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={4} readOnly={isReadOnly} />
                   </Field>
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Assessment Photos</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {jobDescPhotos.map((url, pi) => (
+                        <div key={pi} className="relative group">
+                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                          {!isReadOnly && (
+                            <button onClick={() => setJobDescPhotos(p => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X size={8} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {!isReadOnly && (
+                        <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                          {uploadingPhoto === 'jobdesc-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
+                          <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoUpload('jobdesc', 0, e.target.files)} />
+                        </label>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="md:col-span-2">
-                  <Field label="Remarks">
+                <div>
+                  <Field label="Post-Job Site Remarks">
                     <Textarea value={l2Form.l2_remarks} onChange={e => setLF('l2_remarks', e.target.value)} className="bg-background resize-none" rows={2} readOnly={isReadOnly} />
                   </Field>
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Post-Job Photos</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {remarksPhotos.map((url, pi) => (
+                        <div key={pi} className="relative group">
+                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                          {!isReadOnly && (
+                            <button onClick={() => setRemarksPhotos(p => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X size={8} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {!isReadOnly && (
+                        <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                          {uploadingPhoto === 'remarks-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
+                          <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoUpload('remarks', 0, e.target.files)} />
+                        </label>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -791,8 +845,15 @@ export default function ReportDetail() {
                 </div>
                 {l2Form.l2_job_description && (
                   <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>JOB DESCRIPTION</div>
+                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>PRE-JOB SITE ASSESSMENT</div>
                     <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6' }}>{l2Form.l2_job_description}</div>
+                    {jobDescPhotos.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                        {jobDescPhotos.map((url, pi) => (
+                          <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '200px', height: '160px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 {l2Form.l2_work_detail && (
@@ -803,8 +864,15 @@ export default function ReportDetail() {
                 )}
                 {l2Form.l2_remarks && (
                   <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>REMARKS</div>
+                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>POST-JOB SITE REMARKS</div>
                     <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6' }}>{l2Form.l2_remarks}</div>
+                    {remarksPhotos.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                        {remarksPhotos.map((url, pi) => (
+                          <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '200px', height: '160px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -96,11 +96,23 @@
     "l2_job_description": {
       "type": "string"
     },
+    "l2_job_description_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "l2_work_detail": {
       "type": "string"
     },
     "l2_remarks": {
       "type": "string"
+    },
+    "l2_remarks_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "l2_attended_staff_name": {
       "type": "string"
