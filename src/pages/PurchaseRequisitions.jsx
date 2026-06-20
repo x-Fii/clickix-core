@@ -16,6 +16,7 @@ const STATUS_CONFIG = {
   draft: { label: 'Draft', cls: 'bg-slate-500/15 text-slate-400 border-slate-500/25', dot: 'bg-slate-400' },
   submitted: { label: 'Submitted', cls: 'bg-blue-500/15 text-blue-400 border-blue-500/25', dot: 'bg-blue-400' },
   approved: { label: 'Approved', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25', dot: 'bg-emerald-400' },
+  disburse: { label: 'Disbursed', cls: 'bg-violet-500/15 text-violet-400 border-violet-500/25', dot: 'bg-violet-400' },
   rejected: { label: 'Rejected', cls: 'bg-red-500/15 text-red-400 border-red-500/25', dot: 'bg-red-400' }
 };
 
@@ -24,6 +25,7 @@ const STAT_CARDS = [
 { key: 'draft', label: 'Draft', color: 'border-slate-500/30 bg-slate-500/5', textColor: 'text-slate-400' },
 { key: 'submitted', label: 'Submitted', color: 'border-blue-500/30 bg-blue-500/5', textColor: 'text-blue-400' },
 { key: 'approved', label: 'Approved', color: 'border-emerald-500/30 bg-emerald-500/5', textColor: 'text-emerald-400' },
+{ key: 'disburse', label: 'Disbursed', color: 'border-violet-500/30 bg-violet-500/5', textColor: 'text-violet-400' },
 { key: 'rejected', label: 'Rejected', color: 'border-red-500/30 bg-red-500/5', textColor: 'text-red-400' }];
 
 
@@ -127,11 +129,13 @@ export default function PurchaseRequisitions() {
     draft: prs.filter((p) => p.status === 'draft').length,
     submitted: prs.filter((p) => p.status === 'submitted').length,
     approved: prs.filter((p) => p.status === 'approved').length,
+    disburse: prs.filter((p) => p.status === 'disburse').length,
     rejected: prs.filter((p) => p.status === 'rejected').length
   };
 
   const totalValue = prs.reduce((s, p) => s + (p.grand_total || 0), 0);
-  const approvedValue = prs.filter((p) => p.status === 'approved').reduce((s, p) => s + (p.approved_amount ?? p.grand_total ?? 0), 0);
+  const approvedValue = prs.filter((p) => ['approved', 'disburse'].includes(p.status)).reduce((s, p) => s + (p.approved_amount ?? p.grand_total ?? 0), 0);
+  const disburseValue = prs.filter((p) => p.status === 'disburse').reduce((s, p) => s + (p.disburse_amount ?? p.approved_amount ?? p.grand_total ?? 0), 0);
 
   const filtered = prs.filter((p) => {
     const matchSearch = !search ||
@@ -172,14 +176,18 @@ export default function PurchaseRequisitions() {
       </div>
 
       {/* Value Summary */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Total PR Value</p>
           <p className="text-xl font-bold text-foreground mt-1">MYR {totalValue.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4">
+        <div className="bg-card border border-emerald-500/30 bg-emerald-500/5 rounded-xl p-4">
           <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Approved Value</p>
           <p className="text-xl font-bold text-emerald-400 mt-1">MYR {approvedValue.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
+        </div>
+        <div className="bg-card border border-violet-500/30 bg-violet-500/5 rounded-xl p-4">
+          <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Disbursed Value</p>
+          <p className="text-xl font-bold text-violet-400 mt-1">MYR {disburseValue.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
 
@@ -236,6 +244,7 @@ export default function PurchaseRequisitions() {
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Date</th>
                   <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Total (MYR)</th>
                   <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Approved (MYR)</th>
+                  <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Disbursed (MYR)</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -250,6 +259,7 @@ export default function PurchaseRequisitions() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.pr_date ? format(parseISO(pr.pr_date), 'dd MMM yyyy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{pr.grand_total != null ? pr.grand_total.toFixed(2) : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm text-emerald-400">{pr.approved_amount != null ? pr.approved_amount.toFixed(2) : '—'}</td>
+                    <td className="px-4 py-3 text-right font-mono text-sm text-violet-400">{pr.disburse_amount != null ? pr.disburse_amount.toFixed(2) : '—'}</td>
                     <td className="pt-3 pb-3 pl-4"><StatusBadge status={pr.status} /></td>
                     <td className="py-3 px-1" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-end">

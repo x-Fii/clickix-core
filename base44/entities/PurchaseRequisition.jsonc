@@ -14,6 +14,7 @@
         "draft",
         "submitted",
         "approved",
+        "disburse",
         "rejected"
       ],
       "default": "draft"
@@ -96,6 +97,15 @@
     },
     "approved_amount": {
       "type": "number"
+    },
+    "disburse_amount": {
+      "type": "number"
+    },
+    "disburse_date": {
+      "type": "string"
+    },
+    "disburse_reference": {
+      "type": "string"
     },
     "remarks": {
       "type": "string"

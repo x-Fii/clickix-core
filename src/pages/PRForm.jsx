@@ -52,6 +52,9 @@ export default function PRForm() {
     approved_by: '',
     approved_date: '',
     approved_amount: '',
+    disburse_amount: '',
+    disburse_date: '',
+    disburse_reference: '',
   });
   const [items, setItems] = useState([
     { item_no: 1, description: '', category: '', quantity: 1, unit_cost: '', total: 0 }
@@ -63,7 +66,7 @@ export default function PRForm() {
     queryKey: ['pr', id],
     queryFn: async () => {
       const pr = await base44.entities.PurchaseRequisition.get(id);
-      setForm({ ...pr, approved_amount: pr.approved_amount != null ? pr.approved_amount.toString() : '' });
+      setForm({ ...pr, approved_amount: pr.approved_amount != null ? pr.approved_amount.toString() : '', disburse_amount: pr.disburse_amount != null ? pr.disburse_amount.toString() : '', disburse_date: pr.disburse_date || '', disburse_reference: pr.disburse_reference || '' });
       setItems(pr.items?.length ? pr.items.map(it => ({ ...it, unit_cost: it.unit_cost?.toString() ?? '', quantity: it.quantity?.toString() ?? '1' })) : [{ item_no: 1, description: '', category: '', quantity: '1', unit_cost: '', total: 0 }]);
       return pr;
     },
@@ -198,7 +201,7 @@ export default function PRForm() {
   const grandTotal = items.reduce((s, it) => s + (parseFloat(it.unit_cost) || 0) * (parseFloat(it.quantity) || 0), 0);
 
   const handleSave = (status) => {
-    saveMutation.mutate({ ...form, items, subtotal: grandTotal, grand_total: grandTotal, status: status || form.status, approved_amount: parseFloat(form.approved_amount) || null });
+    saveMutation.mutate({ ...form, items, subtotal: grandTotal, grand_total: grandTotal, status: status || form.status, approved_amount: parseFloat(form.approved_amount) || null, disburse_amount: parseFloat(form.disburse_amount) || null });
   };
 
   const handleExportPDF = async () => {
@@ -251,6 +254,7 @@ export default function PRForm() {
               {form.status && (
                 <span className={`inline-flex px-2.5 py-0.5 text-[11px] font-mono border rounded-full ${
                   form.status === 'approved' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' :
+                  form.status === 'disburse' ? 'bg-violet-500/15 text-violet-400 border-violet-500/25' :
                   form.status === 'submitted' ? 'bg-blue-500/15 text-blue-400 border-blue-500/25' :
                   form.status === 'rejected' ? 'bg-red-500/15 text-red-400 border-red-500/25' :
                   'bg-slate-500/15 text-slate-400 border-slate-500/25'
@@ -286,7 +290,7 @@ export default function PRForm() {
               <Select value={form.status} onValueChange={v => setF('status', v)}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['draft', 'submitted', 'approved', 'rejected'].map(s => <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
+                  {[['draft','Draft'],['submitted','Submitted'],['approved','Approved'],['disburse','Disbursed'],['rejected','Rejected']].map(([v,l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
@@ -460,13 +464,25 @@ export default function PRForm() {
                 type="button"
                 size="sm"
                 className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-                disabled={form.status === 'approved' || saveMutation.isPending}
+                disabled={form.status === 'approved' || form.status === 'disburse' || saveMutation.isPending}
                 onClick={() => {
                   const today = format(new Date(), 'yyyy-MM-dd');
                   setForm(f => ({ ...f, status: 'approved', approved_date: f.approved_date || today }));
-                  saveMutation.mutate({ ...form, status: 'approved', approved_date: form.approved_date || today, items, subtotal: grandTotal, grand_total: grandTotal, approved_amount: parseFloat(form.approved_amount) || null });
+                  saveMutation.mutate({ ...form, status: 'approved', approved_date: form.approved_date || today, items, subtotal: grandTotal, grand_total: grandTotal, approved_amount: parseFloat(form.approved_amount) || null, disburse_amount: parseFloat(form.disburse_amount) || null });
                 }}>
                 <CheckCircle size={13} /> Approve
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
+                disabled={!['approved', 'disburse'].includes(form.status) || saveMutation.isPending}
+                onClick={() => {
+                  const today = format(new Date(), 'yyyy-MM-dd');
+                  setForm(f => ({ ...f, status: 'disburse', disburse_date: f.disburse_date || today }));
+                  saveMutation.mutate({ ...form, status: 'disburse', disburse_date: form.disburse_date || today, items, subtotal: grandTotal, grand_total: grandTotal, approved_amount: parseFloat(form.approved_amount) || null, disburse_amount: parseFloat(form.disburse_amount) || null });
+                }}>
+                <CheckCircle size={13} /> Disburse
               </Button>
             </div>
           </div>
@@ -474,6 +490,9 @@ export default function PRForm() {
             <Field label="Approved By"><Input value={form.approved_by} onChange={e => setF('approved_by', e.target.value)} className="bg-background" placeholder="Approver name" /></Field>
             <Field label="Approved Date"><Input type="date" value={form.approved_date} onChange={e => setF('approved_date', e.target.value)} className="bg-background" /></Field>
             <Field label="Approved Amount (MYR)"><Input type="text" inputMode="decimal" value={form.approved_amount} onChange={e => setF('approved_amount', e.target.value)} className="bg-background font-mono" placeholder="0.00" /></Field>
+            <Field label="Disburse Amount (MYR)"><Input type="text" inputMode="decimal" value={form.disburse_amount} onChange={e => setF('disburse_amount', e.target.value)} className="bg-background font-mono text-violet-400" placeholder="0.00" /></Field>
+            <Field label="Disburse Date"><Input type="date" value={form.disburse_date} onChange={e => setF('disburse_date', e.target.value)} className="bg-background" /></Field>
+            <Field label="Disburse Reference"><Input value={form.disburse_reference} onChange={e => setF('disburse_reference', e.target.value)} className="bg-background font-mono" placeholder="e.g. Bank ref, cheque no." /></Field>
             <div className="md:col-span-2">
               <Field label="Remarks">
                 <Textarea value={form.remarks} onChange={e => setF('remarks', e.target.value)} className="bg-background resize-none" rows={2} placeholder="Additional notes..." />
