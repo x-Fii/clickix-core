@@ -192,7 +192,7 @@ export default function NewReport() {
               <Input value={form.running_number} readOnly className="bg-muted font-mono text-xs" />
             </Field>
             <Field label="Staff ID">
-              <Input value={form.l1_attended_staff_id} onChange={e => setF('l1_attended_staff_id', e.target.value)} className="bg-background font-mono" placeholder="Response ID" />
+              <Input value={form.l1_attended_staff_id} onChange={e => setF('l1_attended_staff_id', e.target.value)} className="bg-background font-mono" placeholder="Staff ID" />
             </Field>
             <Field label="Date">
               <Input type="date" value={form.l1_date} onChange={e => setF('l1_date', e.target.value)} className="bg-background" />
