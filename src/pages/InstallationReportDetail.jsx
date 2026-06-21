@@ -536,7 +536,7 @@ export default function InstallationReportDetail() {
                 </div>
               )}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer */}
