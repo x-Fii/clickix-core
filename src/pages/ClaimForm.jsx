@@ -122,6 +122,8 @@ export default function ClaimForm() {
         quotation_number: pr.quotation_number || '',
         sr_id: pr.sr_id || '',
         sr_number: pr.sr_number || '',
+        ir_id: pr.ir_id || '',
+        ir_number: pr.ir_number || '',
         client_name: pr.client_name || '',
         site_name: pr.site_name || '',
         claimant_name: pr.requester_name || '',
@@ -171,6 +173,8 @@ export default function ClaimForm() {
         quotation_number: pr.quotation_number || '',
         sr_id: pr.sr_id || '',
         sr_number: pr.sr_number || '',
+        ir_id: pr.ir_id || '',
+        ir_number: pr.ir_number || '',
         client_name: pr.client_name || '',
         site_name: pr.site_name || '',
         claimant_name: pr.requester_name || '',
@@ -363,7 +367,21 @@ export default function ClaimForm() {
             <Field label="Quotation">
               <Select value={form.quotation_id} onValueChange={v => {
                 const q = quotations.find(x => x.id === v);
-                if (q) setForm(f => ({ ...f, quotation_id: q.id, quotation_number: q.quotation_number }));
+                if (!q) return;
+                // chain-fill linked SR or IR from quotation
+                const linkedSR = q.sr_id ? reports.find(r => r.id === q.sr_id) : null;
+                const linkedIR = q.ir_id ? installationReports.find(r => r.id === q.ir_id) : null;
+                setForm(f => ({
+                  ...f,
+                  quotation_id: q.id,
+                  quotation_number: q.quotation_number,
+                  client_name: q.client_name || f.client_name,
+                  site_name: q.site_name || f.site_name,
+                  sr_id: linkedSR ? linkedSR.id : f.sr_id,
+                  sr_number: linkedSR ? linkedSR.running_number : f.sr_number,
+                  ir_id: linkedIR ? linkedIR.id : f.ir_id,
+                  ir_number: linkedIR ? linkedIR.report_number : f.ir_number,
+                }));
               }}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select quotation..." /></SelectTrigger>
                 <SelectContent>{quotations.map(q => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}</SelectContent>
@@ -372,9 +390,32 @@ export default function ClaimForm() {
             <Field label="Service / Installation Report">
               <Select value={form.sr_id || form.ir_id || undefined} onValueChange={v => {
                 const sr = reports.find(r => r.id === v);
-                if (sr) { setForm(f => ({ ...f, sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '', client_name: sr.client_name || '', site_name: sr.site_name || '' })); return; }
+                if (sr) {
+                  // chain-fill linked quotation from SR
+                  const linkedQ = quotations.find(q => q.sr_id === sr.id);
+                  setForm(f => ({
+                    ...f,
+                    sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '',
+                    client_name: sr.client_name || f.client_name,
+                    site_name: sr.site_name || f.site_name,
+                    quotation_id: linkedQ ? linkedQ.id : f.quotation_id,
+                    quotation_number: linkedQ ? linkedQ.quotation_number : f.quotation_number,
+                  }));
+                  return;
+                }
                 const ir = installationReports.find(r => r.id === v);
-                if (ir) setForm(f => ({ ...f, ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '', client_name: ir.client_name || '', site_name: ir.site_name || '' }));
+                if (ir) {
+                  // chain-fill linked quotation from IR
+                  const linkedQ = quotations.find(q => q.ir_id === ir.id);
+                  setForm(f => ({
+                    ...f,
+                    ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '',
+                    client_name: ir.client_name || f.client_name,
+                    site_name: ir.site_name || f.site_name,
+                    quotation_id: linkedQ ? linkedQ.id : f.quotation_id,
+                    quotation_number: linkedQ ? linkedQ.quotation_number : f.quotation_number,
+                  }));
+                }
               }}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR or IR..." /></SelectTrigger>
                 <SelectContent>
