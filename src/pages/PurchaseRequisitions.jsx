@@ -239,7 +239,7 @@ export default function PurchaseRequisitions() {
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">PR No.</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Quotation</th>
-                  <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">SR No.</th>
+                  <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">SR / IR No.</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Requester</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Date</th>
                   <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Total (MYR)</th>
@@ -254,7 +254,7 @@ export default function PurchaseRequisitions() {
             <tr key={pr.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/pr/${pr.id}`)}>
                     <td className="px-4 py-3 font-mono text-xs text-primary">{pr.pr_number}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.quotation_number || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{pr.sr_number || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{pr.sr_number || pr.ir_number || '—'}</td>
                     <td className="px-4 py-3">{pr.requester_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.pr_date ? format(parseISO(pr.pr_date), 'dd MMM yyyy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{pr.grand_total != null ? pr.grand_total.toFixed(2) : '—'}</td>
