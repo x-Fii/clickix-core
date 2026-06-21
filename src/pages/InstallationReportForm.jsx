@@ -22,7 +22,8 @@ function generateReportNumber() {
 
 const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '', photos: [] });
 const blankSection = () => ({ section_name: '', items: [blankItem()] });
-const blankDecomm = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '', photos: [] });
+const blankDecommItem = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '', photos: [] });
+const blankDecommSection = () => ({ section_name: '', items: [blankDecommItem()] });
 
 export default function InstallationReportForm() {
   const { id } = useParams();
@@ -43,6 +44,7 @@ export default function InstallationReportForm() {
     attended_staff_name: '', attended_staff_id: '', attended_staff_email: '',
     work_order_number: '', site_pic_name: '',
     equipment_sections: [blankSection()],
+    decommission_sections: [blankDecommSection()],
     equipment_installed: [],
     equipment_decommissioned: [],
     pre_job_assessment: '',
@@ -151,13 +153,59 @@ export default function InstallationReportForm() {
     });
   };
 
-  // Equipment decommissioned helpers
-  const addDecomm = () => set('equipment_decommissioned', [...form.equipment_decommissioned, blankDecomm()]);
-  const removeDecomm = i => set('equipment_decommissioned', form.equipment_decommissioned.filter((_, idx) => idx !== i));
-  const updateDecomm = (i, field, val) => {
-    const arr = [...form.equipment_decommissioned];
-    arr[i] = { ...arr[i], [field]: val };
-    set('equipment_decommissioned', arr);
+  // Decommission sections helpers
+  const addDecommSection = () => set('decommission_sections', [...(form.decommission_sections || []), blankDecommSection()]);
+  const removeDecommSection = (si) => set('decommission_sections', (form.decommission_sections || []).filter((_, idx) => idx !== si));
+  const updateDecommSectionName = (si, val) => {
+    const arr = [...(form.decommission_sections || [])];
+    arr[si] = { ...arr[si], section_name: val };
+    set('decommission_sections', arr);
+  };
+  const addDecommItemToSection = (si) => {
+    const arr = [...(form.decommission_sections || [])];
+    arr[si] = { ...arr[si], items: [...(arr[si].items || []), blankDecommItem()] };
+    set('decommission_sections', arr);
+  };
+  const removeDecommItemFromSection = (si, ii) => {
+    const arr = [...(form.decommission_sections || [])];
+    arr[si] = { ...arr[si], items: arr[si].items.filter((_, idx) => idx !== ii) };
+    set('decommission_sections', arr);
+  };
+  const updateDecommSectionItem = (si, ii, field, val) => {
+    setForm(f => {
+      const arr = (f.decommission_sections || []).map((sec, s) => {
+        if (s !== si) return sec;
+        const items = sec.items.map((item, i) => i === ii ? { ...item, [field]: val } : item);
+        return { ...sec, items };
+      });
+      return { ...f, decommission_sections: arr };
+    });
+  };
+  const handleDecommSectionItemPhotoUpload = async (e, si, ii) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setForm(f => {
+      const arr = (f.decommission_sections || []).map((sec, s) => {
+        if (s !== si) return sec;
+        const items = sec.items.map((item, i) => i === ii ? { ...item, photos: [...(item.photos || []), file_url] } : item);
+        return { ...sec, items };
+      });
+      return { ...f, decommission_sections: arr };
+    });
+    setUploading(false);
+    e.target.value = '';
+  };
+  const removeDecommSectionItemPhoto = (si, ii, pi) => {
+    setForm(f => {
+      const arr = (f.decommission_sections || []).map((sec, s) => {
+        if (s !== si) return sec;
+        const items = sec.items.map((item, i) => i === ii ? { ...item, photos: item.photos.filter((_, p) => p !== pi) } : item);
+        return { ...sec, items };
+      });
+      return { ...f, decommission_sections: arr };
+    });
   };
 
   const handlePhotoSupportUpload = async (e) => {
@@ -455,61 +503,81 @@ export default function InstallationReportForm() {
           </div>
         )}
 
-        {/* Equipment Decommissioned (flat list) */}
+        {/* Equipment Decommissioned — Section-based (decommissioning) */}
         {form.report_type === 'decommissioning' && (
           <div className={sectionClass}>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Equipment Decommissioned</h2>
-              <Button type="button" size="sm" variant="outline" onClick={addDecomm}>
-                <Plus size={14} className="mr-1" /> Add Item
+              <Button type="button" size="sm" variant="outline" onClick={addDecommSection}>
+                <Plus size={14} className="mr-1" /> Add Section
               </Button>
             </div>
-            {(form.equipment_decommissioned || []).map((item, i) => (
-              <div key={i} className="border border-border rounded-lg p-4 space-y-3 relative bg-muted/10">
-                <button type="button" onClick={() => removeDecomm(i)} className="absolute top-3 right-3 text-muted-foreground hover:text-destructive">
-                  <Trash2 size={14} />
-                </button>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Device Type</Label>
-                    <Select value={item.device_type || undefined} onValueChange={v => updateDecomm(i, 'device_type', v)}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
-                      <SelectContent>{DEVICE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Device Name / Model</Label>
-                    <Input className="h-8 text-xs" value={item.device_name} onChange={e => updateDecomm(i, 'device_name', e.target.value)} placeholder="Name / Model" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Serial Number</Label>
-                    <Input className="h-8 text-xs" value={item.serial_number} onChange={e => updateDecomm(i, 'serial_number', e.target.value)} placeholder="S/N" />
-                  </div>
+            {(form.decommission_sections || []).map((sec, si) => (
+              <div key={si} className="border border-primary/30 rounded-lg p-4 space-y-3 bg-muted/10">
+                {/* Section header */}
+                <div className="flex items-center gap-2">
+                  <Input
+                    className="h-8 text-sm font-semibold flex-1"
+                    value={sec.section_name}
+                    onChange={e => updateDecommSectionName(si, e.target.value)}
+                    placeholder={`Section name (e.g. Level 1, Server Room)`}
+                  />
+                  <button type="button" onClick={() => removeDecommSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Reason for Decommission</Label>
-                  <Input className="h-8 text-xs" value={item.reason_for_decommission} onChange={e => updateDecomm(i, 'reason_for_decommission', e.target.value)} placeholder="Reason" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Photos</Label>
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {(item.photos || []).map((url, pi) => (
-                      <div key={pi} className="relative group">
-                        <img src={url} alt="" className="w-16 h-16 object-cover rounded border border-border" />
-                        <button type="button" onClick={() => {
-                          const arr = [...form.equipment_decommissioned];
-                          arr[i] = { ...arr[i], photos: arr[i].photos.filter((_, pi2) => pi2 !== pi) };
-                          set('equipment_decommissioned', arr);
-                        }} className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:block">
-                          <X size={10} />
-                        </button>
+                {/* Items within section */}
+                <div className="space-y-3 pl-2 border-l-2 border-border">
+                  {(sec.items || []).map((item, ii) => (
+                    <div key={ii} className="border border-border rounded-lg p-3 space-y-2 relative bg-card">
+                      <button type="button" onClick={() => removeDecommItemFromSection(si, ii)}
+                        className="absolute top-2 right-2 text-muted-foreground hover:text-destructive">
+                        <Trash2 size={12} />
+                      </button>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Device Type</Label>
+                          <Select value={item.device_type || undefined} onValueChange={v => updateDecommSectionItem(si, ii, 'device_type', v)}>
+                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
+                            <SelectContent>{DEVICE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Device Name / Model</Label>
+                          <Input className="h-8 text-xs" value={item.device_name} onChange={e => updateDecommSectionItem(si, ii, 'device_name', e.target.value)} placeholder="Name / Model" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Serial Number</Label>
+                          <Input className="h-8 text-xs" value={item.serial_number} onChange={e => updateDecommSectionItem(si, ii, 'serial_number', e.target.value)} placeholder="S/N" />
+                        </div>
                       </div>
-                    ))}
-                    <label className="w-16 h-16 border border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                      <Upload size={14} className="text-muted-foreground" />
-                      <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoUpload(e, 'decomm', i)} />
-                    </label>
-                  </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Reason for Decommission</Label>
+                        <Input className="h-8 text-xs" value={item.reason_for_decommission} onChange={e => updateDecommSectionItem(si, ii, 'reason_for_decommission', e.target.value)} placeholder="Reason" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Photos</Label>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          {(item.photos || []).map((url, pi) => (
+                            <div key={pi} className="relative group">
+                              <img src={url} alt="" className="w-14 h-14 object-cover rounded border border-border" />
+                              <button type="button" onClick={() => removeDecommSectionItemPhoto(si, ii, pi)}
+                                className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:block">
+                                <X size={10} />
+                              </button>
+                            </div>
+                          ))}
+                          <label className="w-14 h-14 border border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                            <Upload size={13} className="text-muted-foreground" />
+                            <input type="file" accept="image/*" className="hidden" onChange={e => handleDecommSectionItemPhotoUpload(e, si, ii)} />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => addDecommItemToSection(si)}>
+                    <Plus size={12} className="mr-1" /> Add Item
+                  </Button>
                 </div>
               </div>
             ))}
