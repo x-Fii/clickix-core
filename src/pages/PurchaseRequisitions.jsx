@@ -258,7 +258,7 @@ export default function PurchaseRequisitions() {
                     <td className="px-4 py-3">{pr.requester_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.pr_date ? format(parseISO(pr.pr_date), 'dd MMM yyyy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{pr.grand_total != null ? pr.grand_total.toFixed(2) : '—'}</td>
-                    <td className="px-4 py-3 text-right font-mono text-sm text-emerald-400">{pr.approved_amount != null ? pr.approved_amount.toFixed(2) : '—'}</td>
+                    <td className="text-right font-mono text-sm text-emerald-400 pt-3 pr-3 pb-3 pl-3">{pr.approved_amount != null ? pr.approved_amount.toFixed(2) : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm text-violet-400">{pr.disburse_amount != null ? pr.disburse_amount.toFixed(2) : '—'}</td>
                     <td className="pt-3 pb-3 pl-4"><StatusBadge status={pr.status} /></td>
                     <td className="py-3 px-1" onClick={(e) => e.stopPropagation()}>
