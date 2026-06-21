@@ -208,7 +208,7 @@ export default function Claims() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  {['Claim No.', 'PR No.', 'SR No.', 'Claimant', 'Type', 'Date', 'Total (MYR)', 'Status', ''].map((h) =>
+                  {['Claim No.', 'PR No.', 'SR / IR No.', 'Claimant', 'Type', 'Date', 'Total (MYR)', 'Status', ''].map((h) =>
               <th key={h} className={`px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider ${h === 'Total (MYR)' ? 'text-right' : h === '' ? '' : 'text-left'}`}>{h}</th>
               )}
                 </tr>
@@ -218,7 +218,7 @@ export default function Claims() {
             <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/claims/${c.id}`)}>
                     <td className="px-4 py-3 font-mono text-xs text-primary">{c.claim_number}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.pr_number || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{c.sr_number || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{c.sr_number || c.ir_number || '—'}</td>
                     <td className="px-4 py-3">{c.claimant_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_type || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_date ? format(parseISO(c.claim_date), 'dd MMM yyyy') : '—'}</td>
