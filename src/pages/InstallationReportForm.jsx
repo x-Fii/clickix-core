@@ -52,11 +52,12 @@ export default function InstallationReportForm() {
     technician_notes: '',
     supporting_photos: [],
     supporting_documents: [],
-    ack_signature: '', ack_name: '', ack_phone: '', ack_timestamp: '',
+    ack_signature: '', ack_name: '', ack_phone: '', ack_company_stamp: '', ack_timestamp: '',
     submitted: false, submitted_at: '', admin_email: '',
   });
 
   const [uploading, setUploading] = useState(false);
+  const [uploadingStamp, setUploadingStamp] = useState(false);
 
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
@@ -240,6 +241,16 @@ export default function InstallationReportForm() {
       return { ...f, [key]: arr };
     });
     setUploading(false);
+    e.target.value = '';
+  };
+
+  const handleStampUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingStamp(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setForm(f => ({ ...f, ack_company_stamp: file_url }));
+    setUploadingStamp(false);
     e.target.value = '';
   };
 
@@ -671,12 +682,28 @@ export default function InstallationReportForm() {
               <Input value={form.ack_phone} onChange={e => set('ack_phone', e.target.value)} placeholder="Phone number" />
             </div>
           </div>
-          <div className="space-y-1">
-            <Label>Signature</Label>
-            <SignaturePad
-              value={form.ack_signature}
-              onChange={handleSignatureChange}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label>Signature</Label>
+              <SignaturePad
+                value={form.ack_signature}
+                onChange={handleSignatureChange}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Company Stamp</Label>
+              {form.ack_company_stamp ? (
+                <div className="relative inline-block w-full">
+                  <img src={form.ack_company_stamp} alt="Company Stamp" className="w-full max-h-40 object-contain rounded border border-border bg-muted/20" />
+                  <button type="button" onClick={() => set('ack_company_stamp', '')} className="absolute top-1 right-1 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"><X size={10} /></button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded cursor-pointer hover:border-primary transition-colors bg-muted/10">
+                  {uploadingStamp ? <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <><Upload size={16} className="text-muted-foreground mb-2" /><span className="text-xs text-muted-foreground">Upload Stamp</span></>}
+                  <input type="file" accept="image/*" className="hidden" disabled={uploadingStamp} onChange={handleStampUpload} />
+                </label>
+              )}
+            </div>
           </div>
         </div>
 

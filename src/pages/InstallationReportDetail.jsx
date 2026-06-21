@@ -275,12 +275,20 @@ export default function InstallationReportDetail() {
             <Field label="Phone" value={report.ack_phone} />
           </div>
           {report.ack_timestamp && <Field label="Timestamp" value={new Date(report.ack_timestamp).toLocaleString()} />}
-          {report.ack_signature && (
-            <div>
-              <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider mb-1">Signature</p>
-              <img src={report.ack_signature} alt="Signature" className="max-w-xs h-24 object-contain border border-border rounded bg-white p-1" />
-            </div>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {report.ack_signature && (
+              <div>
+                <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider mb-1">Signature</p>
+                <img src={report.ack_signature} alt="Signature" className="max-w-xs h-24 object-contain border border-border rounded bg-white p-1" />
+              </div>
+            )}
+            {report.ack_company_stamp && (
+              <div>
+                <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider mb-1">Company Stamp</p>
+                <img src={report.ack_company_stamp} alt="Company Stamp" className="max-w-xs h-24 object-contain border border-border rounded bg-white p-1" />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -521,8 +529,14 @@ export default function InstallationReportDetail() {
               <div style={{ fontSize: '13px', marginBottom: '4px' }}><strong>Name:</strong> {report.ack_name}</div>
               <div style={{ fontSize: '13px', marginBottom: '4px' }}><strong>Phone:</strong> {report.ack_phone}</div>
               {report.ack_timestamp && <div style={{ fontSize: '12px', color: '#6b7280' }}>Signed on: {new Date(report.ack_timestamp).toLocaleString()}</div>}
+              {report.ack_company_stamp && (
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>COMPANY STAMP</div>
+                  <img src={report.ack_company_stamp} alt="stamp" crossOrigin="anonymous" style={{ maxWidth: '200px', maxHeight: '120px', objectFit: 'contain' }} />
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}

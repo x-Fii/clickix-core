@@ -230,6 +230,9 @@
     "ack_phone": {
       "type": "string"
     },
+    "ack_company_stamp": {
+      "type": "string"
+    },
     "ack_timestamp": {
       "type": "string"
     },
