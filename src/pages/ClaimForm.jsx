@@ -297,10 +297,17 @@ export default function ClaimForm() {
             <Field label="Claim Number"><Input value={form.claim_number} onChange={e => setF('claim_number', e.target.value)} className="bg-background font-mono" /></Field>
             <Field label="Claim Date"><Input type="date" value={form.claim_date} onChange={e => setF('claim_date', e.target.value)} className="bg-background" /></Field>
             <Field label="Claim Type">
-              <Select value={form.claim_type} onValueChange={v => setF('claim_type', v)}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select type..." /></SelectTrigger>
-                <SelectContent>{CLAIM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
+              {form.claim_type && !CLAIM_TYPES.includes(form.claim_type) ? (
+                <div className="flex gap-1">
+                  <Input value={form.claim_type} onChange={e => setF('claim_type', e.target.value)} className="bg-background text-sm" placeholder="Enter type..." />
+                  <button onClick={() => setF('claim_type', '')} className="text-muted-foreground hover:text-foreground px-1"><X size={14} /></button>
+                </div>
+              ) : (
+                <Select value={form.claim_type || undefined} onValueChange={v => setF('claim_type', v === 'Other' ? ' ' : v)}>
+                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select type..." /></SelectTrigger>
+                  <SelectContent>{CLAIM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              )}
             </Field>
             <Field label="Status">
               <Select value={form.status} onValueChange={v => setF('status', v)}>
