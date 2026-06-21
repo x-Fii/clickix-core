@@ -49,6 +49,8 @@ export default function ClaimForm() {
     quotation_number: '',
     sr_id: '',
     sr_number: '',
+    ir_id: '',
+    ir_number: '',
     client_name: '',
     site_name: '',
     claimant_name: '',
@@ -99,6 +101,11 @@ export default function ClaimForm() {
   const { data: reports = [] } = useQuery({
     queryKey: ['service-reports'],
     queryFn: () => base44.entities.ServiceReport.list('-created_date', 100),
+  });
+
+  const { data: installationReports = [] } = useQuery({
+    queryKey: ['installation-reports'],
+    queryFn: () => base44.entities.InstallationReport.list('-created_date', 100),
   });
 
   // Auto-load from PR if ?from_pr=id query param
@@ -362,13 +369,18 @@ export default function ClaimForm() {
                 <SelectContent>{quotations.map(q => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="Service Report">
-              <Select value={form.sr_id} onValueChange={v => {
+            <Field label="Service / Installation Report">
+              <Select value={form.sr_id || form.ir_id || undefined} onValueChange={v => {
                 const sr = reports.find(r => r.id === v);
-                if (sr) setForm(f => ({ ...f, sr_id: sr.id, sr_number: sr.running_number, client_name: sr.client_name || '', site_name: sr.site_name || '' }));
+                if (sr) { setForm(f => ({ ...f, sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '', client_name: sr.client_name || '', site_name: sr.site_name || '' })); return; }
+                const ir = installationReports.find(r => r.id === v);
+                if (ir) setForm(f => ({ ...f, ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '', client_name: ir.client_name || '', site_name: ir.site_name || '' }));
               }}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR..." /></SelectTrigger>
-                <SelectContent>{reports.map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR or IR..." /></SelectTrigger>
+                <SelectContent>
+                  {reports.length > 0 && <><SelectItem disabled value="__sr__" className="text-xs text-muted-foreground font-semibold">— Service Reports —</SelectItem>{reports.map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}</>}
+                  {installationReports.length > 0 && <><SelectItem disabled value="__ir__" className="text-xs text-muted-foreground font-semibold">— Installation Reports —</SelectItem>{installationReports.map(r => <SelectItem key={r.id} value={r.id}>{r.report_number} — {r.client_name}</SelectItem>)}</>}
+                </SelectContent>
               </Select>
             </Field>
             <Field label="Client"><Input value={form.client_name} onChange={e => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
@@ -499,7 +511,7 @@ export default function ClaimForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Linked Documents</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['PR NO.', form.pr_number], ['SR NO.', form.sr_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) => (
+                {[['PR NO.', form.pr_number], ['SR/IR NO.', form.sr_number || form.ir_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) => (
                   <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
