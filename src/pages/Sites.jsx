@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, MapPin, Phone, User, ExternalLink } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Phone, User, ExternalLink, ChevronRight, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import StatusBadge from '@/components/StatusBadge';
 import { format } from 'date-fns';
@@ -29,6 +29,11 @@ export default function Sites() {
   const [editId, setEditId] = useState(null);
   const [clientFilter, setClientFilter] = useState('all');
   const [selectedSite, setSelectedSite] = useState(null);
+  const [collapsedRegions, setCollapsedRegions] = useState(new Set());
+  const [collapsedStates, setCollapsedStates] = useState(new Set());
+
+  const toggleRegion = (r) => setCollapsedRegions((prev) => { const n = new Set(prev); n.has(r) ? n.delete(r) : n.add(r); return n; });
+  const toggleState = (key) => setCollapsedStates((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
   const { data: sites = [], isLoading } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
@@ -95,63 +100,95 @@ export default function Sites() {
             <p className="text-muted-foreground text-sm">No sites found.</p>
           </div>
         }
-        {!isLoading && filtered.length > 0 &&
-        <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Site Name</th>
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Client</th>
-                
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">State</th>
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Location</th>
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">PIC</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s, i) => {
-              const showRegionHeader = i === 0 || filtered[i - 1].region !== s.region;
-              return [
-              showRegionHeader &&
-              <tr key={`region-${s.region}-${i}`} className="bg-muted/50">
-                      <td colSpan={7} className="px-4 py-2 text-xs font-mono font-semibold text-primary uppercase tracking-wider">
-                        {s.region || 'No Region'}
-                      </td>
-                    </tr>,
-
-              <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors group cursor-pointer" onClick={() => setSelectedSite(s)}>
-                    <td className="pt-2 pb-2 pr-1 pl-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-md bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
-                          <MapPin size={11} className="text-indigo-400" />
-                        </div>
-                        <span className="font-medium text-sm">{s.site_name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.client_name || '—'}</td>
-                    
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.state || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell max-w-[200px] truncate">{s.site_location || '—'}</td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      {s.pic_name ?
-                  <div className="text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1"><User size={10} /> {s.pic_name}</div>
-                          {s.pic_phone && <div className="flex items-center gap-1 mt-0.5"><Phone size={10} /> {s.pic_phone}</div>}
-                        </div> :
-                  <span className="text-xs text-muted-foreground">—</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); openEdit(s); }}><Pencil size={12} /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={e => { e.stopPropagation(); setDeleteId(s.id); }}><Trash2 size={12} /></Button>
-                      </div>
-                    </td>
-                  </tr>];
-
-            })}
-            </tbody>
-          </table>
-        }
+        {!isLoading && filtered.length > 0 && (() => {
+          const grouped = {};
+          filtered.forEach((s) => {
+            const region = s.region || 'No Region';
+            const state = s.state || 'No State';
+            (grouped[region] = grouped[region] || {})[state] = (grouped[region][state] || []);
+            grouped[region][state].push(s);
+          });
+          const regionKeys = Object.keys(grouped).sort();
+          return (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Site Name</th>
+                  <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Client</th>
+                  <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Location</th>
+                  <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">PIC</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {regionKeys.map((region) => {
+                  const stateKeys = Object.keys(grouped[region]).sort();
+                  const regionCount = stateKeys.reduce((n, st) => n + grouped[region][st].length, 0);
+                  const regionCollapsed = collapsedRegions.has(region);
+                  return (
+                    <Fragment key={`region-${region}`}>
+                      <tr className="bg-muted/50 cursor-pointer select-none" onClick={() => toggleRegion(region)}>
+                        <td colSpan={5} className="px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            {regionCollapsed ? <ChevronRight size={14} className="text-primary" /> : <ChevronDown size={14} className="text-primary" />}
+                            <span className="text-xs font-mono font-semibold text-primary uppercase tracking-wider">{region}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground">{regionCount} {regionCount === 1 ? 'site' : 'sites'}</span>
+                          </div>
+                        </td>
+                      </tr>
+                      {!regionCollapsed && stateKeys.map((state) => {
+                        const stateSites = grouped[region][state];
+                        const stateKey = `${region}::${state}`;
+                        const stateCollapsed = collapsedStates.has(stateKey);
+                        return (
+                          <Fragment key={`state-${stateKey}`}>
+                            <tr className="bg-muted/20 cursor-pointer select-none" onClick={() => toggleState(stateKey)}>
+                              <td colSpan={5} className="px-4 py-1.5 pl-10">
+                                <div className="flex items-center gap-2">
+                                  {stateCollapsed ? <ChevronRight size={12} className="text-muted-foreground" /> : <ChevronDown size={12} className="text-muted-foreground" />}
+                                  <span className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-wider">{state}</span>
+                                  <span className="text-[10px] font-mono text-muted-foreground/60">{stateSites.length}</span>
+                                </div>
+                              </td>
+                            </tr>
+                            {!stateCollapsed && stateSites.map((s) => (
+                              <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors group cursor-pointer" onClick={() => setSelectedSite(s)}>
+                                <td className="pt-2 pb-2 pr-1 pl-14">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-md bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
+                                      <MapPin size={11} className="text-indigo-400" />
+                                    </div>
+                                    <span className="font-medium text-sm">{s.site_name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-xs text-muted-foreground">{s.client_name || '—'}</td>
+                                <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell max-w-[200px] truncate">{s.site_location || '—'}</td>
+                                <td className="px-4 py-3 hidden lg:table-cell">
+                                  {s.pic_name ?
+                                    <div className="text-xs text-muted-foreground">
+                                      <div className="flex items-center gap-1"><User size={10} /> {s.pic_name}</div>
+                                      {s.pic_phone && <div className="flex items-center gap-1 mt-0.5"><Phone size={10} /> {s.pic_phone}</div>}
+                                    </div> :
+                                    <span className="text-xs text-muted-foreground">—</span>}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); openEdit(s); }}><Pencil size={12} /></Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={e => { e.stopPropagation(); setDeleteId(s.id); }}><Trash2 size={12} /></Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </Fragment>
+                        );
+                      })}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          );
+        })()}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
