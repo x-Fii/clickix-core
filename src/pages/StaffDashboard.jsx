@@ -3,9 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Clock, Wallet, Wrench, CalendarClock, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Clock, Wallet, Wrench, CalendarClock, CheckCircle2, XCircle, AlertTriangle, CalendarDays } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import StaffScheduleCalendar from '@/components/StaffScheduleCalendar';
 
 const ROLE_COLORS = { Admin: 'text-amber-400 bg-amber-500/15', L1: 'text-blue-400 bg-blue-500/15', L2: 'text-indigo-400 bg-indigo-500/15' };
 const EXPIRY_DAYS = 90;
@@ -87,6 +88,15 @@ export default function StaffDashboard() {
     return records.sort((a, b) => (b.work_date || '').localeCompare(a.work_date || ''));
   }, [myClaims, name]);
 
+  const scheduledJobs = useMemo(() => {
+    if (!name) return [];
+    const sr = reports.filter(r => r.status === 'schedule' && r.scheduled_date && r.l2_attended_staff_name === name)
+      .map(r => ({ type: 'Service', number: r.running_number, date: r.scheduled_date, time: r.l2_attend_time, client: r.client_name, site: r.site_name, id: r.id }));
+    const ir = installations.filter(r => r.status === 'scheduled' && r.scheduled_date && r.attended_staff_name === name)
+      .map(r => ({ type: 'Installation', number: r.report_number, date: r.scheduled_date, time: r.attend_time, client: r.client_name, site: r.site_name, id: r.id }));
+    return [...sr, ...ir].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  }, [name, reports, installations]);
+
   const offDayTotals = useMemo(() => {
     const valid = offDayRecords.filter(r => r.status !== 'expired');
     const expired = offDayRecords.filter(r => r.status === 'expired');
@@ -133,17 +143,19 @@ export default function StaffDashboard() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard icon={Wrench} label="Cases Attended" value={cases.length} sub={`${cases.filter(c => c.type === 'Service').length} service · ${cases.filter(c => c.type === 'Installation').length} installation`} accent="bg-blue-500/15 text-blue-400" />
         <StatCard icon={Wallet} label="Amount Claimed" value={`MYR ${claimSummary.claimed.toFixed(2)}`} sub={`${claimSummary.count} claims`} accent="bg-indigo-500/15 text-indigo-400" />
         <StatCard icon={CheckCircle2} label="Amount Paid" value={`MYR ${claimSummary.paid.toFixed(2)}`} sub={`MYR ${claimSummary.pending.toFixed(2)} pending`} accent="bg-emerald-500/15 text-emerald-400" />
         <StatCard icon={Clock} label="Off-Day Accrued" value={`${offDayTotals.Hours.accrued}h / ${offDayTotals.Days.accrued}d`} sub={`${offDayTotals.Hours.expired}h / ${offDayTotals.Days.expired}d expired`} accent="bg-amber-500/15 text-amber-400" />
+        <StatCard icon={CalendarDays} label="Scheduled Jobs" value={scheduledJobs.length} sub={`${scheduledJobs.filter(j => j.type === 'Service').length} service · ${scheduledJobs.filter(j => j.type === 'Installation').length} installation`} accent="bg-purple-500/15 text-purple-400" />
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-border">
         {[
           { key: 'cases', label: 'Cases Attended' },
+          { key: 'calendar', label: 'Work Calendar' },
           { key: 'claims', label: 'Claims' },
           { key: 'offday', label: 'Off-Day & Hours' },
         ].map(t => (
@@ -176,6 +188,19 @@ export default function StaffDashboard() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Work Calendar */}
+      {tab === 'calendar' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-sm">Scheduled Maintenance Jobs</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Service reports in "schedule" status and installation reports in "scheduled" status assigned to {member.name}.</p>
+            </div>
+          </div>
+          <StaffScheduleCalendar events={scheduledJobs} />
         </div>
       )}
 
