@@ -15,12 +15,12 @@ const CATEGORIES = ['Hardware', 'Software', 'Networking', 'Cabling', 'Consumable
 const PAYMENT_TERMS = ['30 Days', '60 Days', '90 Days', 'COD', 'Advance Payment', 'Upon Delivery'];
 const CLAIM_TYPES = ['Reimbursement', 'Vendor Payment', 'Contractor Payment', 'Internal Expense', 'Other'];
 
-const Field = ({ label, children }) => (
-  <div className="space-y-1.5">
+const Field = ({ label, children }) =>
+<div className="space-y-1.5">
     <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">{label}</Label>
     {children}
-  </div>
-);
+  </div>;
+
 
 const genClaimNumber = () => `CF${format(new Date(), 'yy')}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
 
@@ -29,7 +29,7 @@ const STATUS_COLORS = {
   submitted: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
   rejected: 'bg-red-500/15 text-red-400 border-red-500/25',
   paid: 'bg-teal-500/15 text-teal-400 border-teal-500/25',
-  draft: 'bg-slate-500/15 text-slate-400 border-slate-500/25',
+  draft: 'bg-slate-500/15 text-slate-400 border-slate-500/25'
 };
 
 export default function ClaimForm() {
@@ -64,14 +64,14 @@ export default function ClaimForm() {
     approved_date: '',
     paid_date: '',
     payment_reference: '',
-    remarks: '',
+    remarks: ''
   });
   const [items, setItems] = useState([
-    { item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }
-  ]);
+  { item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]
+  );
   const [offDayClaims, setOffDayClaims] = useState([
-    { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }
-  ]);
+  { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]
+  );
 
 
   // Load existing claim
@@ -84,32 +84,32 @@ export default function ClaimForm() {
       setOffDayClaims(c.off_day_claims?.length ? c.off_day_claims : [{ work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
       return c;
     },
-    enabled: isEdit,
+    enabled: isEdit
   });
 
   const { data: staff = [] } = useQuery({
     queryKey: ['staff'],
-    queryFn: () => base44.entities.StaffMember.list(),
+    queryFn: () => base44.entities.StaffMember.list()
   });
 
   const { data: prs = [] } = useQuery({
     queryKey: ['purchase-requisitions'],
-    queryFn: () => base44.entities.PurchaseRequisition.list('-created_date', 100),
+    queryFn: () => base44.entities.PurchaseRequisition.list('-created_date', 100)
   });
 
   const { data: quotations = [] } = useQuery({
     queryKey: ['quotations'],
-    queryFn: () => base44.entities.Quotation.list('-created_date', 100),
+    queryFn: () => base44.entities.Quotation.list('-created_date', 100)
   });
 
   const { data: reports = [] } = useQuery({
     queryKey: ['service-reports'],
-    queryFn: () => base44.entities.ServiceReport.list('-created_date', 100),
+    queryFn: () => base44.entities.ServiceReport.list('-created_date', 100)
   });
 
   const { data: installationReports = [] } = useQuery({
     queryKey: ['installation-reports'],
-    queryFn: () => base44.entities.InstallationReport.list('-created_date', 100),
+    queryFn: () => base44.entities.InstallationReport.list('-created_date', 100)
   });
 
   // Auto-load from PR if ?from_pr=id query param
@@ -118,7 +118,7 @@ export default function ClaimForm() {
     queryKey: ['pr-prefill', fromPrId],
     queryFn: async () => {
       const pr = await base44.entities.PurchaseRequisition.get(fromPrId);
-      setForm(f => ({
+      setForm((f) => ({
         ...f,
         pr_id: pr.id,
         pr_number: pr.pr_number,
@@ -136,7 +136,7 @@ export default function ClaimForm() {
         claimant_phone: pr.requester_phone || '',
         payment_term: pr.payment_term || '',
         purpose: pr.purpose_of_purchase || '',
-        approved_by: pr.approved_by || '',
+        approved_by: pr.approved_by || ''
       }));
       if (pr.items?.length) {
         setItems(pr.items.map((it, i) => ({
@@ -145,31 +145,31 @@ export default function ClaimForm() {
           category: it.category || '',
           quantity: it.quantity || 1,
           unit_cost: it.unit_cost || 0,
-          total: it.total || (it.quantity || 1) * (it.unit_cost || 0),
+          total: it.total || (it.quantity || 1) * (it.unit_cost || 0)
         })));
       }
       return pr;
     },
-    enabled: !!fromPrId && !isEdit,
+    enabled: !!fromPrId && !isEdit
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => isEdit
-      ? base44.entities.Claim.update(id, data)
-      : base44.entities.Claim.create(data),
+    mutationFn: (data) => isEdit ?
+    base44.entities.Claim.update(id, data) :
+    base44.entities.Claim.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['claims'] });
       toast.success(isEdit ? 'Claim updated' : 'Claim created');
       navigate('/claims');
-    },
+    }
   });
 
-  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const handlePRSelect = (prId) => {
-    const pr = prs.find(x => x.id === prId);
+    const pr = prs.find((x) => x.id === prId);
     if (pr) {
-      setForm(f => ({
+      setForm((f) => ({
         ...f,
         pr_id: pr.id,
         pr_number: pr.pr_number,
@@ -187,7 +187,7 @@ export default function ClaimForm() {
         claimant_phone: pr.requester_phone || '',
         payment_term: pr.payment_term || '',
         purpose: pr.purpose_of_purchase || '',
-        approved_by: pr.approved_by || '',
+        approved_by: pr.approved_by || ''
       }));
       if (pr.items?.length) {
         setItems(pr.items.map((it, i) => ({
@@ -196,7 +196,7 @@ export default function ClaimForm() {
           category: it.category || '',
           quantity: it.quantity || 1,
           unit_cost: it.unit_cost || 0,
-          total: it.total || (it.quantity || 1) * (it.unit_cost || 0),
+          total: it.total || (it.quantity || 1) * (it.unit_cost || 0)
         })));
         toast.success(`${pr.items.length} items imported from PR`);
       }
@@ -204,7 +204,7 @@ export default function ClaimForm() {
   };
 
   const updateItem = (i, field, val) => {
-    setItems(prev => prev.map((item, idx) => {
+    setItems((prev) => prev.map((item, idx) => {
       if (idx !== i) return item;
       const updated = { ...item, [field]: val };
       if (field === 'quantity' || field === 'unit_cost') {
@@ -214,13 +214,13 @@ export default function ClaimForm() {
     }));
   };
 
-  const addItem = () => setItems(p => [...p, { item_no: p.length + 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
+  const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
 
   const updateOffDay = (i, field, val) => {
-    setOffDayClaims(prev => prev.map((item, idx) => idx !== i ? item : { ...item, [field]: val }));
+    setOffDayClaims((prev) => prev.map((item, idx) => idx !== i ? item : { ...item, [field]: val }));
   };
 
-  const addOffDay = () => setOffDayClaims(p => [...p, { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
+  const addOffDay = () => setOffDayClaims((p) => [...p, { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
 
   const itemsTotal = items.reduce((s, it) => s + (parseFloat(it.total) || 0), 0);
   const offDayClaimedTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.claimed) || 0), 0);
@@ -232,45 +232,45 @@ export default function ClaimForm() {
   };
 
   const handleExportPDF = async () => {
-  toast.info('Generating PDF...');
-  const { default: jsPDF } = await import('jspdf');
-  const { default: html2canvas } = await import('html2canvas');
-  
-  // Initialize standard A4 landscape/portrait sizing properties
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const pw = pdf.internal.pageSize.getWidth();
-  const ph = pdf.internal.pageSize.getHeight();
-  
-  const wrapper = document.getElementById('claim-pdf-area');
-  wrapper.style.display = 'block';
-  await new Promise(r => setTimeout(r, 100));
-  
-  const el = document.getElementById('claim-pdf-content');
-  // Re-applied the explicit width threshold to maintain consistent text scaling across pages
-  const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
-  wrapper.style.display = 'none';
-  
-  const imgData = canvas.toDataURL('image/png');
-  const imgW = pw;
-  const imgH = (canvas.height * imgW) / canvas.width;
-  
-  let yPos = 0;
-  let pageCount = 0;
-  
-  // Safely loop and distribute the image chunks down the pages
-  while (yPos < imgH) {
-    if (pageCount > 0) {
-      pdf.addPage();
+    toast.info('Generating PDF...');
+    const { default: jsPDF } = await import('jspdf');
+    const { default: html2canvas } = await import('html2canvas');
+
+    // Initialize standard A4 landscape/portrait sizing properties
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pw = pdf.internal.pageSize.getWidth();
+    const ph = pdf.internal.pageSize.getHeight();
+
+    const wrapper = document.getElementById('claim-pdf-area');
+    wrapper.style.display = 'block';
+    await new Promise((r) => setTimeout(r, 100));
+
+    const el = document.getElementById('claim-pdf-content');
+    // Re-applied the explicit width threshold to maintain consistent text scaling across pages
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
+    wrapper.style.display = 'none';
+
+    const imgData = canvas.toDataURL('image/png');
+    const imgW = pw;
+    const imgH = canvas.height * imgW / canvas.width;
+
+    let yPos = 0;
+    let pageCount = 0;
+
+    // Safely loop and distribute the image chunks down the pages
+    while (yPos < imgH) {
+      if (pageCount > 0) {
+        pdf.addPage();
+      }
+      // 'FAST' memory allocation avoids canvas doubling and limits total document size
+      pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH, undefined, 'FAST');
+      yPos += ph;
+      pageCount++;
     }
-    // 'FAST' memory allocation avoids canvas doubling and limits total document size
-    pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH, undefined, 'FAST');
-    yPos += ph;
-    pageCount++;
-  }
-  
-  pdf.save(`${form.claim_number}.pdf`);
-  toast.success('PDF exported');
-};
+
+    pdf.save(`${form.claim_number}.pdf`);
+    toast.success('PDF exported');
+  };
 
 
 
@@ -280,7 +280,7 @@ export default function ClaimForm() {
     await base44.integrations.Core.SendEmail({
       to: adminEmail,
       subject: `Claim ${form.claim_number} — ${form.status?.toUpperCase()}`,
-      body: `Claim Submission\n\nClaim No: ${form.claim_number}\nDate: ${form.claim_date}\nClaimant: ${form.claimant_name} (${form.claimant_department})\nType: ${form.claim_type}\nClient: ${form.client_name}\nSite: ${form.site_name}\nLinked PR: ${form.pr_number || '—'}\nSR No: ${form.sr_number || '—'}\nGrand Total: MYR ${grandTotal.toFixed(2)}\n\nPurpose: ${form.purpose}\n\nPlease log in to the system to review this claim.`,
+      body: `Claim Submission\n\nClaim No: ${form.claim_number}\nDate: ${form.claim_date}\nClaimant: ${form.claimant_name} (${form.claimant_department})\nType: ${form.claim_type}\nClient: ${form.client_name}\nSite: ${form.site_name}\nLinked PR: ${form.pr_number || '—'}\nSR No: ${form.sr_number || '—'}\nGrand Total: MYR ${grandTotal.toFixed(2)}\n\nPurpose: ${form.purpose}\n\nPlease log in to the system to review this claim.`
     });
     toast.success(`Claim submitted to ${adminEmail}`);
   };
@@ -294,21 +294,21 @@ export default function ClaimForm() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold">{isEdit ? 'Edit Claim' : 'New Claim'}</h1>
-              {form.status && (
-                <span className={`inline-flex px-2.5 py-0.5 text-[11px] font-mono border rounded-full ${STATUS_COLORS[form.status] || STATUS_COLORS.draft}`}>
+              {form.status &&
+              <span className={`inline-flex px-2.5 py-0.5 text-[11px] font-mono border rounded-full ${STATUS_COLORS[form.status] || STATUS_COLORS.draft}`}>
                   {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
                 </span>
-              )}
+              }
             </div>
             <p className="text-xs text-muted-foreground font-mono mt-0.5">{form.claim_number}</p>
           </div>
         </div>
-        {isEdit && (
-          <div className="flex gap-2 flex-wrap justify-end">
+        {isEdit &&
+        <div className="flex gap-2 flex-wrap justify-end">
             <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2"><Download size={14} /> PDF</Button>
             <Button size="sm" onClick={handleSubmitToAdmin} className="gap-2"><Send size={14} /> Submit to Admin</Button>
           </div>
-        )}
+        }
       </div>
 
 
@@ -318,28 +318,28 @@ export default function ClaimForm() {
         <div className="bg-card border border-border rounded-xl p-6">
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Document Header</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Field label="Claim Number"><Input value={form.claim_number} onChange={e => setF('claim_number', e.target.value)} className="bg-background font-mono" /></Field>
-            <Field label="Claim Date"><Input type="date" value={form.claim_date} onChange={e => setF('claim_date', e.target.value)} className="bg-background" /></Field>
+            <Field label="Claim Number"><Input value={form.claim_number} onChange={(e) => setF('claim_number', e.target.value)} className="bg-background font-mono" /></Field>
+            <Field label="Claim Date"><Input type="date" value={form.claim_date} onChange={(e) => setF('claim_date', e.target.value)} className="bg-background" /></Field>
             <Field label="Claim Type">
-              {form.claim_type && !CLAIM_TYPES.includes(form.claim_type) ? (
-                <div className="flex gap-1">
-                  <Input value={form.claim_type} onChange={e => setF('claim_type', e.target.value)} className="bg-background text-sm" placeholder="Enter type..." />
+              {form.claim_type && !CLAIM_TYPES.includes(form.claim_type) ?
+              <div className="flex gap-1">
+                  <Input value={form.claim_type} onChange={(e) => setF('claim_type', e.target.value)} className="bg-background text-sm" placeholder="Enter type..." />
                   <button onClick={() => setF('claim_type', '')} className="text-muted-foreground hover:text-foreground px-1"><X size={14} /></button>
-                </div>
-              ) : (
-                <Select value={form.claim_type || undefined} onValueChange={v => setF('claim_type', v === 'Other' ? ' ' : v)}>
+                </div> :
+
+              <Select value={form.claim_type || undefined} onValueChange={(v) => setF('claim_type', v === 'Other' ? ' ' : v)}>
                   <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select type..." /></SelectTrigger>
-                  <SelectContent>{CLAIM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <SelectContent>{CLAIM_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
-              )}
+              }
             </Field>
             <Field label="Status">
-              <Select value={form.status} onValueChange={v => setF('status', v)}>
+              <Select value={form.status} onValueChange={(v) => setF('status', v)}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['draft', 'submitted', 'approved', 'rejected', 'paid'].map(s => (
-                    <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
-                  ))}
+                  {['draft', 'submitted', 'approved', 'rejected', 'paid'].map((s) =>
+                  <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </Field>
@@ -351,19 +351,19 @@ export default function ClaimForm() {
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Claimant Details</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Field label="Claimant Name">
-              <Select value={form.claimant_name || undefined} onValueChange={v => {
-                const s = staff.find(m => m.name === v);
-                setForm(f => ({ ...f, claimant_name: v, claimant_department: s?.department || f.claimant_department, claimant_email: s?.email || f.claimant_email, claimant_phone: s?.phone || f.claimant_phone }));
+              <Select value={form.claimant_name || undefined} onValueChange={(v) => {
+                const s = staff.find((m) => m.name === v);
+                setForm((f) => ({ ...f, claimant_name: v, claimant_department: s?.department || f.claimant_department, claimant_email: s?.email || f.claimant_email, claimant_phone: s?.phone || f.claimant_phone }));
               }}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select staff..." /></SelectTrigger>
                 <SelectContent className="max-h-60 overflow-y-auto">
-                  {staff.map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}
+                  {staff.map((s) => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Department"><Input value={form.claimant_department} onChange={e => setF('claimant_department', e.target.value)} className="bg-background" /></Field>
-            <Field label="Email"><Input type="email" value={form.claimant_email} onChange={e => setF('claimant_email', e.target.value)} className="bg-background" /></Field>
-            <Field label="Phone"><Input value={form.claimant_phone} onChange={e => setF('claimant_phone', e.target.value)} className="bg-background" /></Field>
+            <Field label="Department"><Input value={form.claimant_department} onChange={(e) => setF('claimant_department', e.target.value)} className="bg-background" /></Field>
+            <Field label="Email"><Input type="email" value={form.claimant_email} onChange={(e) => setF('claimant_email', e.target.value)} className="bg-background" /></Field>
+            <Field label="Phone"><Input value={form.claimant_phone} onChange={(e) => setF('claimant_phone', e.target.value)} className="bg-background" /></Field>
           </div>
         </div>
 
@@ -374,17 +374,17 @@ export default function ClaimForm() {
             <Field label="Purchase Requisition (PR)">
               <Select value={form.pr_id} onValueChange={handlePRSelect}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select PR to convert from..." /></SelectTrigger>
-                <SelectContent>{prs.map(p => <SelectItem key={p.id} value={p.id}>{p.pr_number} — {p.client_name}</SelectItem>)}</SelectContent>
+                <SelectContent>{prs.map((p) => <SelectItem key={p.id} value={p.id}>{p.pr_number} — {p.client_name}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="Quotation">
-              <Select value={form.quotation_id} onValueChange={v => {
-                const q = quotations.find(x => x.id === v);
+              <Select value={form.quotation_id} onValueChange={(v) => {
+                const q = quotations.find((x) => x.id === v);
                 if (!q) return;
                 // chain-fill linked SR or IR from quotation
-                const linkedSR = q.sr_id ? reports.find(r => r.id === q.sr_id) : null;
-                const linkedIR = q.ir_id ? installationReports.find(r => r.id === q.ir_id) : null;
-                setForm(f => ({
+                const linkedSR = q.sr_id ? reports.find((r) => r.id === q.sr_id) : null;
+                const linkedIR = q.ir_id ? installationReports.find((r) => r.id === q.ir_id) : null;
+                setForm((f) => ({
                   ...f,
                   quotation_id: q.id,
                   quotation_number: q.quotation_number,
@@ -393,62 +393,62 @@ export default function ClaimForm() {
                   sr_id: linkedSR ? linkedSR.id : f.sr_id,
                   sr_number: linkedSR ? linkedSR.running_number : f.sr_number,
                   ir_id: linkedIR ? linkedIR.id : f.ir_id,
-                  ir_number: linkedIR ? linkedIR.report_number : f.ir_number,
+                  ir_number: linkedIR ? linkedIR.report_number : f.ir_number
                 }));
               }}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select quotation..." /></SelectTrigger>
-                <SelectContent>{quotations.map(q => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}</SelectContent>
+                <SelectContent>{quotations.map((q) => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="Service / Installation Report">
-              <Select value={form.sr_id || form.ir_id || undefined} onValueChange={v => {
-                const sr = reports.find(r => r.id === v);
+              <Select value={form.sr_id || form.ir_id || undefined} onValueChange={(v) => {
+                const sr = reports.find((r) => r.id === v);
                 if (sr) {
                   // chain-fill linked quotation from SR
-                  const linkedQ = quotations.find(q => q.sr_id === sr.id);
-                  setForm(f => ({
+                  const linkedQ = quotations.find((q) => q.sr_id === sr.id);
+                  setForm((f) => ({
                     ...f,
                     sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '',
                     client_name: sr.client_name || f.client_name,
                     site_name: sr.site_name || f.site_name,
                     quotation_id: linkedQ ? linkedQ.id : f.quotation_id,
-                    quotation_number: linkedQ ? linkedQ.quotation_number : f.quotation_number,
+                    quotation_number: linkedQ ? linkedQ.quotation_number : f.quotation_number
                   }));
                   return;
                 }
-                const ir = installationReports.find(r => r.id === v);
+                const ir = installationReports.find((r) => r.id === v);
                 if (ir) {
                   // chain-fill linked quotation from IR
-                  const linkedQ = quotations.find(q => q.ir_id === ir.id);
-                  setForm(f => ({
+                  const linkedQ = quotations.find((q) => q.ir_id === ir.id);
+                  setForm((f) => ({
                     ...f,
                     ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '',
                     client_name: ir.client_name || f.client_name,
                     site_name: ir.site_name || f.site_name,
                     quotation_id: linkedQ ? linkedQ.id : f.quotation_id,
-                    quotation_number: linkedQ ? linkedQ.quotation_number : f.quotation_number,
+                    quotation_number: linkedQ ? linkedQ.quotation_number : f.quotation_number
                   }));
                 }
               }}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR or IR..." /></SelectTrigger>
                 <SelectContent>
-                  {reports.length > 0 && <><SelectItem disabled value="__sr__" className="text-xs text-muted-foreground font-semibold">— Service Reports —</SelectItem>{reports.map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}</>}
-                  {installationReports.length > 0 && <><SelectItem disabled value="__ir__" className="text-xs text-muted-foreground font-semibold">— Installation Reports —</SelectItem>{installationReports.map(r => <SelectItem key={r.id} value={r.id}>{r.report_number} — {r.client_name}</SelectItem>)}</>}
+                  {reports.length > 0 && <><SelectItem disabled value="__sr__" className="text-xs text-muted-foreground font-semibold">— Service Reports —</SelectItem>{reports.map((r) => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}</>}
+                  {installationReports.length > 0 && <><SelectItem disabled value="__ir__" className="text-xs text-muted-foreground font-semibold">— Installation Reports —</SelectItem>{installationReports.map((r) => <SelectItem key={r.id} value={r.id}>{r.report_number} — {r.client_name}</SelectItem>)}</>}
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Client"><Input value={form.client_name} onChange={e => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
-            <Field label="Site"><Input value={form.site_name} onChange={e => setF('site_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
+            <Field label="Client"><Input value={form.client_name} onChange={(e) => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
+            <Field label="Site"><Input value={form.site_name} onChange={(e) => setF('site_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
             <Field label="Payment Term">
-              <Select value={form.payment_term} onValueChange={v => setF('payment_term', v)}>
+              <Select value={form.payment_term} onValueChange={(v) => setF('payment_term', v)}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-                <SelectContent>{PAYMENT_TERMS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                <SelectContent>{PAYMENT_TERMS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
           </div>
           <div className="mt-4">
             <Field label="Purpose / Justification">
-              <Textarea value={form.purpose} onChange={e => setF('purpose', e.target.value)} className="bg-background resize-none" rows={2} placeholder="Describe the purpose of this claim..." />
+              <Textarea value={form.purpose} onChange={(e) => setF('purpose', e.target.value)} className="bg-background resize-none" rows={2} placeholder="Describe the purpose of this claim..." />
             </Field>
           </div>
         </div>
@@ -476,24 +476,24 @@ export default function ClaimForm() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {items.map((item, i) => (
-                  <tr key={i}>
+                {items.map((item, i) =>
+                <tr key={i}>
                     <td className="py-2 pr-2 text-center text-xs text-muted-foreground font-mono">{i + 1}</td>
-                    <td className="py-2 pr-2"><Input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8" placeholder="Item description" /></td>
+                    <td className="py-2 pr-2"><Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8" placeholder="Item description" /></td>
                     <td className="py-2 pr-2">
-                      <Select value={item.category} onValueChange={v => updateItem(i, 'category', v)}>
+                      <Select value={item.category} onValueChange={(v) => updateItem(i, 'category', v)}>
                         <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Category" /></SelectTrigger>
-                        <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                        <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                       </Select>
                     </td>
-                    <td className="py-2 pr-2"><Input type="number" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" min="1" /></td>
-                    <td className="py-2 pr-2"><Input type="number" value={item.unit_cost} onChange={e => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.01" /></td>
+                    <td className="py-2 pr-2"><Input type="number" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" min="1" /></td>
+                    <td className="py-2 pr-2"><Input type="number" value={item.unit_cost} onChange={(e) => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.01" /></td>
                     <td className="py-2 text-right font-mono text-xs">{(item.total || 0).toFixed(2)}</td>
                     <td className="py-2 pl-2">
-                      <button onClick={() => setItems(p => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
+                      <button onClick={() => setItems((p) => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -528,11 +528,11 @@ export default function ClaimForm() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {offDayClaims.map((item, i) => (
-                  <tr key={i}>
-                    <td className="py-2 pr-2"><Input type="date" value={item.work_date} onChange={e => updateOffDay(i, 'work_date', e.target.value)} className="bg-background text-xs h-8" /></td>
+                {offDayClaims.map((item, i) =>
+                <tr key={i}>
+                    <td className="py-2 pr-2"><Input type="date" value={item.work_date} onChange={(e) => updateOffDay(i, 'work_date', e.target.value)} className="text-xs h-8 bg-[hsl(var(--foreground))]" /></td>
                     <td className="py-2 pr-2">
-                      <Select value={item.work_type || undefined} onValueChange={v => updateOffDay(i, 'work_type', v)}>
+                      <Select value={item.work_type || undefined} onValueChange={(v) => updateOffDay(i, 'work_type', v)}>
                         <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Type" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Installation">Installation</SelectItem>
@@ -541,7 +541,7 @@ export default function ClaimForm() {
                       </Select>
                     </td>
                     <td className="py-2 pr-2">
-                      <Select value={item.unit || 'Hours'} onValueChange={v => updateOffDay(i, 'unit', v)}>
+                      <Select value={item.unit || 'Hours'} onValueChange={(v) => updateOffDay(i, 'unit', v)}>
                         <SelectTrigger className="bg-background text-xs h-8"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Hours">Hours</SelectItem>
@@ -549,14 +549,14 @@ export default function ClaimForm() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="py-2 pr-2"><Input type="number" value={item.claimed} onChange={e => updateOffDay(i, 'claimed', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.5" /></td>
-                    <td className="py-2 pr-2"><Input type="date" value={item.replacement_date} onChange={e => updateOffDay(i, 'replacement_date', e.target.value)} className="bg-background text-xs h-8" /></td>
-                    <td className="py-2"><Input type="number" value={item.replacement} onChange={e => updateOffDay(i, 'replacement', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.5" /></td>
+                    <td className="py-2 pr-2"><Input type="number" value={item.claimed} onChange={(e) => updateOffDay(i, 'claimed', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.5" /></td>
+                    <td className="py-2 pr-2"><Input type="date" value={item.replacement_date} onChange={(e) => updateOffDay(i, 'replacement_date', e.target.value)} className="bg-background text-xs h-8" /></td>
+                    <td className="py-2"><Input type="number" value={item.replacement} onChange={(e) => updateOffDay(i, 'replacement', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.5" /></td>
                     <td className="py-2 pl-2">
-                      <button onClick={() => setOffDayClaims(p => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
+                      <button onClick={() => setOffDayClaims((p) => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -600,13 +600,13 @@ export default function ClaimForm() {
         <div className="bg-card border border-border rounded-xl p-6">
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Approval & Payment</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <Field label="Approved By"><Input value={form.approved_by} onChange={e => setF('approved_by', e.target.value)} className="bg-background" /></Field>
-            <Field label="Approved Date"><Input type="date" value={form.approved_date} onChange={e => setF('approved_date', e.target.value)} className="bg-background" /></Field>
-            <Field label="Paid Date"><Input type="date" value={form.paid_date} onChange={e => setF('paid_date', e.target.value)} className="bg-background" /></Field>
-            <Field label="Payment Reference"><Input value={form.payment_reference} onChange={e => setF('payment_reference', e.target.value)} className="bg-background font-mono" placeholder="e.g. CHQ-001, TT ref" /></Field>
+            <Field label="Approved By"><Input value={form.approved_by} onChange={(e) => setF('approved_by', e.target.value)} className="bg-background" /></Field>
+            <Field label="Approved Date"><Input type="date" value={form.approved_date} onChange={(e) => setF('approved_date', e.target.value)} className="bg-background" /></Field>
+            <Field label="Paid Date"><Input type="date" value={form.paid_date} onChange={(e) => setF('paid_date', e.target.value)} className="bg-background" /></Field>
+            <Field label="Payment Reference"><Input value={form.payment_reference} onChange={(e) => setF('payment_reference', e.target.value)} className="bg-background font-mono" placeholder="e.g. CHQ-001, TT ref" /></Field>
             <div className="md:col-span-2">
               <Field label="Remarks">
-                <Textarea value={form.remarks} onChange={e => setF('remarks', e.target.value)} className="bg-background resize-none" rows={2} placeholder="Additional notes..." />
+                <Textarea value={form.remarks} onChange={(e) => setF('remarks', e.target.value)} className="bg-background resize-none" rows={2} placeholder="Additional notes..." />
               </Field>
             </div>
           </div>
@@ -641,12 +641,12 @@ export default function ClaimForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Claimant Details</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['NAME', form.claimant_name], ['DEPARTMENT', form.claimant_department], ['EMAIL', form.claimant_email], ['PHONE', form.claimant_phone]].map(([k, v]) => (
-                  <div key={k}>
+                {[['NAME', form.claimant_name], ['DEPARTMENT', form.claimant_department], ['EMAIL', form.claimant_email], ['PHONE', form.claimant_phone]].map(([k, v]) =>
+                <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -656,22 +656,22 @@ export default function ClaimForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Linked Documents</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['PR NO.', form.pr_number], ['SR/IR NO.', form.sr_number || form.ir_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) => (
-                  <div key={k}>
+                {[['PR NO.', form.pr_number], ['SR/IR NO.', form.sr_number || form.ir_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) =>
+                <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
             {/* Purpose */}
-            {form.purpose && (
-              <div style={{ marginBottom: '20px' }}>
+            {form.purpose &&
+            <div style={{ marginBottom: '20px' }}>
                 <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>PURPOSE</div>
                 <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.5' }}>{form.purpose}</div>
               </div>
-            )}
+            }
 
             {/* Approval & Payment */}
             <div style={{ marginBottom: '20px' }}>
@@ -679,12 +679,12 @@ export default function ClaimForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Approval & Payment</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['APPROVED BY', form.approved_by], ['APPROVED DATE', form.approved_date], ['PAID DATE', form.paid_date], ['PAYMENT REF', form.payment_reference]].map(([k, v]) => (
-                  <div key={k}>
+                {[['APPROVED BY', form.approved_by], ['APPROVED DATE', form.approved_date], ['PAID DATE', form.paid_date], ['PAYMENT REF', form.payment_reference]].map(([k, v]) =>
+                <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -696,14 +696,14 @@ export default function ClaimForm() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
                 <thead>
                   <tr style={{ background: '#f3f4f6' }}>
-                    {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total'].map((h, i) => (
-                      <th key={h} style={{ padding: '7px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
-                    ))}
+                    {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total'].map((h, i) =>
+                    <th key={h} style={{ padding: '7px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, i) => (
-                    <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                  {items.map((item, i) =>
+                  <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                       <td style={{ padding: '7px 10px', textAlign: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
                       <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.description || '—'}</td>
                       <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.category || '—'}</td>
@@ -711,12 +711,12 @@ export default function ClaimForm() {
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.total) || 0).toFixed(2)}</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
 
-              {offDayClaims.some(o => o.work_date || o.claimed) && (
-                <div style={{ marginBottom: '20px' }}>
+              {offDayClaims.some((o) => o.work_date || o.claimed) &&
+              <div style={{ marginBottom: '20px' }}>
                   <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
                     <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Off Day & Hours Claims</span>
                     <span style={{ fontSize: '9px', color: '#6b7280', marginLeft: '8px' }}>(Weekends / Public Holidays — time off in lieu)</span>
@@ -724,14 +724,14 @@ export default function ClaimForm() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
                     <thead>
                       <tr style={{ background: '#f3f4f6' }}>
-                        {['Work Date', 'Work Type', 'Unit', 'Claimed', 'Replacement Date', 'Replacement'].map((h, i) => (
-                          <th key={h} style={{ padding: '7px 10px', textAlign: (i === 3 || i === 5) ? 'right' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb' }}>{h}</th>
-                        ))}
+                        {['Work Date', 'Work Type', 'Unit', 'Claimed', 'Replacement Date', 'Replacement'].map((h, i) =>
+                      <th key={h} style={{ padding: '7px 10px', textAlign: i === 3 || i === 5 ? 'right' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb' }}>{h}</th>
+                      )}
                       </tr>
                     </thead>
                     <tbody>
-                      {offDayClaims.filter(o => o.work_date || o.claimed).map((item, i) => (
-                        <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                      {offDayClaims.filter((o) => o.work_date || o.claimed).map((item, i) =>
+                    <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                           <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.work_date || '—'}</td>
                           <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.work_type || '—'}</td>
                           <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.unit || 'Hours'}</td>
@@ -739,7 +739,7 @@ export default function ClaimForm() {
                           <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.replacement_date || '—'}</td>
                           <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.replacement || 0}</td>
                         </tr>
-                      ))}
+                    )}
                     </tbody>
                   </table>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '24px', marginBottom: '12px' }}>
@@ -753,7 +753,7 @@ export default function ClaimForm() {
                     </div>
                   </div>
                 </div>
-              )}
+              }
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
                 <div style={{ minWidth: '220px' }}>
@@ -765,23 +765,23 @@ export default function ClaimForm() {
               </div>
             </div>
 
-            {form.remarks && (
-              <div style={{ marginBottom: '20px' }}>
+            {form.remarks &&
+            <div style={{ marginBottom: '20px' }}>
                 <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>REMARKS</div>
                 <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.5' }}>{form.remarks}</div>
               </div>
-            )}
+            }
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
-              {['Claimant', 'Approved By'].map(role => (
-                <div key={role}>
+              {['Claimant', 'Approved By'].map((role) =>
+              <div key={role}>
                   <div style={{ height: '50px', borderBottom: '1px solid #9ca3af', marginBottom: '6px' }} />
                   <p style={{ fontSize: '10px', color: '#6b7280', textAlign: 'center', margin: 0 }}>{role}</p>
                   <p style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', margin: '2px 0 0' }}>
-                    {role === 'Claimant' ? (form.claimant_name || '________________') : (form.approved_by || '________________')}
+                    {role === 'Claimant' ? form.claimant_name || '________________' : form.approved_by || '________________'}
                   </p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -791,6 +791,6 @@ export default function ClaimForm() {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
