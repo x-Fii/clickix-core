@@ -37,6 +37,12 @@
     "sr_number": {
       "type": "string"
     },
+    "ir_id": {
+      "type": "string"
+    },
+    "ir_number": {
+      "type": "string"
+    },
     "client_name": {
       "type": "string"
     },
