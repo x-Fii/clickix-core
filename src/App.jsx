@@ -14,6 +14,7 @@ import ReportDetail from './pages/ReportDetail';
 import Clients from './pages/Clients';
 import Sites from './pages/Sites';
 import StaffMembers from './pages/StaffMembers';
+import StaffDashboard from './pages/StaffDashboard';
 import Quotations from './pages/Quotations';
 import QuotationForm from './pages/QuotationForm';
 import PurchaseRequisitions from './pages/PurchaseRequisitions';
@@ -59,6 +60,7 @@ const AuthenticatedApp = () => {
         <Route path="/clients" element={<Clients />} />
         <Route path="/sites" element={<Sites />} />
         <Route path="/staff" element={<StaffMembers />} />
+        <Route path="/staff/:id" element={<StaffDashboard />} />
         <Route path="/quotations" element={<Quotations />} />
         <Route path="/quotations/new" element={<QuotationForm />} />
         <Route path="/quotations/:id" element={<QuotationForm />} />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ const ROLE_COLORS = { Admin: 'text-amber-400 bg-amber-500/15', L1: 'text-blue-40
 const empty = { name: '', staff_id: '', email: '', phone: '', department: '', role: 'L1', is_active: true };
 
 export default function StaffMembers() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -87,7 +89,9 @@ export default function StaffMembers() {
             )}
             {filtered.map(s => (
               <tr key={s.id} className="hover:bg-muted/30 transition-colors group">
-                <td className="px-5 py-3.5 font-medium text-sm">{s.name}</td>
+                <td className="px-5 py-3.5 font-medium text-sm">
+                  <button onClick={() => navigate(`/staff/${s.id}`)} className="text-left hover:text-primary transition-colors">{s.name}</button>
+                </td>
                 <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">{s.staff_id}</td>
                 <td className="px-5 py-3.5 text-sm text-muted-foreground">{s.department || '—'}</td>
                 <td className="px-5 py-3.5">
