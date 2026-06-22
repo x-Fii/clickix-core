@@ -530,7 +530,7 @@ export default function ClaimForm() {
               <tbody className="divide-y divide-border">
                 {offDayClaims.map((item, i) =>
                 <tr key={i}>
-                    <td className="py-2 pr-2"><Input type="date" value={item.work_date} onChange={(e) => updateOffDay(i, 'work_date', e.target.value)} className="text-xs h-8" /></td>
+                    <td className="py-2 pr-2"><Input type="date" value={item.work_date} onChange={(e) => updateOffDay(i, 'work_date', e.target.value)} className="text-xs h-8 bg-[hsl(var(--popover))]" /></td>
                     <td className="py-2 pr-2">
                       <Select value={item.work_type || undefined} onValueChange={(v) => updateOffDay(i, 'work_type', v)}>
                         <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Type" /></SelectTrigger>
