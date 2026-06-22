@@ -118,25 +118,27 @@
               "Attended Maintenance"
             ]
           },
-          "hours": {
+          "unit": {
+            "type": "string",
+            "enum": [
+              "Hours",
+              "Days"
+            ],
+            "default": "Hours"
+          },
+          "claimed": {
             "type": "number"
           },
           "replacement_date": {
             "type": "string"
           },
-          "rate": {
-            "type": "number"
-          },
-          "amount": {
+          "replacement": {
             "type": "number"
           }
         }
       }
     },
     "subtotal": {
-      "type": "number"
-    },
-    "off_day_total": {
       "type": "number"
     },
     "grand_total": {

@@ -70,7 +70,7 @@ export default function ClaimForm() {
     { item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }
   ]);
   const [offDayClaims, setOffDayClaims] = useState([
-    { work_date: '', work_type: '', hours: 0, replacement_date: '', rate: 0, amount: 0 }
+    { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }
   ]);
 
 
@@ -81,7 +81,7 @@ export default function ClaimForm() {
       const c = await base44.entities.Claim.get(id);
       setForm({ ...c });
       setItems(c.items?.length ? c.items : [{ item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
-      setOffDayClaims(c.off_day_claims?.length ? c.off_day_claims : [{ work_date: '', work_type: '', hours: 0, replacement_date: '', rate: 0, amount: 0 }]);
+      setOffDayClaims(c.off_day_claims?.length ? c.off_day_claims : [{ work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
       return c;
     },
     enabled: isEdit,
@@ -217,24 +217,18 @@ export default function ClaimForm() {
   const addItem = () => setItems(p => [...p, { item_no: p.length + 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
 
   const updateOffDay = (i, field, val) => {
-    setOffDayClaims(prev => prev.map((item, idx) => {
-      if (idx !== i) return item;
-      const updated = { ...item, [field]: val };
-      if (field === 'hours' || field === 'rate') {
-        updated.amount = (parseFloat(updated.hours) || 0) * (parseFloat(updated.rate) || 0);
-      }
-      return updated;
-    }));
+    setOffDayClaims(prev => prev.map((item, idx) => idx !== i ? item : { ...item, [field]: val }));
   };
 
-  const addOffDay = () => setOffDayClaims(p => [...p, { work_date: '', work_type: '', hours: 0, replacement_date: '', rate: 0, amount: 0 }]);
+  const addOffDay = () => setOffDayClaims(p => [...p, { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
 
   const itemsTotal = items.reduce((s, it) => s + (parseFloat(it.total) || 0), 0);
-  const offDayTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
-  const grandTotal = itemsTotal + offDayTotal;
+  const offDayClaimedTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.claimed) || 0), 0);
+  const offDayReplacementTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.replacement) || 0), 0);
+  const grandTotal = itemsTotal;
 
   const handleSave = (status) => {
-    saveMutation.mutate({ ...form, items, off_day_claims: offDayClaims, off_day_total: offDayTotal, subtotal: itemsTotal, grand_total: grandTotal, status: status || form.status });
+    saveMutation.mutate({ ...form, items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal, status: status || form.status });
   };
 
   const handleExportPDF = async () => {
@@ -516,7 +510,7 @@ export default function ClaimForm() {
           <div className="flex items-center justify-between pb-3 mb-5 border-b border-border">
             <div>
               <h3 className="font-semibold text-sm">Off Day & Hours Claims</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Applicable when installation / attended maintenance falls on weekends or public holidays</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Claim hours/days worked on weekends or public holidays, offset by replacement time off</p>
             </div>
             <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addOffDay}><Plus size={12} /> Add Row</Button>
           </div>
@@ -526,10 +520,10 @@ export default function ClaimForm() {
                 <tr className="border-b border-border">
                   <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider pr-2">Work Date</th>
                   <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider pr-2">Work Type</th>
-                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20 pr-2">Hours</th>
+                  <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-24 pr-2">Unit</th>
+                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20 pr-2">Claimed</th>
                   <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider pr-2">Replacement Date</th>
-                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-2">Rate (MYR)</th>
-                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28">Amount</th>
+                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20">Replacement</th>
                   <th className="w-8"></th>
                 </tr>
               </thead>
@@ -546,10 +540,18 @@ export default function ClaimForm() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="py-2 pr-2"><Input type="number" value={item.hours} onChange={e => updateOffDay(i, 'hours', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.5" /></td>
+                    <td className="py-2 pr-2">
+                      <Select value={item.unit || 'Hours'} onValueChange={v => updateOffDay(i, 'unit', v)}>
+                        <SelectTrigger className="bg-background text-xs h-8"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Hours">Hours</SelectItem>
+                          <SelectItem value="Days">Days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="py-2 pr-2"><Input type="number" value={item.claimed} onChange={e => updateOffDay(i, 'claimed', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.5" /></td>
                     <td className="py-2 pr-2"><Input type="date" value={item.replacement_date} onChange={e => updateOffDay(i, 'replacement_date', e.target.value)} className="bg-background text-xs h-8" /></td>
-                    <td className="py-2 pr-2"><Input type="number" value={item.rate} onChange={e => updateOffDay(i, 'rate', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.01" /></td>
-                    <td className="py-2 text-right font-mono text-xs">{(item.amount || 0).toFixed(2)}</td>
+                    <td className="py-2"><Input type="number" value={item.replacement} onChange={e => updateOffDay(i, 'replacement', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.5" /></td>
                     <td className="py-2 pl-2">
                       <button onClick={() => setOffDayClaims(p => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
                     </td>
@@ -558,10 +560,14 @@ export default function ClaimForm() {
               </tbody>
             </table>
           </div>
-          <div className="mt-4 border-t border-border pt-4 flex justify-end">
-            <div className="flex justify-between font-semibold min-w-60 text-sm">
-              <span>Off Day Total</span>
-              <span className="font-mono text-primary">MYR {offDayTotal.toFixed(2)}</span>
+          <div className="mt-4 border-t border-border pt-4 flex justify-end gap-6">
+            <div className="flex justify-between font-semibold min-w-48 text-sm">
+              <span>Total Claimed</span>
+              <span className="font-mono text-primary">{offDayClaimedTotal}</span>
+            </div>
+            <div className="flex justify-between font-semibold min-w-48 text-sm">
+              <span>Total Replacement</span>
+              <span className="font-mono text-primary">{offDayReplacementTotal}</span>
             </div>
           </div>
         </div>
@@ -575,8 +581,12 @@ export default function ClaimForm() {
                 <span className="font-mono">MYR {itemsTotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Off Day Total</span>
-                <span className="font-mono">MYR {offDayTotal.toFixed(2)}</span>
+                <span className="text-muted-foreground">Off Day Claimed</span>
+                <span className="font-mono">{offDayClaimedTotal}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Off Day Replacement</span>
+                <span className="font-mono">{offDayReplacementTotal}</span>
               </div>
               <div className="flex justify-between font-semibold border-t border-border pt-2">
                 <span>Grand Total</span>
@@ -705,46 +715,48 @@ export default function ClaimForm() {
                 </tbody>
               </table>
 
-              {offDayClaims.some(o => o.work_date || o.hours) && (
+              {offDayClaims.some(o => o.work_date || o.claimed) && (
                 <div style={{ marginBottom: '20px' }}>
                   <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
                     <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Off Day & Hours Claims</span>
-                    <span style={{ fontSize: '9px', color: '#6b7280', marginLeft: '8px' }}>(Weekends / Public Holidays)</span>
+                    <span style={{ fontSize: '9px', color: '#6b7280', marginLeft: '8px' }}>(Weekends / Public Holidays — time off in lieu)</span>
                   </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
                     <thead>
                       <tr style={{ background: '#f3f4f6' }}>
-                        {['Work Date', 'Work Type', 'Hours', 'Replacement Date', 'Rate', 'Amount'].map((h, i) => (
-                          <th key={h} style={{ padding: '7px 10px', textAlign: i >= 2 && i !== 3 ? 'right' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb' }}>{h}</th>
+                        {['Work Date', 'Work Type', 'Unit', 'Claimed', 'Replacement Date', 'Replacement'].map((h, i) => (
+                          <th key={h} style={{ padding: '7px 10px', textAlign: (i === 3 || i === 5) ? 'right' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {offDayClaims.filter(o => o.work_date || o.hours).map((item, i) => (
+                      {offDayClaims.filter(o => o.work_date || o.claimed).map((item, i) => (
                         <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                           <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.work_date || '—'}</td>
                           <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.work_type || '—'}</td>
-                          <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.hours || 0}</td>
+                          <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.unit || 'Hours'}</td>
+                          <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.claimed || 0}</td>
                           <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.replacement_date || '—'}</td>
-                          <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.rate) || 0).toFixed(2)}</td>
-                          <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.amount) || 0).toFixed(2)}</td>
+                          <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.replacement || 0}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '24px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', minWidth: '160px' }}>
+                      <span style={{ fontSize: '10px', color: '#6b7280' }}>Total Claimed</span>
+                      <span style={{ fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', color: '#111827' }}>{offDayClaimedTotal}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', minWidth: '160px' }}>
+                      <span style={{ fontSize: '10px', color: '#6b7280' }}>Total Replacement</span>
+                      <span style={{ fontSize: '11px', fontWeight: '700', fontFamily: 'monospace', color: '#111827' }}>{offDayReplacementTotal}</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
                 <div style={{ minWidth: '220px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px' }}>
-                    <span style={{ fontSize: '11px', color: '#6b7280' }}>Items Total</span>
-                    <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#111827' }}>MYR {itemsTotal.toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px' }}>
-                    <span style={{ fontSize: '11px', color: '#6b7280' }}>Off Day Total</span>
-                    <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#111827' }}>MYR {offDayTotal.toFixed(2)}</span>
-                  </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderTop: '2px solid #2563eb' }}>
                     <span style={{ fontSize: '12px', fontWeight: '700', color: '#111827' }}>Grand Total</span>
                     <span style={{ fontSize: '14px', fontWeight: '700', color: '#2563eb', fontFamily: 'monospace' }}>MYR {grandTotal.toFixed(2)}</span>
