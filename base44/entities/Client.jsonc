@@ -41,6 +41,20 @@
         ]
       }
     },
+    "hardware": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "PC",
+          "Cable",
+          "Controller",
+          "TV",
+          "LED",
+          "Network Device"
+        ]
+      }
+    },
     "address": {
       "type": "string"
     },
