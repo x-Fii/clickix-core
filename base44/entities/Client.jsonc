@@ -27,6 +27,20 @@
         "on-demand"
       ]
     },
+    "cms_subscriptions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "CS Play",
+          "CS Sign Hub",
+          "CS Deals",
+          "CS Context",
+          "OmniBuy",
+          "DOTS"
+        ]
+      }
+    },
     "address": {
       "type": "string"
     },

@@ -11,7 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Pencil, Trash2, Users, Building2, Globe, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 
-const empty = { company_name: '', contact_person: '', pic_designation: '', contact_email: '', contact_phone: '', company_website: '', sla: undefined, address: '', notes: '' };
+const CMS_OPTIONS = ['CS Play', 'CS Sign Hub', 'CS Deals', 'CS Context', 'OmniBuy', 'DOTS'];
+
+const empty = { company_name: '', contact_person: '', pic_designation: '', contact_email: '', contact_phone: '', company_website: '', sla: undefined, cms_subscriptions: [], address: '', notes: '' };
 
 export default function Clients() {
   const queryClient = useQueryClient();
@@ -67,6 +69,7 @@ export default function Clients() {
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Contact Person</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email / Phone</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Website</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">CMS</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">SLA</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -94,6 +97,15 @@ export default function Clients() {
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell max-w-[160px] truncate">
                     {c.company_website ? <div className="flex items-center gap-1"><Globe size={10} /> {c.company_website}</div> : '—'}
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    {c.cms_subscriptions && c.cms_subscriptions.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 max-w-[220px]">
+                        {c.cms_subscriptions.map(s => (
+                          <span key={s} className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-mono bg-primary/10 text-primary border border-primary/20">{s}</span>
+                        ))}
+                      </div>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     {c.sla ? (
@@ -134,6 +146,20 @@ export default function Clients() {
                   <SelectItem value="on-demand">On-Demand</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">CMS Subscription</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {CMS_OPTIONS.map(opt => {
+                  const selected = (form.cms_subscriptions || []).includes(opt);
+                  return (
+                    <button key={opt} type="button" onClick={() => setF('cms_subscriptions', selected ? (form.cms_subscriptions || []).filter(x => x !== opt) : [...(form.cms_subscriptions || []), opt])}
+                      className={`px-2.5 py-1 rounded-md text-xs border transition-colors ${selected ? 'border-primary bg-primary/15 text-primary' : 'border-border text-muted-foreground hover:text-foreground'}`}>
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Address</Label>
