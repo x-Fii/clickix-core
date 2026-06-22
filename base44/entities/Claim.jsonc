@@ -103,7 +103,40 @@
         }
       }
     },
+    "off_day_claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "work_date": {
+            "type": "string"
+          },
+          "work_type": {
+            "type": "string",
+            "enum": [
+              "Installation",
+              "Attended Maintenance"
+            ]
+          },
+          "hours": {
+            "type": "number"
+          },
+          "replacement_date": {
+            "type": "string"
+          },
+          "rate": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "number"
+          }
+        }
+      }
+    },
     "subtotal": {
+      "type": "number"
+    },
+    "off_day_total": {
       "type": "number"
     },
     "grand_total": {
