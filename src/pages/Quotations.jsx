@@ -78,6 +78,7 @@ export default function Quotations() {
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Quotation No.</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Linked Report</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Client</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Site</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Date</th>
                 <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Total (MYR)</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Status</th>
@@ -92,6 +93,7 @@ export default function Quotations() {
                     {q.sr_number ? <span className="font-mono text-blue-400">{q.sr_number}</span> : q.ir_number ? <span className="font-mono text-indigo-400">{q.ir_number}</span> : '—'}
                   </td>
                   <td className="px-4 py-3">{q.client_name || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{q.site_name || '—'}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{q.quotation_date ? format(new Date(q.quotation_date), 'dd MMM yyyy') : '—'}</td>
                   <td className="px-4 py-3 text-right font-mono text-sm">{q.grand_total != null ? q.grand_total.toFixed(2) : '—'}</td>
                   <td className="px-4 py-3">
