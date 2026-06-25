@@ -19,7 +19,15 @@ import { toast } from 'sonner';
 const MY_STATES = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'];
 const REGIONS = ['Central', 'Northern', 'Southern', 'East Coast', 'East Malaysia'];
 
-const empty = { client_id: '', client_name: '', site_name: '', site_location: '', state: '', region: '', pic_name: '', pic_phone: '', notes: '' };
+const SITE_STATUSES = ['active', 'inactive', 're-instating', 're-instated'];
+const STATUS_STYLES = {
+  'active': 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+  'inactive': 'bg-zinc-500/15 text-zinc-400 border-zinc-500/25',
+  're-instating': 'bg-amber-500/15 text-amber-400 border-amber-500/25',
+  're-instated': 'bg-sky-500/15 text-sky-400 border-sky-500/25',
+};
+
+const empty = { client_id: '', client_name: '', site_name: '', site_location: '', state: '', region: '', status: [], pic_name: '', pic_phone: '', notes: '' };
 
 export default function Sites() {
   const queryClient = useQueryClient();
@@ -51,7 +59,7 @@ export default function Sites() {
   });
 
   const openNew = () => {setForm(empty);setEditId(null);setOpen(true);};
-  const openEdit = (s) => {setForm({ ...s });setEditId(s.id);setOpen(true);};
+  const openEdit = (s) => {setForm({ ...s, status: Array.isArray(s.status) ? s.status : (s.status ? [s.status] : []) });setEditId(s.id);setOpen(true);};
   const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleClientChange = (id) => {
@@ -116,6 +124,7 @@ export default function Sites() {
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Site Name</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Client</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden md:table-cell">Location</th>
+                  <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Status</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider hidden lg:table-cell">PIC</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -163,6 +172,14 @@ export default function Sites() {
                                 </td>
                                 <td className="px-4 py-3 text-xs text-muted-foreground">{s.client_name || '—'}</td>
                                 <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell max-w-[200px] truncate">{s.site_location || '—'}</td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {(Array.isArray(s.status) ? s.status : (s.status ? [s.status] : [])).map(st => (
+                                      <span key={st} className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${STATUS_STYLES[st] || 'bg-muted text-muted-foreground border-border'}`}>{st}</span>
+                                    ))}
+                                    {(!s.status || (Array.isArray(s.status) && s.status.length === 0)) && <span className="text-xs text-muted-foreground/40">—</span>}
+                                  </div>
+                                </td>
                                 <td className="px-4 py-3 hidden lg:table-cell">
                                   {s.pic_name ?
                                     <div className="text-xs text-muted-foreground">
@@ -216,6 +233,24 @@ export default function Sites() {
                   <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select region..." /></SelectTrigger>
                   <SelectContent>{REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Site Status</Label>
+              <div className="flex flex-wrap gap-1.5 min-h-9 items-center rounded-md border border-input bg-background px-2 py-1.5">
+                {(form.status || []).map(st => (
+                  <span key={st} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border ${STATUS_STYLES[st] || 'bg-muted text-muted-foreground border-border'}`}>
+                    {st}
+                    <button type="button" onClick={() => setF('status', (form.status || []).filter(x => x !== st))} className="hover:text-destructive">✕</button>
+                  </span>
+                ))}
+                <select
+                  value=""
+                  onChange={e => { const v = e.target.value; if (v && !(form.status || []).includes(v)) setF('status', [...(form.status || []), v]); }}
+                  className="text-xs bg-transparent text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
+                  <option value="">{(form.status || []).length ? '+ Add status' : 'Select status...'}</option>
+                  {SITE_STATUSES.map(st => <option key={st} value={st}>{st}</option>)}
+                </select>
               </div>
             </div>
             {[['Site Name', 'site_name', true], ['Site Location', 'site_location'], ['PIC Name', 'pic_name'], ['PIC Phone', 'pic_phone']].map(([label, key, req]) =>
@@ -276,6 +311,7 @@ export default function Sites() {
                         ['Region', selectedSite.region],
                         ['State', selectedSite.state],
                         ['Location', selectedSite.site_location],
+                        ['Status', (Array.isArray(selectedSite.status) ? selectedSite.status : (selectedSite.status ? [selectedSite.status] : [])).join(', ') || '—'],
                         ['PIC Name', selectedSite.pic_name],
                         ['PIC Phone', selectedSite.pic_phone],
                       ].map(([label, val]) => (

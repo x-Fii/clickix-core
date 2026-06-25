@@ -20,6 +20,18 @@
     "region": {
       "type": "string"
     },
+    "status": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive",
+          "re-instating",
+          "re-instated"
+        ]
+      }
+    },
     "pic_name": {
       "type": "string"
     },
