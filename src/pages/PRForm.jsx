@@ -357,8 +357,8 @@ export default function PRForm() {
               <Select value={form.sr_id || form.ir_id || undefined} onValueChange={handleSRSelect}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR or IR (or auto-filled from quotation)..." /></SelectTrigger>
                 <SelectContent className="max-h-60 overflow-y-auto">
-                  {reports.length > 0 && <><SelectItem disabled value="__sr__" className="text-xs text-muted-foreground font-semibold">— Service Reports —</SelectItem>{reports.slice(0, 100).map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}</>}
-                  {installationReports.length > 0 && <><SelectItem disabled value="__ir__" className="text-xs text-muted-foreground font-semibold">— Installation Reports —</SelectItem>{installationReports.slice(0, 100).map(r => <SelectItem key={r.id} value={r.id}>{r.report_number} — {r.client_name}</SelectItem>)}</>}
+                  {reports.length > 0 && <><SelectItem disabled value="__sr__" className="text-xs text-muted-foreground font-semibold">— Service Reports —</SelectItem>{reports.slice(0, 100).map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.site_name}</SelectItem>)}</>}
+                  {installationReports.length > 0 && <><SelectItem disabled value="__ir__" className="text-xs text-muted-foreground font-semibold">— Installation Reports —</SelectItem>{installationReports.slice(0, 100).map(r => <SelectItem key={r.id} value={r.id}>{r.report_number} — {r.site_name}</SelectItem>)}</>}
                 </SelectContent>
               </Select>
             </Field>
