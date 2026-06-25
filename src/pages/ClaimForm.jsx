@@ -49,10 +49,15 @@ export default function ClaimForm() {
     quotation_number: '',
     sr_id: '',
     sr_number: '',
+    sr_ids: [],
+    sr_numbers: [],
     ir_id: '',
     ir_number: '',
+    ir_ids: [],
+    ir_numbers: [],
     client_name: '',
     site_name: '',
+    site_names: [],
     claimant_name: '',
     claimant_department: '',
     claimant_email: '',
@@ -79,7 +84,14 @@ export default function ClaimForm() {
     queryKey: ['claim', id],
     queryFn: async () => {
       const c = await base44.entities.Claim.get(id);
-      setForm({ ...c });
+      setForm({
+        ...c,
+        sr_ids: Array.isArray(c.sr_ids) ? c.sr_ids : (c.sr_id ? [c.sr_id] : []),
+        sr_numbers: Array.isArray(c.sr_numbers) ? c.sr_numbers : (c.sr_number ? [c.sr_number] : []),
+        ir_ids: Array.isArray(c.ir_ids) ? c.ir_ids : (c.ir_id ? [c.ir_id] : []),
+        ir_numbers: Array.isArray(c.ir_numbers) ? c.ir_numbers : (c.ir_number ? [c.ir_number] : []),
+        site_names: Array.isArray(c.site_names) ? c.site_names : (c.site_name ? [c.site_name] : []),
+      });
       setItems(c.items?.length ? c.items : [{ item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
       setOffDayClaims(c.off_day_claims?.length ? c.off_day_claims : [{ work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
       return c;
@@ -126,10 +138,15 @@ export default function ClaimForm() {
         quotation_number: pr.quotation_number || '',
         sr_id: pr.sr_id || '',
         sr_number: pr.sr_number || '',
+        sr_ids: pr.sr_id ? [pr.sr_id] : [],
+        sr_numbers: pr.sr_number ? [pr.sr_number] : [],
         ir_id: pr.ir_id || '',
         ir_number: pr.ir_number || '',
+        ir_ids: pr.ir_id ? [pr.ir_id] : [],
+        ir_numbers: pr.ir_number ? [pr.ir_number] : [],
         client_name: pr.client_name || '',
         site_name: pr.site_name || '',
+        site_names: pr.site_name ? [pr.site_name] : [],
         claimant_name: pr.requester_name || '',
         claimant_department: pr.requester_department || '',
         claimant_email: pr.requester_email || '',
@@ -177,10 +194,15 @@ export default function ClaimForm() {
         quotation_number: pr.quotation_number || '',
         sr_id: pr.sr_id || '',
         sr_number: pr.sr_number || '',
+        sr_ids: pr.sr_id ? [pr.sr_id] : [],
+        sr_numbers: pr.sr_number ? [pr.sr_number] : [],
         ir_id: pr.ir_id || '',
         ir_number: pr.ir_number || '',
+        ir_ids: pr.ir_id ? [pr.ir_id] : [],
+        ir_numbers: pr.ir_number ? [pr.ir_number] : [],
         client_name: pr.client_name || '',
         site_name: pr.site_name || '',
+        site_names: pr.site_name ? [pr.site_name] : [],
         claimant_name: pr.requester_name || '',
         claimant_department: pr.requester_department || '',
         claimant_email: pr.requester_email || '',
@@ -201,6 +223,35 @@ export default function ClaimForm() {
         toast.success(`${pr.items.length} items imported from PR`);
       }
     }
+  };
+
+  const recomputeFromReports = (nextSrIds, nextIrIds) => {
+    const selSRs = reports.filter((r) => nextSrIds.includes(r.id));
+    const selIRs = installationReports.filter((r) => nextIrIds.includes(r.id));
+    const allSelected = [...selSRs, ...selIRs];
+    const sites = Array.from(new Set(allSelected.map((r) => r.site_name).filter(Boolean)));
+    const clients = Array.from(new Set(allSelected.map((r) => r.client_name).filter(Boolean)));
+    setForm((f) => ({
+      ...f,
+      sr_ids: nextSrIds,
+      sr_numbers: selSRs.map((r) => r.running_number),
+      sr_id: selSRs[0]?.id || '',
+      sr_number: selSRs[0]?.running_number || '',
+      ir_ids: nextIrIds,
+      ir_numbers: selIRs.map((r) => r.report_number),
+      ir_id: selIRs[0]?.id || '',
+      ir_number: selIRs[0]?.report_number || '',
+      site_names: sites,
+      site_name: sites.join(', '),
+      client_name: clients[0] || f.client_name,
+    }));
+  };
+
+  const toggleReport = (rid, type) => {
+    const cur = type === 'sr' ? form.sr_ids || [] : form.ir_ids || [];
+    const next = cur.includes(rid) ? cur.filter((x) => x !== rid) : [...cur, rid];
+    if (type === 'sr') recomputeFromReports(next, form.ir_ids || []);
+    else recomputeFromReports(form.sr_ids || [], next);
   };
 
   const updateItem = (i, field, val) => {
@@ -385,57 +436,71 @@ export default function ClaimForm() {
                 const linkedSR = q.sr_id ? reports.find((r) => r.id === q.sr_id) : null;
                 const linkedIR = q.ir_id ? installationReports.find((r) => r.id === q.ir_id) : null;
                 setForm((f) => ({
-                  ...f,
-                  quotation_id: q.id,
-                  quotation_number: q.quotation_number,
-                  client_name: q.client_name || f.client_name,
-                  site_name: q.site_name || f.site_name,
-                  sr_id: linkedSR ? linkedSR.id : f.sr_id,
-                  sr_number: linkedSR ? linkedSR.running_number : f.sr_number,
-                  ir_id: linkedIR ? linkedIR.id : f.ir_id,
-                  ir_number: linkedIR ? linkedIR.report_number : f.ir_number
-                }));
+                   ...f,
+                   quotation_id: q.id,
+                   quotation_number: q.quotation_number,
+                   client_name: q.client_name || f.client_name,
+                   site_name: q.site_name || f.site_name,
+                   site_names: q.site_name ? [q.site_name] : f.site_names,
+                   sr_id: linkedSR ? linkedSR.id : f.sr_id,
+                   sr_number: linkedSR ? linkedSR.running_number : f.sr_number,
+                   sr_ids: linkedSR ? [linkedSR.id] : f.sr_ids,
+                   sr_numbers: linkedSR ? [linkedSR.running_number] : f.sr_numbers,
+                   ir_id: linkedIR ? linkedIR.id : f.ir_id,
+                   ir_number: linkedIR ? linkedIR.report_number : f.ir_number,
+                   ir_ids: linkedIR ? [linkedIR.id] : f.ir_ids,
+                   ir_numbers: linkedIR ? [linkedIR.report_number] : f.ir_numbers
+                 }));
               }}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select quotation..." /></SelectTrigger>
                 <SelectContent>{quotations.map((q) => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="Service / Installation Report">
-              <Select value={form.sr_id || form.ir_id || undefined} onValueChange={(v) => {
-                const sr = reports.find((r) => r.id === v);
-                if (sr) {
-                  // chain-fill linked quotation from SR
-                  const linkedQ = quotations.find((q) => q.sr_id === sr.id);
-                  setForm((f) => ({
-                    ...f,
-                    sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '',
-                    client_name: sr.client_name || f.client_name,
-                    site_name: sr.site_name || f.site_name,
-                    quotation_id: linkedQ ? linkedQ.id : f.quotation_id,
-                    quotation_number: linkedQ ? linkedQ.quotation_number : f.quotation_number
-                  }));
-                  return;
-                }
-                const ir = installationReports.find((r) => r.id === v);
-                if (ir) {
-                  // chain-fill linked quotation from IR
-                  const linkedQ = quotations.find((q) => q.ir_id === ir.id);
-                  setForm((f) => ({
-                    ...f,
-                    ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '',
-                    client_name: ir.client_name || f.client_name,
-                    site_name: ir.site_name || f.site_name,
-                    quotation_id: linkedQ ? linkedQ.id : f.quotation_id,
-                    quotation_number: linkedQ ? linkedQ.quotation_number : f.quotation_number
-                  }));
-                }
-              }}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR or IR..." /></SelectTrigger>
-                <SelectContent>
-                  {reports.length > 0 && <><SelectItem disabled value="__sr__" className="text-xs text-muted-foreground font-semibold">— Service Reports —</SelectItem>{reports.map((r) => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}</>}
-                  {installationReports.length > 0 && <><SelectItem disabled value="__ir__" className="text-xs text-muted-foreground font-semibold">— Installation Reports —</SelectItem>{installationReports.map((r) => <SelectItem key={r.id} value={r.id}>{r.report_number} — {r.client_name}</SelectItem>)}</>}
-                </SelectContent>
-              </Select>
+            <Field label="Service / Installation Reports">
+              <div className="rounded-md border border-input bg-background p-2 space-y-2">
+                {(form.sr_ids?.length > 0 || form.ir_ids?.length > 0) ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(form.sr_ids || []).map((rid) => {
+                      const r = reports.find((x) => x.id === rid);
+                      if (!r) return null;
+                      return (
+                        <span key={rid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-primary/15 text-primary border border-primary/25">
+                          SR: {r.running_number}
+                          <button type="button" onClick={() => toggleReport(rid, 'sr')} className="hover:text-destructive"><X size={11} /></button>
+                        </span>
+                      );
+                    })}
+                    {(form.ir_ids || []).map((rid) => {
+                      const r = installationReports.find((x) => x.id === rid);
+                      if (!r) return null;
+                      return (
+                        <span key={rid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-orange-500/15 text-orange-400 border border-orange-500/25">
+                          IR: {r.report_number}
+                          <button type="button" onClick={() => toggleReport(rid, 'ir')} className="hover:text-destructive"><X size={11} /></button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground/50">No reports selected</p>
+                )}
+                <div className="flex gap-2">
+                  <select
+                    value=""
+                    onChange={(e) => { const v = e.target.value; if (v) toggleReport(v, 'sr'); e.target.value = ''; }}
+                    className="text-xs bg-transparent border border-border rounded-md px-2 py-1 text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
+                    <option value="">+ Add Service Report</option>
+                    {reports.map((r) => <option key={r.id} value={r.id} disabled={(form.sr_ids || []).includes(r.id)}>{r.running_number} — {r.client_name}</option>)}
+                  </select>
+                  <select
+                    value=""
+                    onChange={(e) => { const v = e.target.value; if (v) toggleReport(v, 'ir'); e.target.value = ''; }}
+                    className="text-xs bg-transparent border border-border rounded-md px-2 py-1 text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
+                    <option value="">+ Add Installation Report</option>
+                    {installationReports.map((r) => <option key={r.id} value={r.id} disabled={(form.ir_ids || []).includes(r.id)}>{r.report_number} — {r.client_name}</option>)}
+                  </select>
+                </div>
+              </div>
             </Field>
             <Field label="Client"><Input value={form.client_name} onChange={(e) => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
             <Field label="Site"><Input value={form.site_name} onChange={(e) => setF('site_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
@@ -656,7 +721,7 @@ export default function ClaimForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Linked Documents</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['PR NO.', form.pr_number], ['SR/IR NO.', form.sr_number || form.ir_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) =>
+                {[['PR NO.', form.pr_number], ['SR/IR NO.', [...(form.sr_numbers || []), ...(form.ir_numbers || [])].join(', ') || form.sr_number || form.ir_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) =>
                 <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>

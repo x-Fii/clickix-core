@@ -37,11 +37,35 @@
     "sr_number": {
       "type": "string"
     },
+    "sr_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sr_numbers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "ir_id": {
       "type": "string"
     },
     "ir_number": {
       "type": "string"
+    },
+    "ir_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ir_numbers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "client_name": {
       "type": "string"
@@ -158,6 +182,12 @@
     },
     "remarks": {
       "type": "string"
+    },
+    "site_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
