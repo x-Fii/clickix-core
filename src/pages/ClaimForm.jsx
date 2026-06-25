@@ -274,9 +274,11 @@ export default function ClaimForm() {
   const addOffDay = () => setOffDayClaims((p) => [...p, { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
 
   const itemsTotal = items.reduce((s, it) => s + (parseFloat(it.total) || 0), 0);
+  const docCount = (form.sr_ids?.length || 0) + (form.ir_ids?.length || 0);
+  const averagedItemsTotal = docCount > 0 ? itemsTotal / docCount : itemsTotal;
   const offDayClaimedTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.claimed) || 0), 0);
   const offDayReplacementTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.replacement) || 0), 0);
-  const grandTotal = itemsTotal;
+  const grandTotal = averagedItemsTotal;
 
   const handleSave = (status) => {
     saveMutation.mutate({ ...form, items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal, status: status || form.status });
@@ -523,7 +525,11 @@ export default function ClaimForm() {
           <div className="flex items-center justify-between pb-3 mb-5 border-b border-border">
             <div>
               <h3 className="font-semibold text-sm">Claim Items</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Items being claimed (can differ from PR)</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {docCount > 0
+                  ? <>Averaged across <span className="text-primary font-medium">{docCount}</span> document{docCount > 1 ? 's' : ''}: {[...(form.sr_numbers || []), ...(form.ir_numbers || [])].join(', ')}</>
+                  : 'Items being claimed (can differ from PR)'}
+              </p>
             </div>
             <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addItem}><Plus size={12} /> Add Item</Button>
           </div>
@@ -563,9 +569,17 @@ export default function ClaimForm() {
             </table>
           </div>
           <div className="mt-4 border-t border-border pt-4 flex justify-end">
-            <div className="flex justify-between font-semibold min-w-60 text-sm">
-              <span>Items Total</span>
-              <span className="font-mono text-primary">MYR {itemsTotal.toFixed(2)}</span>
+            <div className="space-y-1 min-w-60">
+              {docCount > 1 && (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Items Total (raw)</span>
+                  <span className="font-mono">MYR {itemsTotal.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-sm">
+                <span>Items Total{docCount > 1 ? ` (avg / ${docCount} docs)` : ''}</span>
+                <span className="font-mono text-primary">MYR {averagedItemsTotal.toFixed(2)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -642,8 +656,8 @@ export default function ClaimForm() {
           <div className="flex justify-end">
             <div className="min-w-60 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Items Total</span>
-                <span className="font-mono">MYR {itemsTotal.toFixed(2)}</span>
+                <span className="text-muted-foreground">Items Total{docCount > 1 ? ` (avg)` : ''}</span>
+                <span className="font-mono">MYR {averagedItemsTotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Off Day Claimed</span>
