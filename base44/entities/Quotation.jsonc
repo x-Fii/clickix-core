@@ -33,7 +33,10 @@
       "type": "string"
     },
     "site_location": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "prepared_by": {
       "type": "string"

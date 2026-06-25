@@ -59,7 +59,7 @@ export default function QuotationForm() {
     client_id: '',
     client_name: '',
     site_name: '',
-    site_location: '',
+    site_location: [],
     prepared_by: '',
     status: 'draft',
     notes: '',
@@ -72,7 +72,7 @@ export default function QuotationForm() {
     queryKey: ['quotation', id],
     queryFn: async () => {
       const q = await base44.entities.Quotation.get(id);
-      setForm({ ...q, tax_percent: q.tax_percent ?? 8 });
+      setForm({ ...q, tax_percent: q.tax_percent ?? 8, site_location: Array.isArray(q.site_location) ? q.site_location : (q.site_location ? [q.site_location] : []) });
       setItems(q.items?.length ? q.items.map(it => ({ item_code: '', item_type: '', taxable: true, ...it })) : [{ item_code: '', item_type: '', description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
       return q;
     },
@@ -94,6 +94,13 @@ export default function QuotationForm() {
     queryFn: () => base44.entities.StaffMember.filter({ is_active: true }, 'name', 100),
   });
 
+  const { data: sites = [] } = useQuery({
+    queryKey: ['sites'],
+    queryFn: () => base44.entities.Site.list('site_name', 200),
+  });
+
+  const locationOptions = Array.from(new Set(sites.map(s => s.site_location).filter(Boolean))).sort();
+
   const saveMutation = useMutation({
     mutationFn: (data) => isEdit
       ? base44.entities.Quotation.update(id, data)
@@ -110,13 +117,13 @@ export default function QuotationForm() {
   const handleSRSelect = (srId) => {
     if (srId === '__none__') { setForm(f => ({ ...f, sr_id: '', sr_number: '' })); return; }
     const sr = reports.find(r => r.id === srId);
-    if (sr) setForm(f => ({ ...f, sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '', client_id: sr.client_id || '', client_name: sr.client_name || '', site_name: sr.site_name || '', site_location: sr.site_location || '' }));
+    if (sr) setForm(f => ({ ...f, sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '', client_id: sr.client_id || '', client_name: sr.client_name || '', site_name: sr.site_name || '', site_location: sr.site_location ? [sr.site_location] : [] }));
   };
 
   const handleIRSelect = (irId) => {
     if (irId === '__none__') { setForm(f => ({ ...f, ir_id: '', ir_number: '' })); return; }
     const ir = installationReports.find(r => r.id === irId);
-    if (ir) setForm(f => ({ ...f, ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '', client_id: ir.client_id || '', client_name: ir.client_name || '', site_name: ir.site_name || '', site_location: ir.site_location || '' }));
+    if (ir) setForm(f => ({ ...f, ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '', client_id: ir.client_id || '', client_name: ir.client_name || '', site_name: ir.site_name || '', site_location: ir.site_location ? [ir.site_location] : [] }));
   };
 
   const updateItem = (i, field, val) => {
@@ -235,7 +242,23 @@ export default function QuotationForm() {
             </Field>
             <Field label="Client"><Input value={form.client_name} onChange={e => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled from linked report" /></Field>
             <Field label="Site Name"><Input value={form.site_name} onChange={e => setF('site_name', e.target.value)} className="bg-background" placeholder="Auto-filled from linked report" /></Field>
-            <Field label="Site Location"><Input value={form.site_location} onChange={e => setF('site_location', e.target.value)} className="bg-background" placeholder="Auto-filled from linked report" /></Field>
+            <Field label="Site Location">
+              <div className="flex flex-wrap gap-1.5 min-h-9 items-center rounded-md border border-input bg-background px-2 py-1.5">
+                {(form.site_location || []).map(loc => (
+                  <span key={loc} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-primary/15 text-primary border border-primary/25">
+                    {loc}
+                    <button type="button" onClick={() => setF('site_location', (form.site_location || []).filter(x => x !== loc))} className="hover:text-destructive"><X size={11} /></button>
+                  </span>
+                ))}
+                <select
+                  value=""
+                  onChange={e => { const v = e.target.value; if (v && !(form.site_location || []).includes(v)) setF('site_location', [...(form.site_location || []), v]); }}
+                  className="text-xs bg-transparent text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
+                  <option value="">{(form.site_location || []).length ? '+ Add location' : 'Select location(s)...'}</option>
+                  {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                </select>
+              </div>
+            </Field>
           </div>
         </div>
 
@@ -355,7 +378,7 @@ export default function QuotationForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Client Information</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['CLIENT', form.client_name], ['SITE', form.site_name], ['LOCATION', form.site_location], ['SR / IR REF', form.sr_number || form.ir_number]].map(([k, v]) => (
+                {[['CLIENT', form.client_name], ['SITE', form.site_name], ['LOCATION', (form.site_location || []).join(', ')], ['SR / IR REF', form.sr_number || form.ir_number]].map(([k, v]) => (
                   <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
