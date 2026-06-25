@@ -276,6 +276,12 @@ export default function ClaimForm() {
   const itemsTotal = items.reduce((s, it) => s + (parseFloat(it.total) || 0), 0);
   const docCount = (form.sr_ids?.length || 0) + (form.ir_ids?.length || 0);
   const averagedItemsTotal = docCount > 0 ? itemsTotal / docCount : itemsTotal;
+  const siteSummary = Object.entries(
+    [
+      ...reports.filter((r) => (form.sr_ids || []).includes(r.id)).map((r) => r.site_name),
+      ...installationReports.filter((r) => (form.ir_ids || []).includes(r.id)).map((r) => r.site_name)
+    ].filter(Boolean).reduce((acc, site) => { acc[site] = (acc[site] || 0) + 1; return acc; }, {})
+  ).map(([site, count]) => ({ site, count, total: averagedItemsTotal * count }));
   const offDayClaimedTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.claimed) || 0), 0);
   const offDayReplacementTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.replacement) || 0), 0);
   const grandTotal = averagedItemsTotal;
@@ -594,6 +600,23 @@ export default function ClaimForm() {
               </div>
             </div>
           </div>
+          {siteSummary.length > 0 && (
+            <div className="mt-4 border-t border-border pt-4">
+              <h4 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Total per Site</h4>
+              <div className="space-y-1.5">
+                {siteSummary.map((s) => (
+                  <div key={s.site} className="flex items-center justify-between text-sm bg-secondary/40 rounded px-3 py-1.5">
+                    <span className="truncate pr-2">{s.site} <span className="text-xs text-muted-foreground">({s.count} doc{s.count > 1 ? 's' : ''})</span></span>
+                    <span className="font-mono text-primary whitespace-nowrap">MYR {s.total.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between font-semibold text-sm pt-1.5 border-t border-border">
+                  <span>Total</span>
+                  <span className="font-mono text-primary">MYR {siteSummary.reduce((s, x) => s + x.total, 0).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Off Day & Hours Claims */}
