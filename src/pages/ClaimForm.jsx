@@ -490,14 +490,14 @@ export default function ClaimForm() {
                     onChange={(e) => { const v = e.target.value; if (v) toggleReport(v, 'sr'); e.target.value = ''; }}
                     className="text-xs bg-transparent border border-border rounded-md px-2 py-1 text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
                     <option value="">+ Add Service Report</option>
-                    {reports.map((r) => <option key={r.id} value={r.id} disabled={(form.sr_ids || []).includes(r.id)}>{r.running_number} — {r.client_name}</option>)}
+                    {reports.map((r) => <option key={r.id} value={r.id} disabled={(form.sr_ids || []).includes(r.id)}>{r.running_number} — {r.site_name}</option>)}
                   </select>
                   <select
                     value=""
                     onChange={(e) => { const v = e.target.value; if (v) toggleReport(v, 'ir'); e.target.value = ''; }}
                     className="text-xs bg-transparent border border-border rounded-md px-2 py-1 text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
                     <option value="">+ Add Installation Report</option>
-                    {installationReports.map((r) => <option key={r.id} value={r.id} disabled={(form.ir_ids || []).includes(r.id)}>{r.report_number} — {r.client_name}</option>)}
+                    {installationReports.map((r) => <option key={r.id} value={r.id} disabled={(form.ir_ids || []).includes(r.id)}>{r.report_number} — {r.site_name}</option>)}
                   </select>
                 </div>
               </div>
