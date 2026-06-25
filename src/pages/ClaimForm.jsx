@@ -533,6 +533,16 @@ export default function ClaimForm() {
             </div>
             <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addItem}><Plus size={12} /> Add Item</Button>
           </div>
+          {docCount > 0 && (
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {(form.sr_numbers || []).map((n, idx) => (
+                <span key={`sr-${idx}`} className="inline-flex items-center gap-1 text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded px-2 py-0.5 font-mono">SR · {n}</span>
+              ))}
+              {(form.ir_numbers || []).map((n, idx) => (
+                <span key={`ir-${idx}`} className="inline-flex items-center gap-1 text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded px-2 py-0.5 font-mono">IR · {n}</span>
+              ))}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -542,7 +552,8 @@ export default function ClaimForm() {
                   <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-32 pr-2">Category</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20 pr-2">Qty</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-2">Unit Cost</th>
-                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28">Total</th>
+                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-2">Total</th>
+                  <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28">Avg Total{docCount > 1 ? ` /${docCount}` : ''}</th>
                   <th className="w-8"></th>
                 </tr>
               </thead>
@@ -559,7 +570,8 @@ export default function ClaimForm() {
                     </td>
                     <td className="py-2 pr-2"><Input type="number" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" min="1" /></td>
                     <td className="py-2 pr-2"><Input type="number" value={item.unit_cost} onChange={(e) => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.01" /></td>
-                    <td className="py-2 text-right font-mono text-xs">{(item.total || 0).toFixed(2)}</td>
+                    <td className="py-2 pr-2 text-right font-mono text-xs">{(item.total || 0).toFixed(2)}</td>
+                    <td className="py-2 text-right font-mono text-xs text-primary">{(docCount > 0 ? (item.total || 0) / docCount : (item.total || 0)).toFixed(2)}</td>
                     <td className="py-2 pl-2">
                       <button onClick={() => setItems((p) => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
                     </td>
