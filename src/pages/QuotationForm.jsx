@@ -66,6 +66,7 @@ export default function QuotationForm() {
     tax_percent: 8,
   });
   const [items, setItems] = useState([{ item_code: '', item_type: '', description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
+  const [locationInput, setLocationInput] = useState('');
   const ITEM_TYPES = ['Hardware', 'Software', 'Services', 'Other'];
 
   useQuery({
@@ -250,13 +251,17 @@ export default function QuotationForm() {
                     <button type="button" onClick={() => setF('site_location', (form.site_location || []).filter(x => x !== loc))} className="hover:text-destructive"><X size={11} /></button>
                   </span>
                 ))}
-                <select
-                  value=""
-                  onChange={e => { const v = e.target.value; if (v && !(form.site_location || []).includes(v)) setF('site_location', [...(form.site_location || []), v]); }}
-                  className="text-xs bg-transparent text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
-                  <option value="">{(form.site_location || []).length ? '+ Add location' : 'Select location(s)...'}</option>
-                  {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                </select>
+                <input
+                  list="site-location-options"
+                  value={locationInput}
+                  onChange={e => setLocationInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); const v = locationInput.trim(); if (v && !(form.site_location || []).includes(v)) setF('site_location', [...(form.site_location || []), v]); setLocationInput(''); } }}
+                  placeholder={(form.site_location || []).length ? '+ Add location (Enter)' : 'Type or select location(s)...'}
+                  className="text-xs bg-transparent outline-none flex-1 min-w-[120px] text-foreground placeholder:text-muted-foreground"
+                />
+                <datalist id="site-location-options">
+                  {locationOptions.map(loc => <option key={loc} value={loc} />)}
+                </datalist>
               </div>
             </Field>
           </div>
