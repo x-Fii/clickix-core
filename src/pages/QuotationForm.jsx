@@ -54,8 +54,12 @@ export default function QuotationForm() {
     valid_until: '',
     sr_id: '',
     sr_number: '',
+    sr_ids: [],
+    sr_numbers: [],
     ir_id: '',
     ir_number: '',
+    ir_ids: [],
+    ir_numbers: [],
     client_id: '',
     client_name: '',
     site_name: '',
@@ -73,7 +77,7 @@ export default function QuotationForm() {
     queryKey: ['quotation', id],
     queryFn: async () => {
       const q = await base44.entities.Quotation.get(id);
-      setForm({ ...q, tax_percent: q.tax_percent ?? 8, site_location: Array.isArray(q.site_location) ? q.site_location : (q.site_location ? [q.site_location] : []) });
+      setForm({ ...q, tax_percent: q.tax_percent ?? 8, site_location: Array.isArray(q.site_location) ? q.site_location : (q.site_location ? [q.site_location] : []), sr_ids: Array.isArray(q.sr_ids) ? q.sr_ids : (q.sr_id ? [q.sr_id] : []), sr_numbers: Array.isArray(q.sr_numbers) ? q.sr_numbers : (q.sr_number ? [q.sr_number] : []), ir_ids: Array.isArray(q.ir_ids) ? q.ir_ids : (q.ir_id ? [q.ir_id] : []), ir_numbers: Array.isArray(q.ir_numbers) ? q.ir_numbers : (q.ir_number ? [q.ir_number] : []) });
       setItems(q.items?.length ? q.items.map(it => ({ item_code: '', item_type: '', taxable: true, ...it })) : [{ item_code: '', item_type: '', description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
       return q;
     },
@@ -115,16 +119,28 @@ export default function QuotationForm() {
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleSRSelect = (srId) => {
-    if (srId === '__none__') { setForm(f => ({ ...f, sr_id: '', sr_number: '' })); return; }
+  const toggleSR = (srId) => {
     const sr = reports.find(r => r.id === srId);
-    if (sr) setForm(f => ({ ...f, sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '', client_id: sr.client_id || '', client_name: sr.client_name || '', site_name: sr.site_name || '', site_location: sr.site_location ? [sr.site_location] : [] }));
+    if (!sr) return;
+    setForm(f => {
+      const exists = (f.sr_ids || []).includes(srId);
+      const sr_ids = exists ? (f.sr_ids || []).filter(x => x !== srId) : [...(f.sr_ids || []), srId];
+      const sr_numbers = sr_ids.map(id => reports.find(r => r.id === id)?.running_number).filter(Boolean);
+      const first = sr_ids.length ? reports.find(r => r.id === sr_ids[0]) : null;
+      return { ...f, sr_ids, sr_numbers, sr_id: sr_ids[0] || '', sr_number: sr_numbers[0] || '', client_id: first?.client_id || f.client_id, client_name: first?.client_name || f.client_name, site_name: first?.site_name || f.site_name, site_location: first?.site_location ? [first.site_location] : f.site_location };
+    });
   };
 
-  const handleIRSelect = (irId) => {
-    if (irId === '__none__') { setForm(f => ({ ...f, ir_id: '', ir_number: '' })); return; }
+  const toggleIR = (irId) => {
     const ir = installationReports.find(r => r.id === irId);
-    if (ir) setForm(f => ({ ...f, ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '', client_id: ir.client_id || '', client_name: ir.client_name || '', site_name: ir.site_name || '', site_location: ir.site_location ? [ir.site_location] : [] }));
+    if (!ir) return;
+    setForm(f => {
+      const exists = (f.ir_ids || []).includes(irId);
+      const ir_ids = exists ? (f.ir_ids || []).filter(x => x !== irId) : [...(f.ir_ids || []), irId];
+      const ir_numbers = ir_ids.map(id => installationReports.find(r => r.id === id)?.report_number).filter(Boolean);
+      const first = ir_ids.length ? installationReports.find(r => r.id === ir_ids[0]) : null;
+      return { ...f, ir_ids, ir_numbers, ir_id: ir_ids[0] || '', ir_number: ir_numbers[0] || '', client_id: first?.client_id || f.client_id, client_name: first?.client_name || f.client_name, site_name: first?.site_name || f.site_name, site_location: first?.site_location ? [first.site_location] : f.site_location };
+    });
   };
 
   const updateItem = (i, field, val) => {
@@ -223,23 +239,45 @@ export default function QuotationForm() {
         <div className="bg-card border border-border rounded-xl p-6">
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Linked Report & Client Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Service Report">
-              <Select value={form.sr_id || '__none__'} onValueChange={handleSRSelect}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— None —</SelectItem>
-                  {reports.map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.client_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <Field label="Service Report(s)">
+              <div className="flex flex-wrap gap-1.5 min-h-9 items-center rounded-md border border-input bg-background px-2 py-1.5">
+                {(form.sr_ids || []).map(id => {
+                  const r = reports.find(x => x.id === id);
+                  return (
+                    <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-primary/15 text-primary border border-primary/25">
+                      {r?.running_number || id}
+                      <button type="button" onClick={() => toggleSR(id)} className="hover:text-destructive"><X size={11} /></button>
+                    </span>
+                  );
+                })}
+                <select
+                  value=""
+                  onChange={e => { if (e.target.value) toggleSR(e.target.value); }}
+                  className="text-xs bg-transparent text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
+                  <option value="">{(form.sr_ids || []).length ? '+ Add SR' : 'Select SR(s)...'}</option>
+                  {reports.filter(r => !(form.sr_ids || []).includes(r.id)).map(r => <option key={r.id} value={r.id}>{r.running_number} — {r.site_name || r.client_name}</option>)}
+                </select>
+              </div>
             </Field>
-            <Field label="Installation Report">
-              <Select value={form.ir_id || '__none__'} onValueChange={handleIRSelect}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select IR..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— None —</SelectItem>
-                  {installationReports.map(r => <SelectItem key={r.id} value={r.id}>{r.report_number} — {r.client_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <Field label="Installation Report(s)">
+              <div className="flex flex-wrap gap-1.5 min-h-9 items-center rounded-md border border-input bg-background px-2 py-1.5">
+                {(form.ir_ids || []).map(id => {
+                  const r = installationReports.find(x => x.id === id);
+                  return (
+                    <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-primary/15 text-primary border border-primary/25">
+                      {r?.report_number || id}
+                      <button type="button" onClick={() => toggleIR(id)} className="hover:text-destructive"><X size={11} /></button>
+                    </span>
+                  );
+                })}
+                <select
+                  value=""
+                  onChange={e => { if (e.target.value) toggleIR(e.target.value); }}
+                  className="text-xs bg-transparent text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
+                  <option value="">{(form.ir_ids || []).length ? '+ Add IR' : 'Select IR(s)...'}</option>
+                  {installationReports.filter(r => !(form.ir_ids || []).includes(r.id)).map(r => <option key={r.id} value={r.id}>{r.report_number} — {r.site_name || r.client_name}</option>)}
+                </select>
+              </div>
             </Field>
             <Field label="Client"><Input value={form.client_name} onChange={e => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled from linked report" /></Field>
             <Field label="Site Name"><Input value={form.site_name} onChange={e => setF('site_name', e.target.value)} className="bg-background" placeholder="Auto-filled from linked report" /></Field>
@@ -383,7 +421,7 @@ export default function QuotationForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Client Information</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['CLIENT', form.client_name], ['SITE', form.site_name], ['LOCATION', (form.site_location || []).join(', ')], ['SR / IR REF', form.sr_number || form.ir_number]].map(([k, v]) => (
+                {[['CLIENT', form.client_name], ['SITE', form.site_name], ['LOCATION', (form.site_location || []).join(', ')], ['SR / IR REF', [...(form.sr_numbers || []), ...(form.ir_numbers || [])].join(', ') || form.sr_number || form.ir_number]].map(([k, v]) => (
                   <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
