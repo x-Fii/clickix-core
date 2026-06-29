@@ -142,7 +142,9 @@ export default function PurchaseRequisitions() {
     p.pr_number?.toLowerCase().includes(search.toLowerCase()) ||
     p.requester_name?.toLowerCase().includes(search.toLowerCase()) ||
     p.quotation_number?.toLowerCase().includes(search.toLowerCase()) ||
-    p.sr_number?.toLowerCase().includes(search.toLowerCase());
+    p.sr_number?.toLowerCase().includes(search.toLowerCase()) ||
+    (p.sr_numbers || []).some(n => n?.toLowerCase().includes(search.toLowerCase())) ||
+    (p.ir_numbers || []).some(n => n?.toLowerCase().includes(search.toLowerCase()));
 
     const matchStatus = statusFilter === 'all' || p.status === statusFilter;
     return matchSearch && matchStatus;
@@ -254,7 +256,7 @@ export default function PurchaseRequisitions() {
             <tr key={pr.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/pr/${pr.id}`)}>
                     <td className="px-4 py-3 font-mono text-xs text-primary">{pr.pr_number}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.quotation_number || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{pr.sr_number || pr.ir_number || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{[...(pr.sr_numbers || []), ...(pr.ir_numbers || [])].join(', ') || pr.sr_number || pr.ir_number || '—'}</td>
                     <td className="px-4 py-3">{pr.requester_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.pr_date ? format(parseISO(pr.pr_date), 'dd MMM yyyy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{pr.grand_total != null ? pr.grand_total.toFixed(2) : '—'}</td>

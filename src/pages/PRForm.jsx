@@ -44,8 +44,12 @@ export default function PRForm() {
     quotation_number: '',
     sr_id: '',
     sr_number: '',
+    sr_ids: [],
+    sr_numbers: [],
     ir_id: '',
     ir_number: '',
+    ir_ids: [],
+    ir_numbers: [],
     client_name: '',
     site_name: '',
     purpose_of_purchase: '',
@@ -68,7 +72,7 @@ export default function PRForm() {
     queryKey: ['pr', id],
     queryFn: async () => {
       const pr = await base44.entities.PurchaseRequisition.get(id);
-      setForm({ ...pr, approved_amount: pr.approved_amount != null ? pr.approved_amount.toString() : '', disburse_amount: pr.disburse_amount != null ? pr.disburse_amount.toString() : '', disburse_date: pr.disburse_date || '', disburse_reference: pr.disburse_reference || '' });
+      setForm({ ...pr, approved_amount: pr.approved_amount != null ? pr.approved_amount.toString() : '', disburse_amount: pr.disburse_amount != null ? pr.disburse_amount.toString() : '', disburse_date: pr.disburse_date || '', disburse_reference: pr.disburse_reference || '', sr_ids: Array.isArray(pr.sr_ids) ? pr.sr_ids : (pr.sr_id ? [pr.sr_id] : []), sr_numbers: Array.isArray(pr.sr_numbers) ? pr.sr_numbers : (pr.sr_number ? [pr.sr_number] : []), ir_ids: Array.isArray(pr.ir_ids) ? pr.ir_ids : (pr.ir_id ? [pr.ir_id] : []), ir_numbers: Array.isArray(pr.ir_numbers) ? pr.ir_numbers : (pr.ir_number ? [pr.ir_number] : []) });
       setItems(pr.items?.length ? pr.items.map(it => ({ ...it, unit_cost: it.unit_cost?.toString() ?? '', quantity: it.quantity?.toString() ?? '1' })) : [{ item_no: 1, description: '', category: '', quantity: '1', unit_cost: '', total: 0 }]);
       return pr;
     },
@@ -117,6 +121,12 @@ export default function PRForm() {
         quotation_number: q.quotation_number,
         sr_id: q.sr_id || '',
         sr_number: q.sr_number || '',
+        sr_ids: Array.isArray(q.sr_ids) && q.sr_ids.length ? q.sr_ids : (q.sr_id ? [q.sr_id] : []),
+        sr_numbers: Array.isArray(q.sr_numbers) && q.sr_numbers.length ? q.sr_numbers : (q.sr_number ? [q.sr_number] : []),
+        ir_id: q.ir_id || '',
+        ir_number: q.ir_number || '',
+        ir_ids: Array.isArray(q.ir_ids) && q.ir_ids.length ? q.ir_ids : (q.ir_id ? [q.ir_id] : []),
+        ir_numbers: Array.isArray(q.ir_numbers) && q.ir_numbers.length ? q.ir_numbers : (q.ir_number ? [q.ir_number] : []),
         client_name: q.client_name || '',
         site_name: q.site_name || '',
       }));
@@ -142,6 +152,12 @@ export default function PRForm() {
       status: 'draft',
       sr_id: form.sr_id || '',
       sr_number: form.sr_number || '',
+      sr_ids: form.sr_ids || [],
+      sr_numbers: form.sr_numbers || [],
+      ir_id: form.ir_id || '',
+      ir_number: form.ir_number || '',
+      ir_ids: form.ir_ids || [],
+      ir_numbers: form.ir_numbers || [],
       client_name: form.client_name || '',
       site_name: form.site_name || '',
       items: items.filter(it => it.description).map(it => ({
@@ -158,11 +174,28 @@ export default function PRForm() {
     toast.success(`Draft quotation ${newQ.quotation_number} created`);
   };
 
-  const handleSRSelect = (val) => {
+  const toggleDoc = (val) => {
     const sr = reports.find(r => r.id === val);
-    if (sr) { setForm(f => ({ ...f, sr_id: sr.id, sr_number: sr.running_number, ir_id: '', ir_number: '', client_name: sr.client_name || '', site_name: sr.site_name || '' })); return; }
+    if (sr) {
+      setForm(f => {
+        const exists = (f.sr_ids || []).includes(val);
+        const sr_ids = exists ? (f.sr_ids || []).filter(x => x !== val) : [...(f.sr_ids || []), val];
+        const sr_numbers = sr_ids.map(id => reports.find(r => r.id === id)?.running_number).filter(Boolean);
+        const first = sr_ids.length ? reports.find(r => r.id === sr_ids[0]) : null;
+        return { ...f, sr_ids, sr_numbers, sr_id: sr_ids[0] || '', sr_number: sr_numbers[0] || '', client_name: first?.client_name || f.client_name, site_name: first?.site_name || f.site_name };
+      });
+      return;
+    }
     const ir = installationReports.find(r => r.id === val);
-    if (ir) setForm(f => ({ ...f, ir_id: ir.id, ir_number: ir.report_number, sr_id: '', sr_number: '', client_name: ir.client_name || '', site_name: ir.site_name || '' }));
+    if (ir) {
+      setForm(f => {
+        const exists = (f.ir_ids || []).includes(val);
+        const ir_ids = exists ? (f.ir_ids || []).filter(x => x !== val) : [...(f.ir_ids || []), val];
+        const ir_numbers = ir_ids.map(id => installationReports.find(r => r.id === id)?.report_number).filter(Boolean);
+        const first = ir_ids.length ? installationReports.find(r => r.id === ir_ids[0]) : null;
+        return { ...f, ir_ids, ir_numbers, ir_id: ir_ids[0] || '', ir_number: ir_numbers[0] || '', client_name: first?.client_name || f.client_name, site_name: first?.site_name || f.site_name };
+      });
+    }
   };
 
   const updateItem = (i, field, val) => {
@@ -353,14 +386,35 @@ export default function PRForm() {
                 <p className="text-xs text-muted-foreground mt-1 font-mono">Linked: {form.quotation_number}</p>
               )}
             </Field>
-            <Field label="Service / Installation Report">
-              <Select value={form.sr_id || form.ir_id || undefined} onValueChange={handleSRSelect}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select SR or IR (or auto-filled from quotation)..." /></SelectTrigger>
-                <SelectContent className="max-h-60 overflow-y-auto">
-                  {reports.length > 0 && <><SelectItem disabled value="__sr__" className="text-xs text-muted-foreground font-semibold">— Service Reports —</SelectItem>{reports.slice(0, 100).map(r => <SelectItem key={r.id} value={r.id}>{r.running_number} — {r.site_name}</SelectItem>)}</>}
-                  {installationReports.length > 0 && <><SelectItem disabled value="__ir__" className="text-xs text-muted-foreground font-semibold">— Installation Reports —</SelectItem>{installationReports.slice(0, 100).map(r => <SelectItem key={r.id} value={r.id}>{r.report_number} — {r.site_name}</SelectItem>)}</>}
-                </SelectContent>
-              </Select>
+            <Field label="Service / Installation Report(s)">
+              <div className="flex flex-wrap gap-1.5 min-h-9 items-center rounded-md border border-input bg-background px-2 py-1.5">
+                {(form.sr_ids || []).map(id => {
+                  const r = reports.find(x => x.id === id);
+                  return (
+                    <span key={`sr-${id}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-primary/15 text-primary border border-primary/25">
+                      {r?.running_number || id}
+                      <button type="button" onClick={() => toggleDoc(id)} className="hover:text-destructive"><X size={11} /></button>
+                    </span>
+                  );
+                })}
+                {(form.ir_ids || []).map(id => {
+                  const r = installationReports.find(x => x.id === id);
+                  return (
+                    <span key={`ir-${id}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                      {r?.report_number || id}
+                      <button type="button" onClick={() => toggleDoc(id)} className="hover:text-destructive"><X size={11} /></button>
+                    </span>
+                  );
+                })}
+                <select
+                  value=""
+                  onChange={e => { if (e.target.value) toggleDoc(e.target.value); }}
+                  className="text-xs bg-transparent text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
+                  <option value="">{(form.sr_ids || []).length + (form.ir_ids || []).length ? '+ Add document' : 'Select SR or IR...'}</option>
+                  {reports.length > 0 && <optgroup label="— Service Reports —">{reports.filter(r => !(form.sr_ids || []).includes(r.id)).slice(0, 100).map(r => <option key={r.id} value={r.id}>{r.running_number} — {r.site_name}</option>)}</optgroup>}
+                  {installationReports.length > 0 && <optgroup label="— Installation Reports —">{installationReports.filter(r => !(form.ir_ids || []).includes(r.id)).slice(0, 100).map(r => <option key={r.id} value={r.id}>{r.report_number} — {r.site_name}</option>)}</optgroup>}
+                </select>
+              </div>
             </Field>
             <Field label="Client Name"><Input value={form.client_name} onChange={e => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
             <Field label="Site Name"><Input value={form.site_name} onChange={e => setF('site_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
@@ -602,7 +656,7 @@ export default function PRForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Linked Documents</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['QUOTATION NO.', form.quotation_number], ['SR/IR NUMBER', form.sr_number || form.ir_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) => (
+                {[['QUOTATION NO.', form.quotation_number], ['SR/IR NUMBER', [...(form.sr_numbers || []), ...(form.ir_numbers || [])].join(', ') || form.sr_number || form.ir_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) => (
                   <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
