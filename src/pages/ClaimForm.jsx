@@ -749,6 +749,21 @@ export default function ClaimForm() {
           </div>
 
           <div style={{ padding: '24px 32px 32px' }}>
+            {/* Document Info */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Document Info</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
+                {[['CLAIM NUMBER', form.claim_number], ['CLAIM DATE', form.claim_date], ['CLAIM TYPE', form.claim_type], ['STATUS', (form.status || '').toUpperCase()]].map(([k, v]) =>
+                <div key={k}>
+                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
+                    <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Claimant */}
             <div style={{ marginBottom: '20px' }}>
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
@@ -770,7 +785,7 @@ export default function ClaimForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Linked Documents</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['PR NO.', form.pr_number], ['SR/IR NO.', [...(form.sr_numbers || []), ...(form.ir_numbers || [])].join(', ') || form.sr_number || form.ir_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) =>
+                {[['PR NO.', form.pr_number], ['QUOTATION NO.', form.quotation_number], ['SR NO.', (form.sr_numbers || []).join(', ') || form.sr_number], ['IR NO.', (form.ir_numbers || []).join(', ') || form.ir_number], ['CLIENT', form.client_name], ['SITE(S)', (form.site_names || []).join(', ') || form.site_name], ['PAYMENT TERM', form.payment_term], ['CLAIM DATE', form.claim_date]].map(([k, v]) =>
                 <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
@@ -810,7 +825,7 @@ export default function ClaimForm() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
                 <thead>
                   <tr style={{ background: '#f3f4f6' }}>
-                    {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total'].map((h, i) =>
+                    {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total', 'Avg Total'].map((h, i) =>
                     <th key={h} style={{ padding: '7px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
                     )}
                   </tr>
@@ -824,6 +839,7 @@ export default function ClaimForm() {
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.quantity}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.total) || 0).toFixed(2)}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', color: '#2563eb', border: '1px solid #e5e7eb' }}>{(docCount > 0 ? (parseFloat(item.total) || 0) / docCount : (parseFloat(item.total) || 0)).toFixed(2)}</td>
                     </tr>
                   )}
                 </tbody>
@@ -869,8 +885,63 @@ export default function ClaimForm() {
                 </div>
               }
 
+              {docCount > 1 &&
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                <div style={{ minWidth: '280px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 12px' }}>
+                    <span style={{ fontSize: '10px', color: '#6b7280' }}>Items Total (raw, {docCount} docs)</span>
+                    <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#6b7280' }}>MYR {itemsTotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 12px' }}>
+                    <span style={{ fontSize: '10px', color: '#6b7280' }}>Items Total (avg / {docCount})</span>
+                    <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#111827' }}>MYR {averagedItemsTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              }
+
+              {siteSummary.length > 0 &&
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Total per Site</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '8px' }}>
+                  <thead>
+                    <tr style={{ background: '#f3f4f6' }}>
+                      <th style={{ padding: '6px 10px', textAlign: 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb' }}>Site</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'center', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: '80px' }}>Docs</th>
+                      <th style={{ padding: '6px 10px', textAlign: 'right', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: '120px' }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {siteSummary.map((s, i) =>
+                    <tr key={s.site} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+                        <td style={{ padding: '6px 10px', border: '1px solid #e5e7eb' }}>{s.site}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'center', color: '#6b7280', border: '1px solid #e5e7eb' }}>{s.count}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: 'monospace', fontWeight: '700', color: '#2563eb', border: '1px solid #e5e7eb' }}>MYR {s.total.toFixed(2)}</td>
+                      </tr>
+                    )}
+                    <tr style={{ background: '#eff6ff' }}>
+                      <td style={{ padding: '6px 10px', fontWeight: '700', border: '1px solid #e5e7eb' }} colSpan={2}>Total</td>
+                      <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: 'monospace', fontWeight: '700', color: '#2563eb', border: '1px solid #e5e7eb' }}>MYR {siteSummary.reduce((s, x) => s + x.total, 0).toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              }
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-                <div style={{ minWidth: '220px' }}>
+                <div style={{ minWidth: '280px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 12px' }}>
+                    <span style={{ fontSize: '11px', color: '#6b7280' }}>Items Total{docCount > 1 ? ' (avg)' : ''}</span>
+                    <span style={{ fontSize: '12px', fontFamily: 'monospace', color: '#111827' }}>MYR {averagedItemsTotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 12px' }}>
+                    <span style={{ fontSize: '11px', color: '#6b7280' }}>Off Day Claimed</span>
+                    <span style={{ fontSize: '12px', fontFamily: 'monospace', color: '#111827' }}>{offDayClaimedTotal}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 12px' }}>
+                    <span style={{ fontSize: '11px', color: '#6b7280' }}>Off Day Replacement</span>
+                    <span style={{ fontSize: '12px', fontFamily: 'monospace', color: '#111827' }}>{offDayReplacementTotal}</span>
+                  </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderTop: '2px solid #2563eb' }}>
                     <span style={{ fontSize: '12px', fontWeight: '700', color: '#111827' }}>Grand Total</span>
                     <span style={{ fontSize: '14px', fontWeight: '700', color: '#2563eb', fontFamily: 'monospace' }}>MYR {grandTotal.toFixed(2)}</span>
