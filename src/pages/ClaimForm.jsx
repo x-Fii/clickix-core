@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -77,6 +77,8 @@ export default function ClaimForm() {
   const [offDayClaims, setOffDayClaims] = useState([
   { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]
   );
+  const loadedRef = useRef(false);
+  const prPrefillRef = useRef(false);
 
 
   // Load existing claim
@@ -84,6 +86,8 @@ export default function ClaimForm() {
     queryKey: ['claim', id],
     queryFn: async () => {
       const c = await base44.entities.Claim.get(id);
+      if (loadedRef.current) return c;
+      loadedRef.current = true;
       setForm({
         ...c,
         sr_ids: Array.isArray(c.sr_ids) ? c.sr_ids : (c.sr_id ? [c.sr_id] : []),
@@ -130,6 +134,8 @@ export default function ClaimForm() {
     queryKey: ['pr-prefill', fromPrId],
     queryFn: async () => {
       const pr = await base44.entities.PurchaseRequisition.get(fromPrId);
+      if (prPrefillRef.current) return pr;
+      prPrefillRef.current = true;
       setForm((f) => ({
         ...f,
         pr_id: pr.id,

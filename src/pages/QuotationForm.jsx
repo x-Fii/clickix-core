@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -72,11 +72,14 @@ export default function QuotationForm() {
   const [items, setItems] = useState([{ item_code: '', item_type: '', description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
   const [locationInput, setLocationInput] = useState('');
   const ITEM_TYPES = ['Hardware', 'Software', 'Services', 'Other'];
+  const loadedRef = useRef(false);
 
   useQuery({
     queryKey: ['quotation', id],
     queryFn: async () => {
       const q = await base44.entities.Quotation.get(id);
+      if (loadedRef.current) return q;
+      loadedRef.current = true;
       setForm({ ...q, tax_percent: q.tax_percent ?? 8, site_location: Array.isArray(q.site_location) ? q.site_location : (q.site_location ? [q.site_location] : []), sr_ids: Array.isArray(q.sr_ids) ? q.sr_ids : (q.sr_id ? [q.sr_id] : []), sr_numbers: Array.isArray(q.sr_numbers) ? q.sr_numbers : (q.sr_number ? [q.sr_number] : []), ir_ids: Array.isArray(q.ir_ids) ? q.ir_ids : (q.ir_id ? [q.ir_id] : []), ir_numbers: Array.isArray(q.ir_numbers) ? q.ir_numbers : (q.ir_number ? [q.ir_number] : []) });
       setItems(q.items?.length ? q.items.map(it => ({ item_code: '', item_type: '', taxable: true, ...it })) : [{ item_code: '', item_type: '', description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }]);
       return q;

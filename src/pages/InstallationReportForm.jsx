@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -58,6 +58,7 @@ export default function InstallationReportForm() {
 
   const [uploading, setUploading] = useState(false);
   const [uploadingStamp, setUploadingStamp] = useState(false);
+  const loadedRef = useRef(false);
 
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
@@ -71,7 +72,10 @@ export default function InstallationReportForm() {
   });
 
   useEffect(() => {
-    if (existing) setForm({ ...form, ...existing });
+    if (existing && !loadedRef.current) {
+      loadedRef.current = true;
+      setForm({ ...form, ...existing });
+    }
   }, [existing]);
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');

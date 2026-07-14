@@ -58,11 +58,14 @@ export default function ReportDetail() {
   const [jobDescPhotos, setJobDescPhotos] = useState([]);
   const [remarksPhotos, setRemarksPhotos] = useState([]);
   const [summaryCopied, setSummaryCopied] = useState(false);
+  const loadedRef = useRef(false);
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['service-report', id],
     queryFn: async () => {
       const r = await base44.entities.ServiceReport.get(id);
+      if (loadedRef.current) return r;
+      loadedRef.current = true;
       setL2Form({
         l2_job_description: r.l2_job_description || '',
         l2_work_detail: r.l2_work_detail || '',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -67,11 +67,14 @@ export default function PRForm() {
   ]);
   const [importModal, setImportModal] = useState(false);
   const [importTypeFilter, setImportTypeFilter] = useState([]);
+  const loadedRef = useRef(false);
 
   useQuery({
     queryKey: ['pr', id],
     queryFn: async () => {
       const pr = await base44.entities.PurchaseRequisition.get(id);
+      if (loadedRef.current) return pr;
+      loadedRef.current = true;
       setForm({ ...pr, approved_amount: pr.approved_amount != null ? pr.approved_amount.toString() : '', disburse_amount: pr.disburse_amount != null ? pr.disburse_amount.toString() : '', disburse_date: pr.disburse_date || '', disburse_reference: pr.disburse_reference || '', sr_ids: Array.isArray(pr.sr_ids) ? pr.sr_ids : (pr.sr_id ? [pr.sr_id] : []), sr_numbers: Array.isArray(pr.sr_numbers) ? pr.sr_numbers : (pr.sr_number ? [pr.sr_number] : []), ir_ids: Array.isArray(pr.ir_ids) ? pr.ir_ids : (pr.ir_id ? [pr.ir_id] : []), ir_numbers: Array.isArray(pr.ir_numbers) ? pr.ir_numbers : (pr.ir_number ? [pr.ir_number] : []) });
       setItems(pr.items?.length ? pr.items.map(it => ({ ...it, unit_cost: it.unit_cost?.toString() ?? '', quantity: it.quantity?.toString() ?? '1' })) : [{ item_no: 1, description: '', category: '', quantity: '1', unit_cost: '', total: 0 }]);
       return pr;
