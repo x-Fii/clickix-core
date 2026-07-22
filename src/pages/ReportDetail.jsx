@@ -58,6 +58,7 @@ export default function ReportDetail() {
   const [jobDescPhotos, setJobDescPhotos] = useState([]);
   const [remarksPhotos, setRemarksPhotos] = useState([]);
   const [summaryCopied, setSummaryCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
   const loadedRef = useRef(false);
 
   const { data: report, isLoading } = useQuery({
@@ -175,43 +176,69 @@ export default function ReportDetail() {
     }));
   };
 
+  // Upload signature data URL as a file to avoid storing oversized base64 in entity
+  const uploadSignature = async (dataUrl) => {
+    if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], `signature-${id}.png`, { type: 'image/png' });
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    return file_url;
+  };
+
   // Save all L2 data including ack fields — works for both draft and completed reports
-  const saveL2 = () => {
-    updateReport.mutate({
-      ...l2Form,
-      l2_items: l2Items,
-      l2_addon_items: l2Addons,
-      l2_replacements: replacements,
-      supporting_documents: supportingDocs,
-      ack_company_stamp: companyStamp,
-      ack_signature: signature,
-      ack_name: ackName,
-      ack_phone: ackPhone,
-      l2_job_description_photos: jobDescPhotos,
-      l2_remarks_photos: remarksPhotos
-    });
+  const saveL2 = async () => {
+    setSaving(true);
+    try {
+      const sigUrl = await uploadSignature(signature);
+      updateReport.mutate({
+        ...l2Form,
+        l2_items: l2Items,
+        l2_addon_items: l2Addons,
+        l2_replacements: replacements,
+        supporting_documents: supportingDocs,
+        ack_company_stamp: companyStamp,
+        ack_signature: sigUrl,
+        ack_name: ackName,
+        ack_phone: ackPhone,
+        l2_job_description_photos: jobDescPhotos,
+        l2_remarks_photos: remarksPhotos
+      });
+    } catch {
+      toast.error('Failed to upload signature');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const advanceStatus = (newStatus, extraData = {}) => {
     updateReport.mutate({ status: newStatus, ...extraData });
   };
 
-  const handleComplete = () => {
-    updateReport.mutate({
-      ...l2Form,
-      l2_items: l2Items,
-      l2_addon_items: l2Addons,
-      l2_replacements: replacements,
-      supporting_documents: supportingDocs,
-      l2_job_description_photos: jobDescPhotos,
-      l2_remarks_photos: remarksPhotos,
-      status: 'complete',
-      ack_signature: signature,
-      ack_company_stamp: companyStamp,
-      ack_name: ackName,
-      ack_phone: ackPhone,
-      ack_timestamp: new Date().toISOString()
-    });
+  const handleComplete = async () => {
+    setSaving(true);
+    try {
+      const sigUrl = await uploadSignature(signature);
+      updateReport.mutate({
+        ...l2Form,
+        l2_items: l2Items,
+        l2_addon_items: l2Addons,
+        l2_replacements: replacements,
+        supporting_documents: supportingDocs,
+        l2_job_description_photos: jobDescPhotos,
+        l2_remarks_photos: remarksPhotos,
+        status: 'complete',
+        ack_signature: sigUrl,
+        ack_company_stamp: companyStamp,
+        ack_name: ackName,
+        ack_phone: ackPhone,
+        ack_timestamp: new Date().toISOString()
+      });
+    } catch {
+      toast.error('Failed to upload signature');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSubmitToAdmin = async () => {
@@ -394,7 +421,7 @@ export default function ReportDetail() {
               </div>
           }
             {report.status === 'schedule' &&
-          <Button size="sm" onClick={handleComplete} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button size="sm" onClick={handleComplete} disabled={saving || updateReport.isPending} className="bg-emerald-600 hover:bg-emerald-700">
                 ✓ Mark Complete
               </Button>
           }
@@ -405,8 +432,8 @@ export default function ReportDetail() {
           }
             {/* Save Draft for non-complete/billed statuses */}
             {report.status !== 'complete' && report.status !== 'billed' &&
-          <Button variant="outline" size="sm" onClick={saveL2} disabled={updateReport.isPending}>
-                <Save size={14} className="mr-2" /> {updateReport.isPending ? 'Saving...' : 'Save Draft'}
+          <Button variant="outline" size="sm" onClick={saveL2} disabled={saving || updateReport.isPending}>
+                <Save size={14} className="mr-2" /> {(saving || updateReport.isPending) ? 'Saving...' : 'Save Draft'}
               </Button>
           }
           </div>
