@@ -65,6 +65,10 @@ export default function ReportDetail() {
     queryKey: ['service-report', id],
     queryFn: async () => {
       const r = await base44.entities.ServiceReport.get(id);
+      
+
+
+
       if (loadedRef.current) return r;
       loadedRef.current = true;
       setL2Form({
@@ -101,6 +105,7 @@ export default function ReportDetail() {
       return r;
     },
     enabled: !!id
+    
   });
 
   const updateReport = useMutation({
@@ -113,7 +118,12 @@ export default function ReportDetail() {
     }
   });
 
+  
   const { data: staffList = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
+
+
+  
+
   const l2Staff = staffList.filter((s) => s.role === 'L2' || s.role === 'Admin');
 
   if (isLoading) return <div className="flex items-center justify-center h-full"><div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
@@ -130,6 +140,7 @@ export default function ReportDetail() {
   const addReplacement = () => setReplacements((prev) => [...prev, { item_description: '', old_item_detail: '', new_item_detail: '' }]);
   const updateReplacement = (i, field, val) => setReplacements((prev) => prev.map((item, idx) => idx === i ? { ...item, [field]: val } : item));
 
+  
   const handlePhotoUpload = async (type, index, files) => {
     const file = files[0];
     if (!file) return;
@@ -141,6 +152,8 @@ export default function ReportDetail() {
     if (type === 'remarks') setRemarksPhotos((prev) => [...prev, file_url]);
     setUploadingPhoto(null);
   };
+  
+  
 
   const handleDocUpload = async (files) => {
     const file = files[0];
@@ -258,72 +271,462 @@ export default function ReportDetail() {
   };
 
   const handleExportPDF = async () => {
-    toast.info('Generating PDF...');
-    const { default: jsPDF } = await import('jspdf');
-    const { default: html2canvas } = await import('html2canvas');
+  toast.info('Generating PDF...');
 
-    // Collect all image URLs that need to be pre-loaded
-    const allImageUrls = [
-    ...l2Items.flatMap((item) => item.photos || []),
-    ...l2Addons.flatMap((item) => item.photos || []),
-    ...supportingDocs.filter((url) => url.match(/\.(jpg|jpeg|png|gif|webp)$/i)),
-    ...jobDescPhotos,
-    ...remarksPhotos,
-    ...(signature ? [signature] : []),
-    ...(companyStamp ? [companyStamp] : [])];
+  const { default: jsPDF } = await import('jspdf');
+  const { default: html2canvas } = await import('html2canvas');
 
+  const wrapper = document.getElementById('pdf-print-area');
 
-    // Pre-load all images to ensure they are in browser cache before html2canvas runs
-    await Promise.all(allImageUrls.map((url) => new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = resolve;
-      img.onerror = resolve; // don't block on failed images
-      img.src = url + (url.includes('?') ? '&' : '?') + '_nocache=' + Date.now();
-    })));
+  if (!wrapper) {
+    toast.error('PDF template not found');
+    return;
+  }
 
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pw = pdf.internal.pageSize.getWidth();
-    const ph = pdf.internal.pageSize.getHeight();
-    const wrapper = document.getElementById('pdf-print-area');
+  try {
+    /*
+     * Show the hidden PDF template.
+     * This only affects the off-screen PDF area.
+     */
     wrapper.style.display = 'block';
 
-    // Small delay to allow DOM to fully render images
-    await new Promise((r) => setTimeout(r, 500));
+    /*
+     * Collect every image used inside the PDF template.
+     * This includes uploaded photos, signature and company stamp.
+     */
+    const pdfImages = Array.from(wrapper.querySelectorAll('img'));
 
-    const hasDocs = supportingDocs.length > 0;
-    const pageIds = ['pdf-page-1', 'pdf-page-2', ...(hasDocs ? ['pdf-page-3'] : []), 'pdf-page-4'];
-    let isFirstPage = true;
-    for (const pageId of pageIds) {
-      const el = document.getElementById(pageId);
-      if (!el || el.offsetHeight < 5) continue;
-      const canvas = await html2canvas(el, {
-        scale: 3,
+    /*
+     * Wait until every image has finished loading.
+     * This helps prevent missing images and incorrect element heights.
+     */
+    await Promise.all(
+      pdfImages.map(
+        (img) =>
+          new Promise((resolve) => {
+            if (img.complete) {
+              resolve();
+              return;
+            }
+
+            img.onload = resolve;
+            img.onerror = resolve;
+          })
+      )
+    );
+
+    /*
+     * Give React and the browser a short moment to finish layout.
+     */
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    /*
+     * PDF spacing.
+     */
+    const sideMargin = 10;
+    const topMargin = 10;
+    const bottomMargin = 12;
+    const blockGap = 3;
+
+    /*
+     * Space reserved for the repeated blue header.
+     */
+    const headerHeight = 22;
+
+    /*
+     * Space reserved for the dynamic footer.
+     */
+    const footerHeight = 8;
+
+    const contentWidth = pageWidth - sideMargin * 2;
+
+    const contentTop = topMargin + headerHeight + 4;
+
+    const contentBottom =
+      pageHeight - bottomMargin - footerHeight;
+
+    const availableContentHeight =
+      contentBottom - contentTop;
+
+    /*
+     * Use the first PDF page's blue header as the repeated header.
+     */
+    const firstSourcePage =
+      document.getElementById('pdf-page-1');
+
+    const headerElement =
+      firstSourcePage?.children?.[0];
+
+    let headerImageData = null;
+    let renderedHeaderHeight = headerHeight;
+
+    if (headerElement) {
+      const headerCanvas = await html2canvas(headerElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#2563eb',
+        logging: false
+      });
+
+      headerImageData =
+        headerCanvas.toDataURL('image/jpeg', 0.95);
+
+      renderedHeaderHeight =
+        (headerCanvas.height * pageWidth) /
+        headerCanvas.width;
+
+      /*
+       * Prevent an unexpectedly tall header.
+       */
+      renderedHeaderHeight = Math.min(
+        renderedHeaderHeight,
+        headerHeight
+      );
+    }
+
+    /*
+     * Get all source pages that currently exist in the template.
+     *
+     * We no longer export each source page as one large bitmap.
+     * We only use them as containers for finding content blocks.
+     */
+    const sourcePageIds = [
+      'pdf-page-1',
+      'pdf-page-2',
+      'pdf-page-3',
+      'pdf-page-4'
+    ];
+
+    const sourcePages = sourcePageIds
+      .map((pageId) => document.getElementById(pageId))
+      .filter(Boolean);
+
+    /*
+     * Store the PDF content blocks here.
+     */
+    const contentBlocks = [];
+
+    sourcePages.forEach((sourcePage) => {
+      const children = Array.from(sourcePage.children);
+
+      /*
+       * Existing source page structure:
+       *
+       * child 0 = blue header
+       * child 1 = main content
+       * last child = old footer
+       *
+       * Only collect the children inside the main content area.
+       * Do not collect the old fixed page footer.
+       */
+      const mainContent = children[1];
+
+      if (!mainContent) return;
+
+      Array.from(mainContent.children).forEach((child) => {
+        if (child.offsetHeight > 0) {
+          contentBlocks.push(child);
+        }
+      });
+    });
+
+    if (contentBlocks.length === 0) {
+      throw new Error('No PDF content found');
+    }
+
+    /*
+     * Current vertical position inside the PDF page.
+     */
+    let currentY = contentTop;
+
+    /*
+     * This tracks whether the current PDF page already contains content.
+     */
+    let pageHasContent = false;
+
+    /*
+     * Draw the repeated blue header.
+     */
+    const drawHeader = () => {
+      if (!headerImageData) return;
+
+      pdf.addImage(
+        headerImageData,
+        'JPEG',
+        0,
+        0,
+        pageWidth,
+        renderedHeaderHeight
+      );
+    };
+
+    /*
+     * Footer page numbers are added after every page has been created.
+     */
+    const drawAllFooters = () => {
+      const totalPages =
+        pdf.internal.getNumberOfPages();
+
+      for (
+        let pageNumber = 1;
+        pageNumber <= totalPages;
+        pageNumber += 1
+      ) {
+        pdf.setPage(pageNumber);
+
+        const footerY =
+          pageHeight - bottomMargin + 2;
+
+        pdf.setDrawColor(229, 231, 235);
+
+        pdf.line(
+          sideMargin,
+          footerY - 5,
+          pageWidth - sideMargin,
+          footerY - 5
+        );
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(156, 163, 175);
+
+        pdf.text(
+          `Page ${pageNumber} of ${totalPages} | ServiceDesk Report`,
+          sideMargin,
+          footerY
+        );
+
+        pdf.text(
+          String(report.running_number || ''),
+          pageWidth - sideMargin,
+          footerY,
+          {
+            align: 'right'
+          }
+        );
+      }
+    };
+
+    /*
+     * Start a new PDF page.
+     *
+     * Important:
+     * We only call this when we actually have content to place.
+     * This prevents random blank pages in the middle.
+     */
+    const startNewPage = () => {
+      pdf.addPage();
+
+      drawHeader();
+
+      currentY = contentTop;
+      pageHasContent = false;
+    };
+
+    /*
+     * Draw header on the first PDF page.
+     */
+    drawHeader();
+
+    /*
+     * Render one HTML element into a canvas.
+     */
+    const renderElement = async (element) => {
+      return html2canvas(element, {
+        scale: 2,
         useCORS: true,
         allowTaint: false,
         backgroundColor: '#ffffff',
-        width: 794,
-        logging: false
+        logging: false,
+        windowWidth: 794
       });
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const imgH = canvas.height * pw / canvas.width;
-      if (!isFirstPage) pdf.addPage();
-      isFirstPage = false;
-      let remaining = imgH;
-      let pos = 0;
-      pdf.addImage(imgData, 'JPEG', 0, pos, pw, imgH);
-      remaining -= ph;
-      while (remaining > 0) {
-        pos -= ph;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, pos, pw, imgH);
-        remaining -= ph;
+    };
+
+    /*
+     * Add one canvas to the PDF.
+     *
+     * If the content does not fit on the current page,
+     * it moves completely to the next page.
+     */
+    const addCanvasToPDF = (
+      canvas,
+      forceFullWidth = true
+    ) => {
+      const imageData =
+        canvas.toDataURL('image/jpeg', 0.95);
+
+      let renderWidth;
+
+      if (forceFullWidth) {
+        renderWidth = contentWidth;
+      } else {
+        renderWidth = Math.min(
+          contentWidth,
+          (canvas.width / 794) * pageWidth
+        );
       }
+
+      let renderHeight =
+        (canvas.height * renderWidth) /
+        canvas.width;
+
+      /*
+       * If one single block is taller than one whole page,
+       * scale only that block.
+       *
+       * The whole report is not scaled down.
+       */
+      if (renderHeight > availableContentHeight) {
+        const scaleRatio =
+          availableContentHeight / renderHeight;
+
+        renderHeight *= scaleRatio;
+        renderWidth *= scaleRatio;
+      }
+
+      const remainingHeight =
+        contentBottom - currentY;
+
+      /*
+       * The block does not fit.
+       * Move the complete block to a new page.
+       *
+       * Do not create another page when the current page is empty.
+       * This is one of the protections against blank pages.
+       */
+      if (
+        renderHeight > remainingHeight &&
+        pageHasContent
+      ) {
+        startNewPage();
+      }
+
+      const x =
+        sideMargin +
+        Math.max(
+          0,
+          (contentWidth - renderWidth) / 2
+        );
+
+      pdf.addImage(
+        imageData,
+        'JPEG',
+        x,
+        currentY,
+        renderWidth,
+        renderHeight
+      );
+
+      currentY += renderHeight + blockGap;
+      pageHasContent = true;
+    };
+
+    /*
+     * Some main sections can still be taller than one page.
+     *
+     * When that happens, try to split the section using its direct
+     * child elements instead of cutting the bitmap.
+     */
+    const addElementWithPagination = async (
+      element,
+      depth = 0
+    ) => {
+      if (
+        !element ||
+        element.offsetHeight < 2
+      ) {
+        return;
+      }
+
+      const canvas =
+        await renderElement(element);
+
+      const estimatedHeight =
+        (canvas.height * contentWidth) /
+        canvas.width;
+
+      /*
+       * The complete section fits on one PDF page.
+       */
+      if (
+        estimatedHeight <= availableContentHeight
+      ) {
+        addCanvasToPDF(canvas);
+        return;
+      }
+
+      const childElements = Array.from(
+        element.children
+      ).filter(
+        (child) => child.offsetHeight > 1
+      );
+
+      /*
+       * Stop recursively splitting at a reasonable depth.
+       *
+       * Tables, images or very small leaf elements are scaled
+       * as one block rather than being cut in half.
+       */
+      const cannotSplitFurther =
+        childElements.length === 0 ||
+        depth >= 4 ||
+        element.tagName === 'TABLE' ||
+        element.tagName === 'IMG';
+
+      if (cannotSplitFurther) {
+        addCanvasToPDF(canvas);
+        return;
+      }
+
+      /*
+       * Split an oversized section into its child blocks.
+       */
+      for (const child of childElements) {
+        await addElementWithPagination(
+          child,
+          depth + 1
+        );
+      }
+    };
+
+    /*
+     * Add every content block in its original order.
+     */
+    for (const block of contentBlocks) {
+      await addElementWithPagination(block);
     }
-    wrapper.style.display = 'none';
-    pdf.save(`${report.running_number}.pdf`);
+
+    /*
+     * Add accurate dynamic page numbers after pagination is complete.
+     */
+    drawAllFooters();
+
+    pdf.save(
+      `${report.running_number || 'service-report'}.pdf`
+    );
+
     toast.success('PDF exported');
-  };
+  } catch (error) {
+    console.error('PDF export failed:', error);
+    toast.error('Failed to export PDF');
+  } finally {
+    /*
+     * Always hide the off-screen PDF template again,
+     * including when an error occurs.
+     */
+    wrapper.style.display = 'none';
+  }
+};
 
   const statusIdx = L2_FLOW.indexOf(report.status);
   const isReadOnly = (report.status === 'complete' || report.status === 'billed') && !editing;
@@ -844,8 +1247,7 @@ export default function ReportDetail() {
       </div>
 
       {/* Hidden PDF Template */}
-      <div id="pdf-print-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#111827' }}>
-
+      <div id="pdf-print-area" style={{ display: 'none', position: 'fixed', left: '-10000px', top: 0, width: '794px', fontFamily: 'Arial, sans-serif', color: '#111827', background: '#ffffff', zIndex: -9999 }}>
         {/* Shared header/footer helpers as inline styles */}
         {/* PAGE 1 — Header + Job Info + L1 */}
         <div id="pdf-page-1" style={{ width: '794px', background: 'white' }}>
@@ -972,11 +1374,11 @@ export default function ReportDetail() {
                 {l2Form.l2_job_description &&
               <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>PRE-JOB SITE ASSESSMENT</div>
-                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6' }}>{l2Form.l2_job_description}</div>
+                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{l2Form.l2_job_description}</div>
                     {jobDescPhotos.length > 0 &&
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', marginTop: '8px' }}>
                         {jobDescPhotos.map((url, pi) =>
-                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '200px', height: '160px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
                   )}
                       </div>
                 }
@@ -985,17 +1387,17 @@ export default function ReportDetail() {
                 {l2Form.l2_work_detail &&
               <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>WORK PERFORMED</div>
-                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6' }}>{l2Form.l2_work_detail}</div>
+                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{l2Form.l2_work_detail}</div>
                   </div>
               }
                 {l2Form.l2_remarks &&
               <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>POST-JOB SITE REMARKS</div>
-                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6' }}>{l2Form.l2_remarks}</div>
+                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{l2Form.l2_remarks}</div>
                     {remarksPhotos.length > 0 &&
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', marginTop: '8px' }}>
                         {remarksPhotos.map((url, pi) =>
-                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '200px', height: '160px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
                   )}
                       </div>
                 }
@@ -1039,9 +1441,9 @@ export default function ReportDetail() {
                   {l2Items.map((item, i) => item.photos?.length > 0 &&
               <div key={i} style={{ marginBottom: '10px' }}>
                       <div style={{ fontSize: '10px', fontWeight: '600', color: '#6b7280', marginBottom: '6px' }}>#{i + 1} {item.device_name}</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
                         {item.photos.map((url, pi) =>
-                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '300px', height: '300px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
                   )}
                       </div>
                     </div>
@@ -1060,9 +1462,9 @@ export default function ReportDetail() {
                       <div style={{ fontSize: '12px', fontWeight: '600', color: '#111827' }}>{item.device_type} — {item.device_name}</div>
                       {item.issue_description && <div style={{ fontSize: '12px', color: '#374151' }}>{item.issue_description}</div>}
                       {item.photos?.length > 0 &&
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', marginTop: '6px' }}>
                           {item.photos.map((url, pi) =>
-                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '300px', height: '300px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
                   )}
                         </div>
                 }
@@ -1109,7 +1511,7 @@ export default function ReportDetail() {
                 const fileName = url.split('/').pop() || `Document ${i + 1}`;
                 return isImage ?
                 <div key={i} style={{ marginBottom: '8px' }}>
-                        <img src={url} alt="" crossOrigin="anonymous" style={{ width: '300px', height: '240px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                        <img src={url} alt="" crossOrigin="anonymous" style={{ maxWidth: '100%', width: 'auto', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', display: 'block' }} />
                       </div> :
 
                 <div key={i} style={{ fontSize: '12px', color: '#2563eb', marginBottom: '4px' }}>📎 {fileName}</div>;
@@ -1141,9 +1543,9 @@ export default function ReportDetail() {
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Supporting Photos</span>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
                 {supportingDocs.filter((u) => u.match(/\.(jpg|jpeg|png|gif|webp)$/i)).map((url, i) =>
-              <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '300px', height: '240px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+              <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
               )}
               </div>
             </div>
