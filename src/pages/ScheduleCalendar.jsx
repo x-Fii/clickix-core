@@ -22,6 +22,9 @@ const STATUS_COLORS = {
   resolved:  { dot: 'bg-teal-400',    pill: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
 };
 
+
+
+
 // Map each report to the most relevant date for calendar display
 function getReportDate(report) {
   // Use the most meaningful date in priority order
@@ -179,18 +182,80 @@ export default function ScheduleCalendar() {
                     key={key}
                     onClick={() => setSelectedDay(isSameDay(day, selectedDay) ? null : day)}
                     className={cn(
-                      'min-h-[120px] border-b border-r border-border/40 p-2 text-left transition-colors relative',
+                      'min-h-[120px] border-b border-r border-border/40 px-2 pb-2 pt-10 text-left transition-colors relative flex flex-col items-stretch justify-start',
                       isSelected ? 'bg-primary/10 border-primary/30' : 'hover:bg-muted/40',
                       !inMonth && 'opacity-30',
                     )}
                   >
                     <div className={cn(
-                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold mb-1.5',
+                      'absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold',
                       today ? 'bg-primary text-primary-foreground' : 'text-foreground',
                     )}>
                       {format(day, 'd')}
                     </div>
                     <div className="space-y-0.5">
+
+
+                      
+
+
+
+
+
+
+
+
+                      {format(day, 'yyyy-MM-dd') === '2026-07-01' && (
+                        <>
+                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
+                            Test Event 1
+                          </div>
+                         
+                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
+                            Test Event 1
+                          </div>
+                        </>
+                      )}
+                      {format(day, 'yyyy-MM-dd') === '2026-07-02' && (
+                        <>
+                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
+                            Test Event 1
+                          </div>
+                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
+                            Test Event 1
+                          </div>
+                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
+                            Test Event 1
+                          </div>
+                        </>
+                      )}
+                        {format(day, 'yyyy-MM-dd') === '2026-07-31' && (
+                        <>
+                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
+                            Test Event 1
+                          </div>
+                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
+                            Test Event 1
+                          </div>
+                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
+                            Test Event 1
+                          </div>
+                         
+                        </>
+                      )}
+
+
+
+
+
+
+
+
+
+
+
+                    
+
                       {dayReports.slice(0, 3).map((r, ri) => {
                         const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
                         return (
