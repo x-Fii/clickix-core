@@ -194,68 +194,6 @@ export default function ScheduleCalendar() {
                       {format(day, 'd')}
                     </div>
                     <div className="space-y-0.5">
-
-
-                      
-
-
-
-
-
-
-
-
-                      {format(day, 'yyyy-MM-dd') === '2026-07-01' && (
-                        <>
-                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
-                            Test Event 1
-                          </div>
-                         
-                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
-                            Test Event 1
-                          </div>
-                        </>
-                      )}
-                      {format(day, 'yyyy-MM-dd') === '2026-07-02' && (
-                        <>
-                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
-                            Test Event 1
-                          </div>
-                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
-                            Test Event 1
-                          </div>
-                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
-                            Test Event 1
-                          </div>
-                        </>
-                      )}
-                        {format(day, 'yyyy-MM-dd') === '2026-07-31' && (
-                        <>
-                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
-                            Test Event 1
-                          </div>
-                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
-                            Test Event 1
-                          </div>
-                          <div className="text-[10px] px-1.5 py-0.5 rounded border font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
-                            Test Event 1
-                          </div>
-                         
-                        </>
-                      )}
-
-
-
-
-
-
-
-
-
-
-
-                    
-
                       {dayReports.slice(0, 3).map((r, ri) => {
                         const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
                         return (
