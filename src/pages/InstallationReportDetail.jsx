@@ -40,29 +40,644 @@ export default function InstallationReportDetail() {
   const pdfRef = useRef(null);
   const [exportingPdf, setExportingPdf] = useState(false);
 
-  const handleExportPdf = async () => {
+    const handleExportPdf = async () => {
     if (!pdfRef.current) return;
+
     setExportingPdf(true);
+
+    const wrapper = pdfRef.current;
+
     try {
-      const canvas = await html2canvas(pdfRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      let y = 0;
-      let remaining = imgH;
-      while (remaining > 0) {
-        pdf.addImage(imgData, 'PNG', 0, -y, imgW, imgH);
-        remaining -= pageH;
-        if (remaining > 0) { pdf.addPage(); y += pageH; }
+      /*
+      * Wait for all IR photos, signature and company stamp.
+      */
+      const pdfImages = Array.from(
+        wrapper.querySelectorAll('img')
+      );
+
+      await Promise.all(
+        pdfImages.map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) {
+                resolve();
+                return;
+              }
+
+              img.onload = resolve;
+              img.onerror = resolve;
+            })
+        )
+      );
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, 300)
+      );
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth =
+        pdf.internal.pageSize.getWidth();
+
+      const pageHeight =
+        pdf.internal.pageSize.getHeight();
+
+      const sideMargin = 10;
+      const topMargin = 10;
+      const bottomMargin = 12;
+      const blockGap = 3;
+
+      const headerHeight = 22;
+      const footerHeight = 8;
+
+      const footerSafetyGap = 6;
+      const paginationSafetyGap = 8;
+
+      const contentWidth =
+        pageWidth - sideMargin * 2;
+
+      const contentTop =
+        topMargin + headerHeight + 4;
+
+      const contentBottom =
+        pageHeight -
+        bottomMargin -
+        footerHeight -
+        footerSafetyGap;
+
+      const availableContentHeight =
+        contentBottom - contentTop;
+
+      /*
+      * IR template structure:
+      *
+      * child 0 = blue header
+      * child 1 = main IR content
+      * child 2 = old footer
+      */
+      const headerElement =
+        wrapper.children[0];
+
+      const mainContent =
+        wrapper.children[1];
+
+      if (!headerElement || !mainContent) {
+        throw new Error(
+          'Installation Report PDF template is incomplete'
+        );
       }
-      pdf.save(`${report.report_number}.pdf`);
+
+      /*
+      * Capture the IR header once.
+      * It will be repeated on every PDF page.
+      */
+      const headerCanvas =
+        await html2canvas(headerElement, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: '#2563eb',
+          logging: false,
+          windowWidth: 794
+        });
+
+      const headerImageData =
+        headerCanvas.toDataURL(
+          'image/jpeg',
+          0.95
+        );
+
+      let renderedHeaderHeight =
+        (headerCanvas.height * pageWidth) /
+        headerCanvas.width;
+
+      renderedHeaderHeight = Math.min(
+        renderedHeaderHeight,
+        headerHeight
+      );
+
+      /*
+      * Every direct child inside the main IR content
+      * is treated as a top-level PDF section.
+      */
+      const contentBlocks = Array.from(
+        mainContent.children
+      ).filter(
+        (child) => child.offsetHeight > 1
+      );
+
+      if (contentBlocks.length === 0) {
+        throw new Error(
+          'No Installation Report content found'
+        );
+      }
+
+      let currentY = contentTop;
+      let pageHasContent = false;
+
+      const drawHeader = () => {
+        pdf.addImage(
+          headerImageData,
+          'JPEG',
+          0,
+          0,
+          pageWidth,
+          renderedHeaderHeight
+        );
+      };
+
+      const startNewPage = () => {
+        pdf.addPage();
+
+        drawHeader();
+
+        currentY = contentTop;
+        pageHasContent = false;
+      };
+
+      const drawAllFooters = () => {
+        const totalPages =
+          pdf.internal.getNumberOfPages();
+
+        for (
+          let pageNumber = 1;
+          pageNumber <= totalPages;
+          pageNumber += 1
+        ) {
+          pdf.setPage(pageNumber);
+
+          const footerY =
+            pageHeight - bottomMargin + 2;
+
+          pdf.setDrawColor(229, 231, 235);
+
+          pdf.line(
+            sideMargin,
+            footerY - 5,
+            pageWidth - sideMargin,
+            footerY - 5
+          );
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(8);
+          pdf.setTextColor(156, 163, 175);
+
+          pdf.text(
+            `Page ${pageNumber} of ${totalPages} | Installation Report`,
+            sideMargin,
+            footerY
+          );
+
+          pdf.text(
+            String(report.report_number || ''),
+            pageWidth - sideMargin,
+            footerY,
+            {
+              align: 'right'
+            }
+          );
+        }
+      };
+
+      /*
+      * Capture one IR element.
+      *
+      * The temporary bottom padding prevents
+      * html2canvas from cutting the final text line.
+      */
+      const renderElement = async (element) => {
+        const originalPaddingBottom =
+          element.style.paddingBottom;
+
+        const originalOverflow =
+          element.style.overflow;
+
+        const currentPaddingBottom =
+          parseFloat(
+            window
+              .getComputedStyle(element)
+              .paddingBottom
+          ) || 0;
+
+        element.style.paddingBottom =
+          `${currentPaddingBottom + 6}px`;
+
+        element.style.overflow = 'visible';
+
+        try {
+          return await html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: '#ffffff',
+            logging: false,
+            windowWidth: 794
+          });
+        } finally {
+          element.style.paddingBottom =
+            originalPaddingBottom;
+
+          element.style.overflow =
+            originalOverflow;
+        }
+      };
+
+      /*
+      * Add one complete canvas block to the PDF.
+      *
+      * If it does not fit, move the complete block
+      * to the next page instead of cutting it.
+      */
+      const addCanvasToPDF = (canvas) => {
+        const imageData =
+          canvas.toDataURL(
+            'image/jpeg',
+            0.95
+          );
+
+        let renderWidth = contentWidth;
+
+        let renderHeight =
+          (canvas.height * renderWidth) /
+          canvas.width;
+
+        const safePageHeight =
+          availableContentHeight -
+          paginationSafetyGap;
+
+        /*
+        * Last protection for a block that cannot
+        * be divided any further.
+        */
+        if (renderHeight > safePageHeight) {
+          const scaleRatio =
+            safePageHeight / renderHeight;
+
+          renderHeight *= scaleRatio;
+          renderWidth *= scaleRatio;
+        }
+
+        const remainingHeight =
+          contentBottom -
+          currentY -
+          paginationSafetyGap;
+
+        if (
+          renderHeight > remainingHeight &&
+          pageHasContent
+        ) {
+          startNewPage();
+        }
+
+        const x =
+          sideMargin +
+          Math.max(
+            0,
+            (contentWidth - renderWidth) / 2
+          );
+
+        pdf.addImage(
+          imageData,
+          'JPEG',
+          x,
+          currentY,
+          renderWidth,
+          renderHeight
+        );
+
+        currentY +=
+          renderHeight + blockGap;
+
+        pageHasContent = true;
+      };
+
+      /*
+      * Add a photo container row by row.
+      *
+      * Each PDF row contains up to two photos.
+      * Photos are not cut in the middle.
+      */
+      const addPhotoContainerWithPagination =
+        async (photoContainer) => {
+          const imageElements = Array.from(
+            photoContainer.children
+          ).filter(
+            (child) => child.tagName === 'IMG'
+          );
+
+          if (imageElements.length === 0) {
+            return;
+          }
+
+          const imagesPerRow = 2;
+
+          for (
+            let index = 0;
+            index < imageElements.length;
+            index += imagesPerRow
+          ) {
+            const temporaryRow =
+              document.createElement('div');
+
+            const containerWidth =
+              photoContainer
+                .getBoundingClientRect()
+                .width ||
+              photoContainer.offsetWidth ||
+              730;
+
+            Object.assign(
+              temporaryRow.style,
+              {
+                position: 'fixed',
+                left: '-10000px',
+                top: '0',
+                width: `${containerWidth}px`,
+                display: 'grid',
+                gridTemplateColumns:
+                  'repeat(2, minmax(0, 1fr))',
+                gap: '8px',
+                backgroundColor: '#ffffff'
+              }
+            );
+
+            const rowImages =
+              imageElements.slice(
+                index,
+                index + imagesPerRow
+              );
+
+            rowImages.forEach((image) => {
+              const clone =
+                image.cloneNode(true);
+
+              Object.assign(clone.style, {
+                width: '100%',
+                height: '260px',
+                maxHeight: '260px',
+                objectFit: 'contain',
+                border:
+                  '1px solid #e5e7eb',
+                borderRadius: '4px',
+                backgroundColor: '#ffffff',
+                display: 'block'
+              });
+
+              temporaryRow.appendChild(clone);
+            });
+
+            wrapper.appendChild(temporaryRow);
+
+            const clonedImages =
+              Array.from(
+                temporaryRow.querySelectorAll(
+                  'img'
+                )
+              );
+
+            await Promise.all(
+              clonedImages.map(
+                (img) =>
+                  new Promise((resolve) => {
+                    if (img.complete) {
+                      resolve();
+                      return;
+                    }
+
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                  })
+              )
+            );
+
+            const rowCanvas =
+              await renderElement(
+                temporaryRow
+              );
+
+            temporaryRow.remove();
+
+            addCanvasToPDF(rowCanvas);
+          }
+        };
+
+      /*
+      * Add an IR element using the same recursive
+      * pagination logic used by the Service Report.
+      */
+      const addElementWithPagination =
+        async (element, depth = 0) => {
+          if (
+            !element ||
+            element.offsetHeight < 2
+          ) {
+            return;
+          }
+
+          const directChildren =
+            Array.from(element.children);
+
+          const computedStyle =
+            window.getComputedStyle(element);
+
+          const directImages =
+            directChildren.filter(
+              (child) =>
+                child.tagName === 'IMG'
+            );
+
+          /*
+          * IR currently uses flex photo containers,
+          * while SR mainly uses grid containers.
+          *
+          * Support both.
+          */
+          const isPhotoContainer =
+            directChildren.length > 0 &&
+            directImages.length ===
+              directChildren.length &&
+            (
+              computedStyle.display ===
+                'flex' ||
+              computedStyle.display ===
+                'grid'
+            );
+
+          if (isPhotoContainer) {
+            await addPhotoContainerWithPagination(
+              element
+            );
+
+            return;
+          }
+
+          /*
+          * Check whether this section contains
+          * a direct photo container.
+          *
+          * Such a section must be split so that
+          * its text can use the current page space
+          * while photos can continue on later pages.
+          */
+          const containsPhotoContainer =
+            directChildren.some((child) => {
+              const childStyle =
+                window.getComputedStyle(child);
+
+              const grandchildren =
+                Array.from(child.children);
+
+              return (
+                grandchildren.length > 0 &&
+                grandchildren.every(
+                  (grandchild) =>
+                    grandchild.tagName === 'IMG'
+                ) &&
+                (
+                  childStyle.display ===
+                    'flex' ||
+                  childStyle.display ===
+                    'grid'
+                )
+              );
+            });
+
+          const canvas =
+            await renderElement(element);
+
+          const estimatedHeight =
+            (canvas.height * contentWidth) /
+            canvas.width;
+
+          /*
+          * A normal section that fits on one page
+          * can be added as one complete block.
+          *
+          * Sections containing photos continue
+          * downward so they can be separated.
+          */
+          if (
+            !containsPhotoContainer &&
+            estimatedHeight <=
+              availableContentHeight -
+                paginationSafetyGap
+          ) {
+            addCanvasToPDF(canvas);
+            return;
+          }
+
+          const childElements =
+            directChildren.filter(
+              (child) =>
+                child.offsetHeight > 1
+            );
+
+          const keepTogether =
+            element.dataset
+              .pdfKeepTogether === 'true';
+
+          const cannotSplitFurther =
+            keepTogether ||
+            childElements.length === 0 ||
+            depth >= 7 ||
+            element.tagName === 'TABLE' ||
+            element.tagName === 'IMG';
+
+          if (cannotSplitFurther) {
+            addCanvasToPDF(canvas);
+            return;
+          }
+
+          for (
+            let index = 0;
+            index < childElements.length;
+            index += 1
+          ) {
+            const child =
+              childElements[index];
+
+            const childCanvas =
+              await renderElement(child);
+
+            const childHeight =
+              (
+                childCanvas.height *
+                contentWidth
+              ) / childCanvas.width;
+
+            const remainingHeight =
+              contentBottom -
+              currentY -
+              paginationSafetyGap;
+
+            /*
+            * Prevent a short blue heading from being
+            * left alone at the bottom of a page.
+            */
+            const isShortHeading =
+              childHeight < 18 &&
+              index <
+                childElements.length - 1;
+
+            if (
+              isShortHeading &&
+              remainingHeight < 45 &&
+              pageHasContent
+            ) {
+              startNewPage();
+            }
+
+            await addElementWithPagination(
+              child,
+              depth + 1
+            );
+          }
+        };
+
+      /*
+      * Draw the first IR header.
+      */
+      drawHeader();
+
+      /*
+      * Add every IR section in its original order.
+      */
+      for (const block of contentBlocks) {
+        await addElementWithPagination(block);
+      }
+
+      /*
+      * Add accurate page numbers after pagination.
+      */
+      drawAllFooters();
+
+      pdf.save(
+        `${report.report_number || 'installation-report'}.pdf`
+      );
+
+      toast({
+        title: 'PDF exported'
+      });
+    } catch (error) {
+      console.error(
+        'Installation PDF export failed:',
+        error
+      );
+
+      toast({
+        title: 'Failed to export PDF',
+        variant: 'destructive'
+      });
     } finally {
       setExportingPdf(false);
     }
   };
+
+
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['installation-report', id],
@@ -409,7 +1024,16 @@ export default function InstallationReportDetail() {
                           <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '5px', fontWeight: '600' }}>{item.device_name} Photos:</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {item.photos.map((url, pi) => (
-                              <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '220px', height: '165px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                              <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{
+                                                                                                width: '220px',
+                                                                                                height: 'auto',
+                                                                                                maxHeight: '260px',
+                                                                                                objectFit: 'contain',
+                                                                                                border: '1px solid #e5e7eb',
+                                                                                                borderRadius: '4px',
+                                                                                                background: '#ffffff',
+                                                                                                display: 'block'
+                                                                                            }} />
                             ))}
                           </div>
                         </div>
@@ -463,7 +1087,16 @@ export default function InstallationReportDetail() {
                           <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '5px', fontWeight: '600' }}>{item.device_name} Photos:</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {item.photos.map((url, pi) => (
-                              <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '220px', height: '165px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                              <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{
+                                                                                                width: '220px',
+                                                                                                height: 'auto',
+                                                                                                maxHeight: '260px',
+                                                                                                objectFit: 'contain',
+                                                                                                border: '1px solid #e5e7eb',
+                                                                                                borderRadius: '4px',
+                                                                                                background: '#ffffff',
+                                                                                                display: 'block'
+                                                                                            }} />
                             ))}
                           </div>
                         </div>
@@ -485,7 +1118,16 @@ export default function InstallationReportDetail() {
               {report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {report.pre_job_assessment_photos.map((url, i) => (
-                    <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '200px', height: '160px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                    <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
+                                                                                  width: '220px',
+                                                                                  height: 'auto',
+                                                                                  maxHeight: '260px',
+                                                                                  objectFit: 'contain',
+                                                                                  border: '1px solid #e5e7eb',
+                                                                                  borderRadius: '4px',
+                                                                                  background: '#ffffff',
+                                                                                  display: 'block'
+                                                                                }} />
                   ))}
                 </div>
               )}
@@ -510,7 +1152,16 @@ export default function InstallationReportDetail() {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {report.supporting_photos.map((url, i) => (
-                  <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '280px', height: '210px', objectFit: 'cover', border: '1px solid #e5e7eb', borderRadius: '4px' }} />
+                  <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
+                                                                                width: '220px',
+                                                                                height: 'auto',
+                                                                                maxHeight: '260px',
+                                                                                objectFit: 'contain',
+                                                                                border: '1px solid #e5e7eb',
+                                                                                borderRadius: '4px',
+                                                                                background: '#ffffff',
+                                                                                display: 'block'
+                                                                              }} />
                 ))}
               </div>
             </div>
@@ -518,7 +1169,10 @@ export default function InstallationReportDetail() {
 
           {/* Client Signature */}
           {(report.ack_name || report.ack_phone || report.ack_signature) && (
-            <div style={{ marginTop: '24px' }}>
+            
+            <div 
+            data-pdf-keep-together="true"
+            style={{ marginTop: '24px' }}>
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '16px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Client Signature</span>
               </div>
