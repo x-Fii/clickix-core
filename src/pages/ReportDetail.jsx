@@ -545,11 +545,48 @@ export default function ReportDetail() {
      */
     drawHeader();
 
-    /*
-     * Render one HTML element into a canvas.
-     */
+   
     const renderElement = async (element) => {
-      return html2canvas(element, {
+    /*
+    * html2canvas can crop the bottom pixels of text when the
+    * canvas ends exactly at the element boundary.
+    *
+    * Temporarily add a small amount of bottom padding before
+    * rendering, then restore the original styles afterwards.
+    */
+    const originalPaddingBottom =
+      element.style.paddingBottom;
+
+    const originalOverflow =
+      element.style.overflow;
+
+    const computedStyle =
+      window.getComputedStyle(element);
+
+    const currentPaddingBottom =
+      parseFloat(computedStyle.paddingBottom) || 0;
+
+    /*
+    * Extra HTML pixels, not PDF millimetres.
+    */
+    const canvasBottomPadding = 10;
+
+    element.style.paddingBottom =
+      `${currentPaddingBottom + canvasBottomPadding}px`;
+
+    element.style.overflow = 'visible';
+
+    try {
+      /*
+      * Wait for the browser to apply the temporary padding.
+      */
+      await new Promise((resolve) =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(resolve)
+        )
+      );
+
+      return await html2canvas(element, {
         scale: 2,
         useCORS: true,
         allowTaint: false,
@@ -557,7 +594,17 @@ export default function ReportDetail() {
         logging: false,
         windowWidth: 794
       });
-    };
+    } finally {
+      /*
+      * Restore the original HTML styles after rendering.
+      */
+      element.style.paddingBottom =
+        originalPaddingBottom;
+
+      element.style.overflow =
+        originalOverflow;
+    }
+  };
 
     /*
      * Add one canvas to the PDF.
