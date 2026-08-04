@@ -351,8 +351,13 @@ export default function ReportDetail() {
 
     const contentTop = topMargin + headerHeight + 4;
 
+    const footerSafetyGap = 5;
+
     const contentBottom =
-      pageHeight - bottomMargin - footerHeight;
+      pageHeight -
+      bottomMargin -
+      footerHeight -
+      footerSafetyGap;
 
     const availableContentHeight =
       contentBottom - contentTop;
@@ -631,6 +636,107 @@ export default function ReportDetail() {
       pageHasContent = true;
     };
 
+    const addPhotoGridWithPagination = async (
+      gridElement
+    ) => {
+      const imageElements = Array.from(
+        gridElement.children
+      ).filter(
+        (child) => child.tagName === 'IMG'
+      );
+
+      if (imageElements.length === 0) {
+        return;
+      }
+
+      const imagesPerRow = 2;
+
+      for (
+        let index = 0;
+        index < imageElements.length;
+        index += imagesPerRow
+      ) {
+        /*
+        * Create one temporary row containing up to two photos.
+        */
+        const temporaryRow =
+          document.createElement('div');
+
+        const gridWidth =
+          gridElement.getBoundingClientRect().width ||
+          gridElement.offsetWidth ||
+          730;
+
+        Object.assign(temporaryRow.style, {
+          position: 'fixed',
+          left: '-10000px',
+          top: '0',
+          width: `${gridWidth}px`,
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(2, minmax(0, 1fr))',
+          gap: '8px',
+          backgroundColor: '#ffffff'
+        });
+
+        const rowImages = imageElements.slice(
+          index,
+          index + imagesPerRow
+        );
+
+        rowImages.forEach((image) => {
+          const clone = image.cloneNode(true);
+
+          Object.assign(clone.style, {
+            width: '100%',
+            height: '260px',
+            maxHeight: '260px',
+            objectFit: 'contain',
+            border: '1px solid #e5e7eb',
+            borderRadius: '4px',
+            backgroundColor: '#ffffff',
+            display: 'block'
+          });
+
+          temporaryRow.appendChild(clone);
+        });
+
+        wrapper.appendChild(temporaryRow);
+
+        /*
+        * Wait for the cloned images to finish loading.
+        */
+        const clonedImages = Array.from(
+          temporaryRow.querySelectorAll('img')
+        );
+
+        await Promise.all(
+          clonedImages.map(
+            (img) =>
+              new Promise((resolve) => {
+                if (img.complete) {
+                  resolve();
+                  return;
+                }
+
+                img.onload = resolve;
+                img.onerror = resolve;
+              })
+          )
+        );
+
+        const rowCanvas =
+          await renderElement(temporaryRow);
+
+        temporaryRow.remove();
+
+        /*
+        * Add this two-photo row as one PDF block.
+        */
+        addCanvasToPDF(rowCanvas);
+      }
+    };
+
     /*
      * Some main sections can still be taller than one page.
      *
@@ -645,6 +751,31 @@ export default function ReportDetail() {
         !element ||
         element.offsetHeight < 2
       ) {
+        return;
+      }
+
+      /*
+      * Detect a grid whose direct children are all images.
+      */
+      const directChildren =
+        Array.from(element.children);
+
+      const computedStyle =
+        window.getComputedStyle(element);
+
+      const isPhotoGrid =
+        computedStyle.display === 'grid' &&
+        directChildren.length > 0 &&
+        directChildren.every(
+          (child) => child.tagName === 'IMG'
+        );
+
+      /*
+      * Add photo grids row by row instead of splitting
+      * every photo into a separate full-width PDF block.
+      */
+      if (isPhotoGrid) {
+        await addPhotoGridWithPagination(element);
         return;
       }
 
@@ -665,11 +796,10 @@ export default function ReportDetail() {
         return;
       }
 
-      const childElements = Array.from(
-        element.children
-      ).filter(
-        (child) => child.offsetHeight > 1
-      );
+      const childElements =
+        directChildren.filter(
+          (child) => child.offsetHeight > 1
+        );
 
       /*
        * Stop recursively splitting at a reasonable depth.
@@ -679,7 +809,7 @@ export default function ReportDetail() {
        */
       const cannotSplitFurther =
         childElements.length === 0 ||
-        depth >= 4 ||
+        depth >= 5 ||
         element.tagName === 'TABLE' ||
         element.tagName === 'IMG';
 
