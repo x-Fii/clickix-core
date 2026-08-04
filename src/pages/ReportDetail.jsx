@@ -351,9 +351,7 @@ export default function ReportDetail() {
 
     const contentTop = topMargin + headerHeight + 4;
 
-    const footerSafetyGap = 6;
-
-    const paginationSafetyGap = 8;
+    const footerSafetyGap = 5;
 
     const contentBottom =
       pageHeight -
@@ -587,23 +585,22 @@ export default function ReportDetail() {
         (canvas.height * renderWidth) /
         canvas.width;
 
-      const safeAvailableContentHeight =
-        availableContentHeight -
-        paginationSafetyGap;
-
-      if (renderHeight > safeAvailableContentHeight) {
+      /*
+       * If one single block is taller than one whole page,
+       * scale only that block.
+       *
+       * The whole report is not scaled down.
+       */
+      if (renderHeight > availableContentHeight) {
         const scaleRatio =
-          safeAvailableContentHeight /
-          renderHeight;
+          availableContentHeight / renderHeight;
 
         renderHeight *= scaleRatio;
         renderWidth *= scaleRatio;
       }
 
       const remainingHeight =
-        contentBottom -
-        currentY -
-        paginationSafetyGap;
+        contentBottom - currentY;
 
       /*
        * The block does not fit.
@@ -789,20 +786,11 @@ export default function ReportDetail() {
         (canvas.height * contentWidth) /
         canvas.width;
 
-      
+      /*
+       * The complete section fits on one PDF page.
+       */
       if (
-        estimatedHeight >
-          availableContentHeight -
-            paginationSafetyGap &&
-        pageHasContent
-      ) {
-        startNewPage();
-      }
-
-      if (
-        estimatedHeight <=
-        availableContentHeight -
-          paginationSafetyGap
+        estimatedHeight <= availableContentHeight
       ) {
         addCanvasToPDF(canvas);
         return;
@@ -830,41 +818,10 @@ export default function ReportDetail() {
         return;
       }
 
-      for (
-        let index = 0;
-        index < childElements.length;
-        index += 1
-      ) {
-        const child = childElements[index];
-
-        /*
-        * A blue section heading is usually short.
-        * Do not place it near the bottom by itself.
-        */
-        const childCanvas =
-          await renderElement(child);
-
-        const childHeight =
-          (childCanvas.height * contentWidth) /
-          childCanvas.width;
-
-        const remainingHeight =
-          contentBottom -
-          currentY -
-          paginationSafetyGap;
-
-        const isShortHeading =
-          childHeight < 18 &&
-          index < childElements.length - 1;
-
-        if (
-          isShortHeading &&
-          remainingHeight < 45 &&
-          pageHasContent
-        ) {
-          startNewPage();
-        }
-
+      /*
+       * Split an oversized section into its child blocks.
+       */
+      for (const child of childElements) {
         await addElementWithPagination(
           child,
           depth + 1
