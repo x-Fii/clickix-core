@@ -351,9 +351,9 @@ export default function ReportDetail() {
 
     const contentTop = topMargin + headerHeight + 4;
 
-    const footerSafetyGap = 5;
+    const footerSafetyGap = 6;
 
-    const pageBreakTolerance = 6;
+    const paginationSafetyGap = 8;
 
     const contentBottom =
       pageHeight -
@@ -545,48 +545,11 @@ export default function ReportDetail() {
      */
     drawHeader();
 
-   
+    /*
+     * Render one HTML element into a canvas.
+     */
     const renderElement = async (element) => {
-    /*
-    * html2canvas can crop the bottom pixels of text when the
-    * canvas ends exactly at the element boundary.
-    *
-    * Temporarily add a small amount of bottom padding before
-    * rendering, then restore the original styles afterwards.
-    */
-    const originalPaddingBottom =
-      element.style.paddingBottom;
-
-    const originalOverflow =
-      element.style.overflow;
-
-    const computedStyle =
-      window.getComputedStyle(element);
-
-    const currentPaddingBottom =
-      parseFloat(computedStyle.paddingBottom) || 0;
-
-    /*
-    * Extra HTML pixels, not PDF millimetres.
-    */
-    const canvasBottomPadding = 10;
-
-    element.style.paddingBottom =
-      `${currentPaddingBottom + canvasBottomPadding}px`;
-
-    element.style.overflow = 'visible';
-
-    try {
-      /*
-      * Wait for the browser to apply the temporary padding.
-      */
-      await new Promise((resolve) =>
-        requestAnimationFrame(() =>
-          requestAnimationFrame(resolve)
-        )
-      );
-
-      return await html2canvas(element, {
+      return html2canvas(element, {
         scale: 2,
         useCORS: true,
         allowTaint: false,
@@ -594,17 +557,7 @@ export default function ReportDetail() {
         logging: false,
         windowWidth: 794
       });
-    } finally {
-      /*
-      * Restore the original HTML styles after rendering.
-      */
-      element.style.paddingBottom =
-        originalPaddingBottom;
-
-      element.style.overflow =
-        originalOverflow;
-    }
-  };
+    };
 
     /*
      * Add one canvas to the PDF.
@@ -636,7 +589,7 @@ export default function ReportDetail() {
 
       const safeAvailableContentHeight =
         availableContentHeight -
-        pageBreakTolerance;
+        paginationSafetyGap;
 
       if (renderHeight > safeAvailableContentHeight) {
         const scaleRatio =
@@ -650,7 +603,7 @@ export default function ReportDetail() {
       const remainingHeight =
         contentBottom -
         currentY -
-        pageBreakTolerance;
+        paginationSafetyGap;
 
       /*
        * The block does not fit.
@@ -836,11 +789,20 @@ export default function ReportDetail() {
         (canvas.height * contentWidth) /
         canvas.width;
 
+      
+      if (
+        estimatedHeight >
+          availableContentHeight -
+            paginationSafetyGap &&
+        pageHasContent
+      ) {
+        startNewPage();
+      }
 
       if (
         estimatedHeight <=
         availableContentHeight -
-          pageBreakTolerance
+          paginationSafetyGap
       ) {
         addCanvasToPDF(canvas);
         return;
@@ -866,10 +828,41 @@ export default function ReportDetail() {
         return;
       }
 
-      /*
-       * Split an oversized section into its child blocks.
-       */
-      for (const child of childElements) {
+      for (
+        let index = 0;
+        index < childElements.length;
+        index += 1
+      ) {
+        const child = childElements[index];
+
+        /*
+        * A blue section heading is usually short.
+        * Do not place it near the bottom by itself.
+        */
+        const childCanvas =
+          await renderElement(child);
+
+        const childHeight =
+          (childCanvas.height * contentWidth) /
+          childCanvas.width;
+
+        const remainingHeight =
+          contentBottom -
+          currentY -
+          paginationSafetyGap;
+
+        const isShortHeading =
+          childHeight < 18 &&
+          index < childElements.length - 1;
+
+        if (
+          isShortHeading &&
+          remainingHeight < 45 &&
+          pageHasContent
+        ) {
+          startNewPage();
+        }
+
         await addElementWithPagination(
           child,
           depth + 1
@@ -1539,86 +1532,149 @@ export default function ReportDetail() {
               {/* Work Details */}
               <div style={{ marginBottom: '20px' }}>
                 <div data-pdf-keep-together="true">
-                  <div
-                    style={{
-                      background: '#eff6ff',
-                      borderLeft: '4px solid #2563eb',
-                      padding: '6px 12px',
-                      marginBottom: '12px'
-                    }}
-                  >
-                    <span
+                <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Work Details</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', marginBottom: '12px' }}>
+                  {[['TECHNICIAN', l2Form.l2_attended_staff_name], ['TECHNICIAN ID', l2Form.l2_attended_staff_id], ['WORK ORDER', l2Form.l2_work_order_number], ['SITE PIC', l2Form.l2_site_pic_name]].filter(([, v]) => v).map(([k, v]) =>
+                <div key={k}>
+                      <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
+                      <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>
+                    </div>
+                )}
+                </div>
+                </div>
+                {l2Form.l2_job_description && (
+                <div style={{ marginBottom: '12px' }}>
+                  <div data-pdf-keep-together="true">
+                    <div
                       style={{
-                        fontSize: '12px',
+                        fontSize: '9px',
                         fontWeight: '700',
-                        color: '#1d4ed8'
+                        color: '#6b7280',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginBottom: '4px'
                       }}
                     >
-                      Work Details
-                    </span>
+                      PRE-JOB SITE ASSESSMENT
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: '#111827',
+                        lineHeight: '1.6',
+                        whiteSpace: 'pre-wrap',
+                        overflowWrap: 'anywhere'
+                      }}
+                    >
+                      {l2Form.l2_job_description}
+                    </div>
                   </div>
 
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '12px 24px',
-                      marginBottom: '12px'
-                    }}
-                  >
-                    {[
-                      ['TECHNICIAN', l2Form.l2_attended_staff_name],
-                      ['TECHNICIAN ID', l2Form.l2_attended_staff_id],
-                      ['WORK ORDER', l2Form.l2_work_order_number],
-                      ['SITE PIC', l2Form.l2_site_pic_name]
-                    ]
-                      .filter(([, value]) => value)
-                      .map(([key, value]) => (
-                        <div key={key}>
-                          <div
-                            style={{
+                  {jobDescPhotos.length > 0 && (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        gap: '8px',
+                        marginTop: '8px'
+                      }}
+                    >
+                      {jobDescPhotos.map((url, pi) => (
+                        <img
+                          key={pi}
+                          src={url}
+                          alt=""
+                          crossOrigin="anonymous"
+                          style={{
+                            width: '100%',
+                            height: 'auto',
+                            maxHeight: '260px',
+                            objectFit: 'contain',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '4px',
+                            background: '#ffffff',
+                            display: 'block'
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+                {l2Form.l2_work_detail &&
+              <div style={{ marginBottom: '12px' }}>
+                 <div data-pdf-keep-together="true">
+                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>WORK PERFORMED</div>
+                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{l2Form.l2_work_detail}</div>
+                  </div>
+                  </div>
+              }
+
+               {l2Form.l2_remarks &&
+              <div style={{ marginBottom: '12px' }}>
+
+                  <div data-pdf-keep-together="true">
+                      <div
+                          style={{
                               fontSize: '9px',
                               fontWeight: '700',
                               color: '#6b7280',
                               textTransform: 'uppercase',
                               letterSpacing: '0.5px',
-                              marginBottom: '2px'
-                            }}
-                          >
-                            {key}
-                          </div>
-
-                          <div
-                            style={{
-                              fontSize: '12px',
-                              color: '#111827'
-                            }}
-                          >
-                            {value}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {l2Form.l2_work_detail &&
-              <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>WORK PERFORMED</div>
-                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{l2Form.l2_work_detail}</div>
-                  </div>
-              }
-                {l2Form.l2_remarks &&
-              <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>POST-JOB SITE REMARKS</div>
-                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{l2Form.l2_remarks}</div>
-                    {remarksPhotos.length > 0 &&
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', marginTop: '8px' }}>
-                        {remarksPhotos.map((url, pi) =>
-                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
-                  )}
+                              marginBottom: '4px'
+                          }}
+                      >
+                          POST-JOB SITE REMARKS
                       </div>
-                }
+
+                      <div
+                          style={{
+                              fontSize: '12px',
+                              color: '#111827',
+                              lineHeight: '1.6',
+                              whiteSpace: 'pre-wrap',
+                              overflowWrap: 'anywhere'
+                          }}
+                      >
+                          {l2Form.l2_remarks}
+                      </div>
                   </div>
+
+                  {remarksPhotos.length > 0 &&
+                  <div
+                      style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                          gap: '8px',
+                          marginTop: '8px'
+                      }}
+                  >
+                      {remarksPhotos.map((url, pi) =>
+                          <img
+                              key={pi}
+                              src={url}
+                              alt=""
+                              crossOrigin="anonymous"
+                              style={{
+                                  width: '100%',
+                                  height: 'auto',
+                                  maxHeight: '260px',
+                                  objectFit: 'contain',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '4px',
+                                  background: '#ffffff',
+                                  display: 'block'
+                              }}
+                          />
+                      )}
+                  </div>
+                  }
+
+              </div>
               }
               </div>
 
@@ -1784,9 +1840,11 @@ export default function ReportDetail() {
           </div>
 
           <div style={{ padding: '24px 32px 32px' }}>
+            <div data-pdf-keep-together="true">
             <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '16px' }}>
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Client Signature</span>
             </div>
+            
             <div style={{ marginBottom: '16px' }}>
               {signature || report.ack_signature ?
               <img src={signature || report.ack_signature} alt="signature" crossOrigin="anonymous" style={{ maxWidth: '220px', maxHeight: '120px', display: 'block', marginBottom: '12px' }} /> :
@@ -1803,6 +1861,7 @@ export default function ReportDetail() {
                 <img src={companyStamp || report.ack_company_stamp} alt="stamp" crossOrigin="anonymous" style={{ maxWidth: '200px', maxHeight: '120px', objectFit: 'contain' }} />
               </div>
             }
+          </div>
           </div>
 
           {/* Footer */}
