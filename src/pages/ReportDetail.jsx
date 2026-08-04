@@ -793,6 +793,20 @@ export default function ReportDetail() {
           (child) => child.tagName === 'IMG'
         );
 
+      const containsPhotoGrid =
+        directChildren.some((child) => {
+          const childStyle = window.getComputedStyle(child);
+          const grandchildren = Array.from(child.children);
+
+          return (
+            childStyle.display === 'grid' &&
+            grandchildren.length > 0 &&
+            grandchildren.every(
+              (grandchild) => grandchild.tagName === 'IMG'
+            )
+          );
+        });
+
       /*
       * Add photo grids row by row instead of splitting
       * every photo into a separate full-width PDF block.
@@ -810,9 +824,10 @@ export default function ReportDetail() {
         canvas.width;
 
       if (
+        !containsPhotoGrid &&
         estimatedHeight <=
-        availableContentHeight -
-          paginationSafetyGap
+          availableContentHeight -
+            paginationSafetyGap
       ) {
         addCanvasToPDF(canvas);
         return;
