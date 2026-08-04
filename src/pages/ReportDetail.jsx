@@ -351,9 +351,9 @@ export default function ReportDetail() {
 
     const contentTop = topMargin + headerHeight + 4;
 
-    const footerSafetyGap = 12;
+    const footerSafetyGap = 6;
 
-    const paginationSafetyGap = 15;
+    const paginationSafetyGap = 8;
 
     const contentBottom =
       pageHeight -
@@ -791,6 +791,15 @@ export default function ReportDetail() {
 
       
       if (
+        estimatedHeight >
+          availableContentHeight -
+            paginationSafetyGap &&
+        pageHasContent
+      ) {
+        startNewPage();
+      }
+
+      if (
         estimatedHeight <=
         availableContentHeight -
           paginationSafetyGap
@@ -821,10 +830,41 @@ export default function ReportDetail() {
         return;
       }
 
-      /*
-       * Split an oversized section into its child blocks.
-       */
-      for (const child of childElements) {
+      for (
+        let index = 0;
+        index < childElements.length;
+        index += 1
+      ) {
+        const child = childElements[index];
+
+        /*
+        * A blue section heading is usually short.
+        * Do not place it near the bottom by itself.
+        */
+        const childCanvas =
+          await renderElement(child);
+
+        const childHeight =
+          (childCanvas.height * contentWidth) /
+          childCanvas.width;
+
+        const remainingHeight =
+          contentBottom -
+          currentY -
+          paginationSafetyGap;
+
+        const isShortHeading =
+          childHeight < 18 &&
+          index < childElements.length - 1;
+
+        if (
+          isShortHeading &&
+          remainingHeight < 45 &&
+          pageHasContent
+        ) {
+          startNewPage();
+        }
+
         await addElementWithPagination(
           child,
           depth + 1
