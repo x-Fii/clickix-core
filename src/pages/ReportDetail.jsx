@@ -351,7 +351,9 @@ export default function ReportDetail() {
 
     const contentTop = topMargin + headerHeight + 4;
 
-    const footerSafetyGap = 5;
+    const footerSafetyGap = 12;
+
+    const paginationSafetyGap = 15;
 
     const contentBottom =
       pageHeight -
@@ -585,22 +587,23 @@ export default function ReportDetail() {
         (canvas.height * renderWidth) /
         canvas.width;
 
-      /*
-       * If one single block is taller than one whole page,
-       * scale only that block.
-       *
-       * The whole report is not scaled down.
-       */
-      if (renderHeight > availableContentHeight) {
+      const safeAvailableContentHeight =
+        availableContentHeight -
+        paginationSafetyGap;
+
+      if (renderHeight > safeAvailableContentHeight) {
         const scaleRatio =
-          availableContentHeight / renderHeight;
+          safeAvailableContentHeight /
+          renderHeight;
 
         renderHeight *= scaleRatio;
         renderWidth *= scaleRatio;
       }
 
       const remainingHeight =
-        contentBottom - currentY;
+        contentBottom -
+        currentY -
+        paginationSafetyGap;
 
       /*
        * The block does not fit.
@@ -786,11 +789,11 @@ export default function ReportDetail() {
         (canvas.height * contentWidth) /
         canvas.width;
 
-      /*
-       * The complete section fits on one PDF page.
-       */
+      
       if (
-        estimatedHeight <= availableContentHeight
+        estimatedHeight <=
+        availableContentHeight -
+          paginationSafetyGap
       ) {
         addCanvasToPDF(canvas);
         return;
