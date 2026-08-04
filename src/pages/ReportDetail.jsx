@@ -545,11 +545,24 @@ export default function ReportDetail() {
      */
     drawHeader();
 
-    /*
-     * Render one HTML element into a canvas.
-     */
     const renderElement = async (element) => {
-      return html2canvas(element, {
+    /*
+    * html2canvas sometimes cuts the bottom of the last text line.
+    * Temporarily add a small bottom padding before capturing.
+    */
+    const originalPaddingBottom = element.style.paddingBottom;
+    const originalOverflow = element.style.overflow;
+
+    const currentPaddingBottom =
+      parseFloat(window.getComputedStyle(element).paddingBottom) || 0;
+
+    element.style.paddingBottom =
+      `${currentPaddingBottom + 6}px`;
+
+    element.style.overflow = 'visible';
+
+    try {
+      return await html2canvas(element, {
         scale: 2,
         useCORS: true,
         allowTaint: false,
@@ -557,7 +570,14 @@ export default function ReportDetail() {
         logging: false,
         windowWidth: 794
       });
-    };
+    } finally {
+      /*
+      * Restore the original styles after capturing.
+      */
+      element.style.paddingBottom = originalPaddingBottom;
+      element.style.overflow = originalOverflow;
+    }
+  };
 
     /*
      * Add one canvas to the PDF.
@@ -788,16 +808,6 @@ export default function ReportDetail() {
       const estimatedHeight =
         (canvas.height * contentWidth) /
         canvas.width;
-
-      
-      if (
-        estimatedHeight >
-          availableContentHeight -
-            paginationSafetyGap &&
-        pageHasContent
-      ) {
-        startNewPage();
-      }
 
       if (
         estimatedHeight <=
