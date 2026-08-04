@@ -851,13 +851,11 @@ export default function ReportDetail() {
           (child) => child.offsetHeight > 1
         );
 
-      /*
-       * Stop recursively splitting at a reasonable depth.
-       *
-       * Tables, images or very small leaf elements are scaled
-       * as one block rather than being cut in half.
-       */
+      const keepTogether =
+        element.dataset.pdfKeepTogether === 'true';
+
       const cannotSplitFurther =
+        keepTogether ||
         childElements.length === 0 ||
         depth >= 5 ||
         element.tagName === 'TABLE' ||
@@ -1540,30 +1538,69 @@ export default function ReportDetail() {
             <div style={{ padding: '24px 32px 32px' }}>
               {/* Work Details */}
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Work Details</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', marginBottom: '12px' }}>
-                  {[['TECHNICIAN', l2Form.l2_attended_staff_name], ['TECHNICIAN ID', l2Form.l2_attended_staff_id], ['WORK ORDER', l2Form.l2_work_order_number], ['SITE PIC', l2Form.l2_site_pic_name]].filter(([, v]) => v).map(([k, v]) =>
-                <div key={k}>
-                      <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
-                      <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>
-                    </div>
-                )}
-                </div>
-                {l2Form.l2_job_description &&
-              <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>PRE-JOB SITE ASSESSMENT</div>
-                    <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.6', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{l2Form.l2_job_description}</div>
-                    {jobDescPhotos.length > 0 &&
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', marginTop: '8px' }}>
-                        {jobDescPhotos.map((url, pi) =>
-                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
-                  )}
-                      </div>
-                }
+                <div data-pdf-keep-together="true">
+                  <div
+                    style={{
+                      background: '#eff6ff',
+                      borderLeft: '4px solid #2563eb',
+                      padding: '6px 12px',
+                      marginBottom: '12px'
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        color: '#1d4ed8'
+                      }}
+                    >
+                      Work Details
+                    </span>
                   </div>
-              }
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '12px 24px',
+                      marginBottom: '12px'
+                    }}
+                  >
+                    {[
+                      ['TECHNICIAN', l2Form.l2_attended_staff_name],
+                      ['TECHNICIAN ID', l2Form.l2_attended_staff_id],
+                      ['WORK ORDER', l2Form.l2_work_order_number],
+                      ['SITE PIC', l2Form.l2_site_pic_name]
+                    ]
+                      .filter(([, value]) => value)
+                      .map(([key, value]) => (
+                        <div key={key}>
+                          <div
+                            style={{
+                              fontSize: '9px',
+                              fontWeight: '700',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              marginBottom: '2px'
+                            }}
+                          >
+                            {key}
+                          </div>
+
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: '#111827'
+                            }}
+                          >
+                            {value}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
                 {l2Form.l2_work_detail &&
               <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>WORK PERFORMED</div>
