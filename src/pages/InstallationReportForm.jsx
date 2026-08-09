@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -66,17 +66,20 @@ export default function InstallationReportForm() {
 
   const { data: existing } = useQuery({
     queryKey: ['installation-report', id],
-    queryFn: () => base44.entities.InstallationReport.filter({ id }),
+    queryFn: async () => {
+      const arr = await base44.entities.InstallationReport.filter({ id });
+      // Guard inside queryFn: only seed form state on the first load.
+      // Subsequent refetches (which produce a new `existing` reference) must
+      // NOT overwrite in-progress edits.
+      if (loadedRef.current) return arr;
+      loadedRef.current = true;
+      const r = arr[0];
+      if (r) setForm(f => ({ ...f, ...r }));
+      return arr;
+    },
     enabled: isEdit,
     select: data => data[0],
   });
-
-  useEffect(() => {
-    if (existing && !loadedRef.current) {
-      loadedRef.current = true;
-      setForm({ ...form, ...existing });
-    }
-  }, [existing]);
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
@@ -96,6 +99,7 @@ export default function InstallationReportForm() {
       : base44.entities.InstallationReport.create(data),
     onSuccess: (result) => {
       queryClient.invalidateQueries(['installation-reports']);
+      queryClient.invalidateQueries(['installation-report', result.id || id]);
       toast({ title: isEdit ? 'Report updated' : 'Report created' });
       navigate(`/installation/${result.id || id}`);
     },
