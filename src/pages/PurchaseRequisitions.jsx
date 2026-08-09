@@ -4,13 +4,38 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, ShoppingCart, Eye, Trash2, Calendar, List, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear, subDays, isWithinInterval } from 'date-fns';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle } from
 '@/components/ui/alert-dialog';
+
+const PERIODS = [
+  { key: 'all', label: 'All Time' },
+  { key: 'today', label: 'Today' },
+  { key: '7d', label: 'Last 7 days' },
+  { key: '30d', label: 'Last 30 days' },
+  { key: 'this_week', label: 'This Week' },
+  { key: 'this_month', label: 'This Month' },
+  { key: 'this_year', label: 'This Year' },
+];
+
+function periodRange(period) {
+  if (period === 'all') return null;
+  const now = new Date();
+  switch (period) {
+    case 'today': return { start: startOfDay(now), end: endOfDay(now) };
+    case '7d': return { start: startOfDay(subDays(now, 7)), end: endOfDay(now) };
+    case '30d': return { start: startOfDay(subDays(now, 30)), end: endOfDay(now) };
+    case 'this_week': return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    case 'this_month': return { start: startOfMonth(now), end: endOfMonth(now) };
+    case 'this_year': return { start: startOfYear(now), end: endOfYear(now) };
+    default: return null;
+  }
+}
 
 const STATUS_CONFIG = {
   draft: { label: 'Draft', cls: 'bg-slate-500/15 text-slate-400 border-slate-500/25', dot: 'bg-slate-400' },
@@ -113,6 +138,9 @@ export default function PurchaseRequisitions() {
   const [deleteId, setDeleteId] = useState(null);
   const [view, setView] = useState('list'); // 'list' | 'calendar'
   const [statusFilter, setStatusFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState('all');
+  const [requesterFilter, setRequesterFilter] = useState('all');
 
   const { data: prs = [], isLoading } = useQuery({
     queryKey: ['purchase-requisitions'],
@@ -137,6 +165,16 @@ export default function PurchaseRequisitions() {
   const approvedValue = prs.filter((p) => ['approved', 'disburse'].includes(p.status)).reduce((s, p) => s + (p.approved_amount ?? p.grand_total ?? 0), 0);
   const disburseValue = prs.filter((p) => p.status === 'disburse').reduce((s, p) => s + (p.disburse_amount ?? p.approved_amount ?? p.grand_total ?? 0), 0);
 
+  const uniqueClients = [...new Set(prs.map((p) => p.client_name).filter(Boolean))].sort();
+  const uniqueRequesters = [...new Set(prs.map((p) => p.requester_name).filter(Boolean))].sort();
+
+  const range = periodRange(periodFilter);
+  const inPeriod = (p) => {
+    if (!range) return true;
+    const d = p.pr_date ? parseISO(p.pr_date) : (p.created_date ? parseISO(p.created_date) : null);
+    return d && isWithinInterval(d, range);
+  };
+
   const filtered = prs.filter((p) => {
     const matchSearch = !search ||
     p.pr_number?.toLowerCase().includes(search.toLowerCase()) ||
@@ -149,7 +187,10 @@ export default function PurchaseRequisitions() {
     (Array.isArray(p.purpose_of_purchase) ? p.purpose_of_purchase : []).some(pu => pu?.toLowerCase().includes(search.toLowerCase()));
 
     const matchStatus = statusFilter === 'all' || p.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchClient = clientFilter === 'all' || p.client_name === clientFilter;
+    const matchRequester = requesterFilter === 'all' || p.requester_name === requesterFilter;
+    const matchPeriod = inPeriod(p);
+    return matchSearch && matchStatus && matchClient && matchRequester && matchPeriod;
   });
 
   return (
@@ -196,16 +237,35 @@ export default function PurchaseRequisitions() {
       </div>
 
       {/* View Toggle + Search */}
-      <div className="flex gap-3 mb-5">
-        <div className="relative flex-1">
+      <div className="flex gap-3 mb-5 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by PR no., requester, quotation, or SR..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-background" />
-          
         </div>
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="w-44 bg-background"><SelectValue placeholder="Client" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Clients</SelectItem>
+            {uniqueClients.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={requesterFilter} onValueChange={setRequesterFilter}>
+          <SelectTrigger className="w-44 bg-background"><SelectValue placeholder="Requester" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Requesters</SelectItem>
+            {uniqueRequesters.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={periodFilter} onValueChange={setPeriodFilter}>
+          <SelectTrigger className="w-40 bg-background"><SelectValue placeholder="Period" /></SelectTrigger>
+          <SelectContent>
+            {PERIODS.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <div className="flex rounded-lg border border-border overflow-hidden">
           <button
             onClick={() => setView('list')}

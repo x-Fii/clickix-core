@@ -4,13 +4,38 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, Receipt, Eye, Trash2, Calendar, List, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear, subDays, isWithinInterval } from 'date-fns';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle } from
 '@/components/ui/alert-dialog';
+
+const PERIODS = [
+  { key: 'all', label: 'All Time' },
+  { key: 'today', label: 'Today' },
+  { key: '7d', label: 'Last 7 days' },
+  { key: '30d', label: 'Last 30 days' },
+  { key: 'this_week', label: 'This Week' },
+  { key: 'this_month', label: 'This Month' },
+  { key: 'this_year', label: 'This Year' },
+];
+
+function periodRange(period) {
+  if (period === 'all') return null;
+  const now = new Date();
+  switch (period) {
+    case 'today': return { start: startOfDay(now), end: endOfDay(now) };
+    case '7d': return { start: startOfDay(subDays(now, 7)), end: endOfDay(now) };
+    case '30d': return { start: startOfDay(subDays(now, 30)), end: endOfDay(now) };
+    case 'this_week': return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    case 'this_month': return { start: startOfMonth(now), end: endOfMonth(now) };
+    case 'this_year': return { start: startOfYear(now), end: endOfYear(now) };
+    default: return null;
+  }
+}
 
 const STATUS_CONFIG = {
   draft: { label: 'Draft', cls: 'bg-slate-500/15 text-slate-400 border-slate-500/25', dot: 'bg-slate-400' },
@@ -104,6 +129,9 @@ export default function Claims() {
   const [deleteId, setDeleteId] = useState(null);
   const [view, setView] = useState('list');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState('all');
+  const [requesterFilter, setRequesterFilter] = useState('all');
 
   const { data: claims = [], isLoading } = useQuery({
     queryKey: ['claims'],
@@ -127,6 +155,16 @@ export default function Claims() {
   const totalValue = claims.reduce((s, c) => s + (c.grand_total || 0), 0);
   const paidValue = claims.filter((c) => c.status === 'paid').reduce((s, c) => s + (c.grand_total || 0), 0);
 
+  const uniqueClients = [...new Set(claims.map((c) => c.client_name).filter(Boolean))].sort();
+  const uniqueRequesters = [...new Set(claims.map((c) => c.claimant_name).filter(Boolean))].sort();
+
+  const range = periodRange(periodFilter);
+  const inPeriod = (c) => {
+    if (!range) return true;
+    const d = c.claim_date ? parseISO(c.claim_date) : (c.created_date ? parseISO(c.created_date) : null);
+    return d && isWithinInterval(d, range);
+  };
+
   const filtered = claims.filter((c) => {
     const matchSearch = !search ||
     c.claim_number?.toLowerCase().includes(search.toLowerCase()) ||
@@ -136,7 +174,10 @@ export default function Claims() {
     c.client_name?.toLowerCase().includes(search.toLowerCase());
 
     const matchStatus = statusFilter === 'all' || c.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchClient = clientFilter === 'all' || c.client_name === clientFilter;
+    const matchRequester = requesterFilter === 'all' || c.claimant_name === requesterFilter;
+    const matchPeriod = inPeriod(c);
+    return matchSearch && matchStatus && matchClient && matchRequester && matchPeriod;
   });
 
   return (
@@ -175,12 +216,32 @@ export default function Claims() {
       </div>
 
       {/* View Toggle + Search */}
-      <div className="flex gap-3 mb-5">
-        <div className="relative flex-1">
+      <div className="flex gap-3 mb-5 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Search by claim no., claimant, PR, SR, or client..." value={search}
           onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-background" />
         </div>
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="w-44 bg-background"><SelectValue placeholder="Client" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Clients</SelectItem>
+            {uniqueClients.map((cl) => <SelectItem key={cl} value={cl}>{cl}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={requesterFilter} onValueChange={setRequesterFilter}>
+          <SelectTrigger className="w-44 bg-background"><SelectValue placeholder="Claimant" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Claimants</SelectItem>
+            {uniqueRequesters.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={periodFilter} onValueChange={setPeriodFilter}>
+          <SelectTrigger className="w-40 bg-background"><SelectValue placeholder="Period" /></SelectTrigger>
+          <SelectContent>
+            {PERIODS.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <div className="flex rounded-lg border border-border overflow-hidden">
           <button onClick={() => setView('list')}
           className={`px-3 py-2 flex items-center gap-1.5 text-xs transition-colors ${view === 'list' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'}`}>
