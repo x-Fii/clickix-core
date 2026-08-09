@@ -44,11 +44,14 @@ const statusColors = {
   rejected: 'bg-red-500/15 text-red-400 border-red-500/25'
 };
 
+const STATUSES = ['all', 'draft', 'submitted', 'approved', 'rejected'];
+
 export default function Quotations() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
   const [deleteId, setDeleteId] = useState(null);
 
@@ -76,6 +79,7 @@ export default function Quotations() {
 
   const filtered = quotations.filter((q) =>
   (clientFilter === 'all' || q.client_id === clientFilter) &&
+  (statusFilter === 'all' || q.status === statusFilter) &&
   inPeriod(q) &&
   (q.quotation_number?.toLowerCase().includes(search.toLowerCase()) ||
   q.client_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -110,6 +114,16 @@ export default function Quotations() {
           <SelectContent>
             <SelectItem value="all">All Clients</SelectItem>
             {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40 bg-background">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUSES.map((s) =>
+            <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+            )}
           </SelectContent>
         </Select>
         <Select value={periodFilter} onValueChange={setPeriodFilter}>
