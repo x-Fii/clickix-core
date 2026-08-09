@@ -11,7 +11,7 @@ import ExportButtons from '@/components/ExportButtons';
 import { Badge } from '@/components/ui/badge';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, isWithinInterval, parseISO } from 'date-fns';
 
-const STATUSES = ['all', 'open', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete', 'billed'];
+const STATUSES = ['all', 'open', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete', 'completed', 'billed'];
 const PERIODS = [
   { key: 'all', label: 'All Time' },
   { key: 'today', label: 'Today' },
@@ -64,6 +64,7 @@ export default function ServiceReports() {
   const filtered = reports.filter((r) => {
     const matchStatus = statusFilter === 'all' ? true
       : statusFilter === 'open' ? !['resolved', 'complete', 'billed'].includes(r.status)
+      : statusFilter === 'completed' ? ['complete', 'billed'].includes(r.status)
       : r.status === statusFilter;
     const matchClient = clientFilter === 'all' || r.client_id === clientFilter;
     const matchPeriod = inPeriod(r);
@@ -171,7 +172,7 @@ export default function ServiceReports() {
           </SelectTrigger>
           <SelectContent>
             {STATUSES.map((s) =>
-            <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s === 'open' ? 'Open Jobs' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+            <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s === 'open' ? 'Open Jobs' : s === 'completed' ? 'Completed' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
             )}
           </SelectContent>
         </Select>

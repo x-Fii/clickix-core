@@ -66,10 +66,10 @@ export default function Dashboard() {
 
   // KPIs
   const total = filteredReports.length;
-  const open = filteredReports.filter((r) => !['resolved', 'complete', 'billed'].includes(r.status)).length;
-  const complete = filteredReports.filter((r) => r.status === 'complete').length;
-  const escalated = filteredReports.filter((r) => r.status === 'escalated').length;
   const resolvedAtL1 = filteredReports.filter((r) => r.status === 'resolved').length;
+  const completed = filteredReports.filter((r) => ['complete', 'billed'].includes(r.status)).length;
+  const open = total - resolvedAtL1 - completed;
+  const escalated = filteredReports.filter((r) => r.status === 'escalated').length;
 
   // By status
   const STATUS_LIST = ['resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'];
@@ -164,10 +164,9 @@ export default function Dashboard() {
 
   const kpis = [
   { label: 'Total Reports', value: total, icon: ClipboardList, color: 'text-blue-400', to: '/reports' },
-  { label: 'Open Jobs', value: open, icon: Clock, color: 'text-amber-400', to: '/reports?status=open' },
   { label: 'Resolved At L1', value: resolvedAtL1, icon: ShieldCheck, color: 'text-teal-400', to: '/reports?status=resolved' },
-  { label: 'Completed', value: complete, icon: CheckCircle, color: 'text-emerald-400', to: '/reports?status=complete' },
-  { label: 'Escalated', value: escalated, icon: AlertTriangle, color: 'text-orange-400', to: '/reports?status=escalated' }];
+  { label: 'Open Jobs', value: open, icon: Clock, color: 'text-amber-400', to: '/reports?status=open' },
+  { label: 'Completed', value: completed, icon: CheckCircle, color: 'text-emerald-400', to: '/reports?status=completed' }];
 
 
   return (
@@ -221,7 +220,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map(({ label, value, icon: Icon, color, to }) =>
         <Link key={label} to={to} className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 hover:bg-muted/20 transition-colors">
             <div className="flex items-center justify-between mb-3">
