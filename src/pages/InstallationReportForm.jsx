@@ -106,9 +106,10 @@ export default function InstallationReportForm() {
   const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
 
   const filteredSites = sites.filter(s =>
-    (!form.client_id || s.client_id === form.client_id) &&
+    (form.site_id && s.id === form.site_id) ||
+    ((!form.client_id || s.client_id === form.client_id) &&
     (!siteRegionFilter || s.region === siteRegionFilter) &&
-    (!siteStateFilter || s.state === siteStateFilter)
+    (!siteStateFilter || s.state === siteStateFilter))
   );
 
   const mutation = useMutation({
@@ -371,7 +372,7 @@ export default function InstallationReportForm() {
             </div>
             <div className="space-y-1">
               <Label>Region</Label>
-              <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
+              <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); }}>
                 <SelectTrigger><SelectValue placeholder="All regions" /></SelectTrigger>
                 <SelectContent>
                   {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -381,7 +382,7 @@ export default function InstallationReportForm() {
             </div>
             <div className="space-y-1">
               <Label>State</Label>
-              <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
+              <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); }}>
                 <SelectTrigger><SelectValue placeholder="All states" /></SelectTrigger>
                 <SelectContent>
                   {stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
