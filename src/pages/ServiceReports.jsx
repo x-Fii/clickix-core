@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import ExportButtons from '@/components/ExportButtons';
 import { Badge } from '@/components/ui/badge';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, isWithinInterval, parseISO } from 'date-fns';
 
-const STATUSES = ['all', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete', 'billed'];
+const STATUSES = ['all', 'open', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete', 'billed'];
 const PERIODS = [
   { key: 'all', label: 'All Time' },
   { key: 'today', label: 'Today' },
@@ -38,8 +38,9 @@ function periodRange(period) {
 
 export default function ServiceReports() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
   const [clientFilter, setClientFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
 
@@ -61,7 +62,9 @@ export default function ServiceReports() {
   };
 
   const filtered = reports.filter((r) => {
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+    const matchStatus = statusFilter === 'all' ? true
+      : statusFilter === 'open' ? !['resolved', 'complete'].includes(r.status)
+      : r.status === statusFilter;
     const matchClient = clientFilter === 'all' || r.client_id === clientFilter;
     const matchPeriod = inPeriod(r);
     const q = search.toLowerCase();
@@ -168,7 +171,7 @@ export default function ServiceReports() {
           </SelectTrigger>
           <SelectContent>
             {STATUSES.map((s) =>
-            <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+            <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s === 'open' ? 'Open Jobs' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
             )}
           </SelectContent>
         </Select>
