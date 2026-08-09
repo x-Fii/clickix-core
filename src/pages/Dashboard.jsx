@@ -95,8 +95,12 @@ export default function Dashboard() {
 
   // By client
   const clientMap = {};
+  const clientNameToId = {};
   filteredReports.forEach((r) => {
-    if (r.client_name) clientMap[r.client_name] = (clientMap[r.client_name] || 0) + 1;
+    if (r.client_name) {
+      clientMap[r.client_name] = (clientMap[r.client_name] || 0) + 1;
+      if (r.client_id) clientNameToId[r.client_name] = r.client_id;
+    }
   });
   const clientData = Object.entries(clientMap).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value }));
 
@@ -234,7 +238,7 @@ export default function Dashboard() {
 
       {/* Jobs by Client */}
       <div className="bg-card border border-border rounded-xl p-5">
-        <p className="text-sm font-medium mb-4">Jobs by Client</p>
+        <p className="text-sm font-medium mb-4">Jobs by Client <span className="text-xs text-muted-foreground font-normal ml-1">— click a bar to filter</span></p>
         {clientData.length === 0 ?
         <div className="flex items-center justify-center h-[180px] text-muted-foreground text-sm">No data yet</div> :
 
@@ -243,8 +247,8 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
               <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-              <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+              <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} cursor={{ fill: 'hsl(var(--accent))', opacity: 0.3 }} />
+              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(d) => { const cid = clientNameToId[d.name]; if (cid) setClientFilter(cid); }} />
             </BarChart>
           </ResponsiveContainer>
         }
