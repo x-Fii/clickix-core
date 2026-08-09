@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, ShoppingCart, Eye, Trash2, Calendar, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import ExportButtons from '@/components/ExportButtons';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear, subDays, isWithinInterval } from 'date-fns';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -201,9 +202,29 @@ export default function PurchaseRequisitions() {
           <h1 className="text-xl font-semibold">Purchase Requisitions</h1>
           <p className="text-xs text-muted-foreground mt-0.5">PR documents linked to quotations and service reports</p>
         </div>
-        <Button onClick={() => navigate('/pr/new')} className="gap-2">
-          <Plus size={14} /> New PR
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButtons
+            data={filtered}
+            fileName="purchase_requisitions"
+            title="Purchase Requisitions"
+            columns={[
+              { header: 'PR No.', accessor: 'pr_number' },
+              { header: 'Quotation', accessor: 'quotation_number' },
+              { header: 'SR / IR No.', accessor: (r) => [...(r.sr_numbers || []), ...(r.ir_numbers || []), r.sr_number, r.ir_number].filter(Boolean).join(', ') },
+              { header: 'Requester', accessor: 'requester_name' },
+              { header: 'Site', accessor: 'site_name' },
+              { header: 'Purpose', accessor: (r) => (Array.isArray(r.purpose_of_purchase) ? r.purpose_of_purchase : []).join(', ') },
+              { header: 'Date', accessor: 'pr_date' },
+              { header: 'Total (MYR)', accessor: (r) => (r.grand_total != null ? r.grand_total.toFixed(2) : '') },
+              { header: 'Approved (MYR)', accessor: (r) => (r.approved_amount != null ? r.approved_amount.toFixed(2) : '') },
+              { header: 'Disbursed (MYR)', accessor: (r) => (r.disburse_amount != null ? r.disburse_amount.toFixed(2) : '') },
+              { header: 'Status', accessor: 'status' },
+            ]}
+          />
+          <Button onClick={() => navigate('/pr/new')} className="gap-2">
+            <Plus size={14} /> New PR
+          </Button>
+        </div>
       </div>
 
       {/* Status Dashboard Cards */}

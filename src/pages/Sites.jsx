@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import StatusBadge from '@/components/StatusBadge';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import ExportButtons from '@/components/ExportButtons';
 
 const MY_STATES = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'];
 const REGIONS = ['Central', 'Northern', 'Southern', 'East Coast', 'East Malaysia'];
@@ -90,7 +91,24 @@ export default function Sites() {
           <h1 className="text-2xl font-semibold font-heading">Sites / Outlets</h1>
           <p className="text-sm text-muted-foreground mt-1">{sites.length} registered sites</p>
         </div>
-        <Button onClick={openNew} className="gap-2"><Plus size={16} /> Add Site</Button>
+        <div className="flex items-center gap-2">
+          <ExportButtons
+            data={filtered}
+            fileName="sites"
+            title="Sites / Outlets"
+            columns={[
+              { header: 'Site Name', accessor: 'site_name' },
+              { header: 'Client', accessor: 'client_name' },
+              { header: 'Location', accessor: 'site_location' },
+              { header: 'State', accessor: 'state' },
+              { header: 'Region', accessor: 'region' },
+              { header: 'Status', accessor: (r) => (Array.isArray(r.status) ? r.status : [r.status || '']).filter(Boolean).join(', ') },
+              { header: 'PIC Name', accessor: 'pic_name' },
+              { header: 'PIC Phone', accessor: 'pic_phone' },
+            ]}
+          />
+          <Button onClick={openNew} className="gap-2"><Plus size={16} /> Add Site</Button>
+        </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">

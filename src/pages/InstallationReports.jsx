@@ -13,6 +13,7 @@ import {
   AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from
 '@/components/ui/alert-dialog';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from 'date-fns';
+import ExportButtons from '@/components/ExportButtons';
 
 const STATUSES = ['all', 'pending', 'scheduled', 'completed', 'billed', 'cancelled'];
 const PERIODS = [
@@ -114,9 +115,26 @@ export default function InstallationReports() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Commissioning &amp; decommissioning of outlets</p>
         </div>
-        <Button asChild>
-          <Link to="/installation/new"><Plus size={16} className="mr-1" /> New Report</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButtons
+            data={filtered}
+            fileName="installation_reports"
+            title="Installation Reports"
+            columns={[
+              { header: 'Report No.', accessor: 'report_number' },
+              { header: 'Type', accessor: 'report_type' },
+              { header: 'DO No.', accessor: 'do_number' },
+              { header: 'Client', accessor: 'client_name' },
+              { header: 'Site', accessor: 'site_name' },
+              { header: 'Date', accessor: (r) => r.installation_date || r.scheduled_date || '' },
+              { header: 'Technician', accessor: 'attended_staff_name' },
+              { header: 'Status', accessor: 'status' },
+            ]}
+          />
+          <Button asChild>
+            <Link to="/installation/new"><Plus size={16} className="mr-1" /> New Report</Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}

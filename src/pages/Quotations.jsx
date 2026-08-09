@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, FileText, Eye, Trash2 } from 'lucide-react';
+import ExportButtons from '@/components/ExportButtons';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from 'date-fns';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -93,9 +94,25 @@ export default function Quotations() {
           <h1 className="text-xl font-semibold">Quotations</h1>
           <p className="text-xs text-muted-foreground mt-0.5">All quotations linked to service reports</p>
         </div>
-        <Button onClick={() => navigate('/quotations/new')} className="gap-2">
-          <Plus size={14} /> New Quotation
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButtons
+            data={filtered}
+            fileName="quotations"
+            title="Quotations"
+            columns={[
+              { header: 'Quotation No.', accessor: 'quotation_number' },
+              { header: 'Linked Report', accessor: (r) => r.sr_number || r.ir_number || '' },
+              { header: 'Client', accessor: 'client_name' },
+              { header: 'Site', accessor: 'site_name' },
+              { header: 'Date', accessor: 'quotation_date' },
+              { header: 'Total (MYR)', accessor: (r) => (r.grand_total != null ? r.grand_total.toFixed(2) : '') },
+              { header: 'Status', accessor: 'status' },
+            ]}
+          />
+          <Button onClick={() => navigate('/quotations/new')} className="gap-2">
+            <Plus size={14} /> New Quotation
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-3 flex-wrap mb-5">

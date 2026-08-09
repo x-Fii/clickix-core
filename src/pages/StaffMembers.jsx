@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Pencil, Trash2, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import ExportButtons from '@/components/ExportButtons';
 
 const ROLES = ['Admin', 'L1', 'L2'];
 const ROLE_COLORS = { Admin: 'text-amber-400 bg-amber-500/15', L1: 'text-blue-400 bg-blue-500/15', L2: 'text-indigo-400 bg-indigo-500/15' };
@@ -59,7 +60,23 @@ export default function StaffMembers() {
           <h1 className="text-2xl font-semibold font-heading">Staff Members</h1>
           <p className="text-sm text-muted-foreground mt-1">{staff.length} staff members</p>
         </div>
-        <Button onClick={openNew} className="gap-2"><Plus size={16} /> Add Staff</Button>
+        <div className="flex items-center gap-2">
+          <ExportButtons
+            data={filtered}
+            fileName="staff_members"
+            title="Staff Members"
+            columns={[
+              { header: 'Name', accessor: 'name' },
+              { header: 'Staff ID', accessor: 'staff_id' },
+              { header: 'Department', accessor: 'department' },
+              { header: 'Role', accessor: 'role' },
+              { header: 'Email', accessor: 'email' },
+              { header: 'Phone', accessor: 'phone' },
+              { header: 'Active', accessor: (r) => (r.is_active ? 'Yes' : 'No') },
+            ]}
+          />
+          <Button onClick={openNew} className="gap-2"><Plus size={16} /> Add Staff</Button>
+        </div>
       </div>
 
       <div className="flex gap-2">

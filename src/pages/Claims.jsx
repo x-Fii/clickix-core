@@ -12,6 +12,7 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle } from
 '@/components/ui/alert-dialog';
+import ExportButtons from '@/components/ExportButtons';
 
 const PERIODS = [
   { key: 'all', label: 'All Time' },
@@ -187,9 +188,26 @@ export default function Claims() {
           <h1 className="text-xl font-semibold">Claims</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Reimbursement and payment claims linked to PRs</p>
         </div>
-        <Button onClick={() => navigate('/claims/new')} className="gap-2">
-          <Plus size={14} /> New Claim
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButtons
+            data={filtered}
+            fileName="claims"
+            title="Claims"
+            columns={[
+              { header: 'Claim No.', accessor: 'claim_number' },
+              { header: 'PR No.', accessor: 'pr_number' },
+              { header: 'SR / IR No.', accessor: (r) => r.sr_number || r.ir_number || '' },
+              { header: 'Claimant', accessor: 'claimant_name' },
+              { header: 'Type', accessor: 'claim_type' },
+              { header: 'Date', accessor: 'claim_date' },
+              { header: 'Total (MYR)', accessor: (r) => (r.grand_total != null ? r.grand_total.toFixed(2) : '') },
+              { header: 'Status', accessor: 'status' },
+            ]}
+          />
+          <Button onClick={() => navigate('/claims/new')} className="gap-2">
+            <Plus size={14} /> New Claim
+          </Button>
+        </div>
       </div>
 
       {/* Status Dashboard */}

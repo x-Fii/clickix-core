@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Pencil, Trash2, Users, Building2, Globe, Phone } from 'lucide-react';
 import { toast } from 'sonner';
+import ExportButtons from '@/components/ExportButtons';
 
 const CMS_OPTIONS = ['CS Play', 'CS Sign Hub', 'CS Deals', 'CS Context', 'OmniBuy', 'DOTS'];
 const HARDWARE_OPTIONS = ['PC', 'Cable', 'Controller', 'TV', 'LED', 'Network Device'];
@@ -51,7 +52,26 @@ export default function Clients() {
           <h1 className="text-2xl font-semibold font-heading">Clients</h1>
           <p className="text-sm text-muted-foreground mt-1">{clients.length} registered clients</p>
         </div>
-        <Button onClick={openNew} className="gap-2"><Plus size={16} /> Add Client</Button>
+        <div className="flex items-center gap-2">
+          <ExportButtons
+            data={clients}
+            fileName="clients"
+            title="Clients"
+            columns={[
+              { header: 'Company', accessor: 'company_name' },
+              { header: 'Contact Person', accessor: 'contact_person' },
+              { header: 'PIC Designation', accessor: 'pic_designation' },
+              { header: 'Email', accessor: 'contact_email' },
+              { header: 'Phone', accessor: 'contact_phone' },
+              { header: 'Website', accessor: 'company_website' },
+              { header: 'CMS Subscriptions', accessor: (r) => (r.cms_subscriptions || []).join(', ') },
+              { header: 'Hardware', accessor: (r) => (r.hardware || []).join(', ') },
+              { header: 'SLA', accessor: 'sla' },
+              { header: 'Address', accessor: 'address' },
+            ]}
+          />
+          <Button onClick={openNew} className="gap-2"><Plus size={16} /> Add Client</Button>
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">

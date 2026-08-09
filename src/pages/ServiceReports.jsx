@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, FileText, ClipboardList } from 'lucide-react';
+import ExportButtons from '@/components/ExportButtons';
 import { Badge } from '@/components/ui/badge';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, isWithinInterval, parseISO } from 'date-fns';
 
@@ -98,9 +99,27 @@ export default function ServiceReports() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">L1 remote support &amp; L2 onsite service records</p>
         </div>
-        <Link to="/reports/new">
-          <Button className="gap-2"><Plus size={16} /> New Report</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButtons
+            data={filtered}
+            fileName="service_reports"
+            title="Service Reports"
+            columns={[
+              { header: 'Report No.', accessor: 'running_number' },
+              { header: 'Response ID', accessor: 'whatsapp_response_id' },
+              { header: 'DO No.', accessor: (r) => (r.status === 'resolved' ? 'N/A' : (r.do_number || '')) },
+              { header: 'Work Order No.', accessor: (r) => (r.status === 'resolved' ? 'N/A' : (r.l2_work_order_number || '')) },
+              { header: 'Client', accessor: 'client_name' },
+              { header: 'Site', accessor: 'site_name' },
+              { header: 'Reported By', accessor: 'reported_by' },
+              { header: 'Status', accessor: 'status' },
+              { header: 'Date', accessor: (r) => (r.created_date ? r.created_date.slice(0, 10) : '') },
+            ]}
+          />
+          <Link to="/reports/new">
+            <Button className="gap-2"><Plus size={16} /> New Report</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
