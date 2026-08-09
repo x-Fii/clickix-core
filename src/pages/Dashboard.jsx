@@ -5,7 +5,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import StatusBadge from '@/components/StatusBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ClipboardList, CheckCircle, AlertTriangle, Clock, TrendingUp, Users, Filter, X } from 'lucide-react';
+import { ClipboardList, CheckCircle, AlertTriangle, Clock, TrendingUp, Users, Filter, X, ShieldCheck } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO } from 'date-fns';
 import ScheduleCalendarWidget from '@/components/ScheduleCalendarWidget';
 
@@ -68,6 +68,7 @@ export default function Dashboard() {
   const open = filteredReports.filter((r) => !['resolved', 'complete'].includes(r.status)).length;
   const complete = filteredReports.filter((r) => r.status === 'complete').length;
   const escalated = filteredReports.filter((r) => r.status === 'escalated').length;
+  const resolvedAtL1 = filteredReports.filter((r) => r.status === 'resolved').length;
 
   // By status
   const STATUS_LIST = ['resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'];
@@ -163,6 +164,7 @@ export default function Dashboard() {
   const kpis = [
   { label: 'Total Reports', value: total, icon: ClipboardList, color: 'text-blue-400' },
   { label: 'Open Jobs', value: open, icon: Clock, color: 'text-amber-400' },
+  { label: 'Resolved At L1', value: resolvedAtL1, icon: ShieldCheck, color: 'text-teal-400' },
   { label: 'Completed', value: complete, icon: CheckCircle, color: 'text-emerald-400' },
   { label: 'Escalated', value: escalated, icon: AlertTriangle, color: 'text-orange-400' }];
 
@@ -218,7 +220,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {kpis.map(({ label, value, icon: Icon, color }) =>
         <div key={label} className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
