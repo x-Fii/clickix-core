@@ -238,7 +238,18 @@ export default function Dashboard() {
 
       {/* Jobs by Client */}
       <div className="bg-card border border-border rounded-xl p-5">
-        <p className="text-sm font-medium mb-4">Jobs by Client <span className="text-xs text-muted-foreground font-normal ml-1">— click a bar to filter</span></p>
+        <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+          <p className="text-sm font-medium">Jobs by Client <span className="text-xs text-muted-foreground font-normal ml-1">— click a bar to filter</span></p>
+          {clientFilter !== 'all' && (
+            <button
+              type="button"
+              onClick={() => setClientFilter('all')}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <X size={12} /> Remove filter
+            </button>
+          )}
+        </div>
         {clientData.length === 0 ?
         <div className="flex items-center justify-center h-[180px] text-muted-foreground text-sm">No data yet</div> :
 
