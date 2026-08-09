@@ -318,8 +318,8 @@ export default function PurchaseRequisitions() {
             <p className="text-sm">No purchase requisitions found</p>
           </div> :
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
+      <div className="bg-card border border-border rounded-xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[760px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">PR No.</th>

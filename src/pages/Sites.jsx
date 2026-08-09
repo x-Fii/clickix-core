@@ -118,7 +118,7 @@ export default function Sites() {
         )}
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-x-auto">
         {isLoading && <div className="text-center py-12 text-muted-foreground text-sm">Loading...</div>}
         {!isLoading && filtered.length === 0 &&
         <div className="text-center py-16">
@@ -136,7 +136,7 @@ export default function Sites() {
           });
           const regionKeys = Object.keys(grouped).sort();
           return (
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[760px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Site Name</th>

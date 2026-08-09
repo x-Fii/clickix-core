@@ -283,8 +283,8 @@ export default function Claims() {
             <p className="text-sm">No claims found</p>
           </div> :
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
+      <div className="bg-card border border-border rounded-xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[760px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   {['Claim No.', 'PR No.', 'SR / IR No.', 'Claimant', 'Type', 'Date', 'Total (MYR)', 'Status', ''].map((h) =>

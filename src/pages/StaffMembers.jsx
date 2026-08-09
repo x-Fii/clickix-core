@@ -87,8 +87,8 @@ export default function StaffMembers() {
         ))}
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full">
+      <div className="bg-card border border-border rounded-xl overflow-x-auto">
+        <table className="w-full min-w-[640px]">
           <thead>
             <tr className="border-b border-border">
               {['Name', 'Staff ID', 'Department', 'Role', 'Email', 'Phone', 'Active', ''].map(h => (
