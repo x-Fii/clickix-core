@@ -103,7 +103,10 @@
       "type": "string"
     },
     "l1_issue_pillar": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "l1_rectification_done": {
       "type": "string"

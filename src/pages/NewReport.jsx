@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -50,7 +51,7 @@ export default function NewReport() {
     l1_attended_staff_name: '', l1_attended_staff_id: '', l1_attended_staff_email: '',
     do_number: '',
     l1_issue_statement: '',
-    l1_issue_pillar: '',
+    l1_issue_pillar: [],
     l1_rectification_done: '',
     l1_summary: '',
     l1_remarks: '',
@@ -226,7 +227,43 @@ export default function NewReport() {
               <Textarea value={form.l1_issue_statement} onChange={e => setF('l1_issue_statement', e.target.value)} placeholder="Describe the issue reported..." className="bg-background resize-none" rows={3} />
             </Field>
             <Field label="Issue Pillar">
-              <Input value={form.l1_issue_pillar} onChange={e => setF('l1_issue_pillar', e.target.value)} placeholder="e.g. Hardware, Software, Network, CMS..." className="bg-background" />
+              <div className="flex flex-wrap gap-x-5 gap-y-2 bg-background border border-input rounded-md p-3">
+                {['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'].map(opt => {
+                  const arr = Array.isArray(form.l1_issue_pillar) ? form.l1_issue_pillar : [];
+                  const checked = arr.includes(opt);
+                  return (
+                    <div key={opt} className="flex items-center gap-2">
+                      <Checkbox id={`pillar-${opt}`} checked={checked} onCheckedChange={(v) => {
+                        const cur = Array.isArray(form.l1_issue_pillar) ? [...form.l1_issue_pillar] : [];
+                        const fixed = cur.filter(p => ['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'].includes(p));
+                        const others = cur.filter(p => !['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'].includes(p));
+                        setF('l1_issue_pillar', v ? [...fixed, opt, ...others] : fixed.filter(p => p !== opt).concat(others));
+                      }} />
+                      <label htmlFor={`pillar-${opt}`} className="text-sm cursor-pointer">{opt}</label>
+                    </div>
+                  );
+                })}
+                <div className="flex items-center gap-2">
+                  <Checkbox id="pillar-other" checked={(Array.isArray(form.l1_issue_pillar) ? form.l1_issue_pillar : []).some(p => !['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'].includes(p))} onCheckedChange={(v) => {
+                    const cur = Array.isArray(form.l1_issue_pillar) ? [...form.l1_issue_pillar] : [];
+                    const fixed = cur.filter(p => ['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'].includes(p));
+                    setF('l1_issue_pillar', v ? [...fixed, ''] : fixed);
+                  }} />
+                  <label htmlFor="pillar-other" className="text-sm cursor-pointer">Other</label>
+                </div>
+                {(Array.isArray(form.l1_issue_pillar) ? form.l1_issue_pillar : []).some(p => !['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'].includes(p)) && (
+                  <Input
+                    value={(Array.isArray(form.l1_issue_pillar) ? form.l1_issue_pillar : []).find(p => !['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'].includes(p)) || ''}
+                    onChange={e => {
+                      const cur = Array.isArray(form.l1_issue_pillar) ? [...form.l1_issue_pillar] : [];
+                      const fixed = cur.filter(p => ['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'].includes(p));
+                      setF('l1_issue_pillar', e.target.value ? [...fixed, e.target.value] : fixed);
+                    }}
+                    className="bg-background h-8 flex-1 min-w-[160px]"
+                    placeholder="Specify other pillar..."
+                  />
+                )}
+              </div>
             </Field>
             <Field label="Rectification Done">
               <Textarea value={form.l1_rectification_done} onChange={e => setF('l1_rectification_done', e.target.value)} placeholder="Describe the rectification actions taken..." className="bg-background resize-none" rows={3} />
