@@ -80,7 +80,10 @@
       "type": "string"
     },
     "purpose_of_purchase": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "payment_term": {
       "type": "string",

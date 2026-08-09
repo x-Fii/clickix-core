@@ -52,7 +52,7 @@ export default function PRForm() {
     ir_numbers: [],
     client_name: '',
     site_name: '',
-    purpose_of_purchase: '',
+    purpose_of_purchase: [],
     payment_term: '',
     remarks: '',
     approved_by: '',
@@ -75,7 +75,7 @@ export default function PRForm() {
       const pr = await base44.entities.PurchaseRequisition.get(id);
       if (loadedRef.current) return pr;
       loadedRef.current = true;
-      setForm({ ...pr, approved_amount: pr.approved_amount != null ? pr.approved_amount.toString() : '', disburse_amount: pr.disburse_amount != null ? pr.disburse_amount.toString() : '', disburse_date: pr.disburse_date || '', disburse_reference: pr.disburse_reference || '', sr_ids: Array.isArray(pr.sr_ids) ? pr.sr_ids : (pr.sr_id ? [pr.sr_id] : []), sr_numbers: Array.isArray(pr.sr_numbers) ? pr.sr_numbers : (pr.sr_number ? [pr.sr_number] : []), ir_ids: Array.isArray(pr.ir_ids) ? pr.ir_ids : (pr.ir_id ? [pr.ir_id] : []), ir_numbers: Array.isArray(pr.ir_numbers) ? pr.ir_numbers : (pr.ir_number ? [pr.ir_number] : []) });
+      setForm({ ...pr, approved_amount: pr.approved_amount != null ? pr.approved_amount.toString() : '', disburse_amount: pr.disburse_amount != null ? pr.disburse_amount.toString() : '', disburse_date: pr.disburse_date || '', disburse_reference: pr.disburse_reference || '', sr_ids: Array.isArray(pr.sr_ids) ? pr.sr_ids : (pr.sr_id ? [pr.sr_id] : []), sr_numbers: Array.isArray(pr.sr_numbers) ? pr.sr_numbers : (pr.sr_number ? [pr.sr_number] : []), ir_ids: Array.isArray(pr.ir_ids) ? pr.ir_ids : (pr.ir_id ? [pr.ir_id] : []), ir_numbers: Array.isArray(pr.ir_numbers) ? pr.ir_numbers : (pr.ir_number ? [pr.ir_number] : []), purpose_of_purchase: Array.isArray(pr.purpose_of_purchase) ? pr.purpose_of_purchase : (pr.purpose_of_purchase ? [pr.purpose_of_purchase] : []) });
       setItems(pr.items?.length ? pr.items.map(it => ({ ...it, unit_cost: it.unit_cost?.toString() ?? '', quantity: it.quantity?.toString() ?? '1' })) : [{ item_no: 1, description: '', category: '', quantity: '1', unit_cost: '', total: 0 }]);
       return pr;
     },
@@ -429,7 +429,44 @@ export default function PRForm() {
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Purchase Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Purpose of Purchase">
-              <Textarea value={form.purpose_of_purchase} onChange={e => setF('purpose_of_purchase', e.target.value)} className="bg-background resize-none" rows={3} placeholder="Describe the purpose and justification for this purchase..." />
+              <div className="space-y-2 bg-background border border-input rounded-md p-3">
+                {['Travel', 'Inventory'].map(opt => {
+                  const arr = Array.isArray(form.purpose_of_purchase) ? form.purpose_of_purchase : [];
+                  const checked = arr.includes(opt);
+                  return (
+                    <div key={opt} className="flex items-center gap-2">
+                      <Checkbox id={`purpose-${opt}`} checked={checked} onCheckedChange={(v) => {
+                        const cur = Array.isArray(form.purpose_of_purchase) ? [...form.purpose_of_purchase] : [];
+                        const fixed = cur.filter(p => ['Travel', 'Inventory'].includes(p));
+                        const others = cur.filter(p => !['Travel', 'Inventory'].includes(p));
+                        const next = v ? [...fixed, opt, ...others] : fixed.filter(p => p !== opt).concat(others);
+                        setF('purpose_of_purchase', next);
+                      }} />
+                      <label htmlFor={`purpose-${opt}`} className="text-sm cursor-pointer">{opt}</label>
+                    </div>
+                  );
+                })}
+                <div className="flex items-center gap-2">
+                  <Checkbox id="purpose-other" checked={(Array.isArray(form.purpose_of_purchase) ? form.purpose_of_purchase : []).some(p => !['Travel', 'Inventory'].includes(p))} onCheckedChange={(v) => {
+                    const cur = Array.isArray(form.purpose_of_purchase) ? [...form.purpose_of_purchase] : [];
+                    const fixed = cur.filter(p => ['Travel', 'Inventory'].includes(p));
+                    setF('purpose_of_purchase', v ? [...fixed, ''] : fixed);
+                  }} />
+                  <label htmlFor="purpose-other" className="text-sm cursor-pointer">Others</label>
+                </div>
+                {(Array.isArray(form.purpose_of_purchase) ? form.purpose_of_purchase : []).some(p => !['Travel', 'Inventory'].includes(p)) && (
+                  <Input
+                    value={(Array.isArray(form.purpose_of_purchase) ? form.purpose_of_purchase : []).find(p => !['Travel', 'Inventory'].includes(p)) || ''}
+                    onChange={e => {
+                      const cur = Array.isArray(form.purpose_of_purchase) ? [...form.purpose_of_purchase] : [];
+                      const fixed = cur.filter(p => ['Travel', 'Inventory'].includes(p));
+                      setF('purpose_of_purchase', e.target.value ? [...fixed, e.target.value] : fixed);
+                    }}
+                    className="bg-background"
+                    placeholder="Specify other purpose..."
+                  />
+                )}
+              </div>
             </Field>
             <Field label="Payment Term">
               <Select value={form.payment_term || undefined} onValueChange={v => setF('payment_term', v)}>
@@ -676,7 +713,7 @@ export default function PRForm() {
               <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '12px' }}>
                 <div>
                   <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>PURPOSE OF PURCHASE</div>
-                  <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.5' }}>{form.purpose_of_purchase || '—'}</div>
+                  <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.5' }}>{(Array.isArray(form.purpose_of_purchase) ? form.purpose_of_purchase : []).join(', ') || '—'}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>PAYMENT TERM</div>
