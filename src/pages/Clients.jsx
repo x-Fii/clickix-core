@@ -140,7 +140,7 @@ export default function Clients() {
                   </td>
                   <td className="px-4 py-3">
                     {c.sla ? (
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium border ${c.sla === 'subscribe' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25' : 'bg-amber-500/15 text-amber-400 border-amber-500/25'}`}>
+                      <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-mono border ${c.sla === 'subscribe' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                         {c.sla === 'subscribe' ? 'Subscribe' : 'On-Demand'}
                       </span>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
