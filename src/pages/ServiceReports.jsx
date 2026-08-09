@@ -85,6 +85,7 @@ export default function ServiceReports() {
     schedule: scoped.filter((r) => r.status === 'schedule').length,
     complete: scoped.filter((r) => r.status === 'complete').length,
     billed: scoped.filter((r) => r.status === 'billed').length,
+    l1Pending: scoped.filter((r) => r.l1_status === 'pending').length,
   };
 
   return (
@@ -114,6 +115,7 @@ export default function ServiceReports() {
         { label: 'Schedule',  value: counts.schedule,  color: 'text-blue-400' },
         { label: 'Complete',  value: counts.complete,  color: 'text-emerald-400' },
         { label: 'Billed',    value: counts.billed,    color: 'text-pink-400' },
+        { label: 'L1 Pending', value: counts.l1Pending, color: 'text-cyan-400' },
         ].map((s) =>
         <div key={s.label} className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">{s.label}</p>
