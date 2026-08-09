@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -25,6 +25,12 @@ import ScheduleCalendar from './pages/ScheduleCalendar';
 import InstallationReports from './pages/InstallationReports';
 import InstallationReportForm from './pages/InstallationReportForm';
 import InstallationReportDetail from './pages/InstallationReportDetail';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import OAuthConsent from './pages/OAuthConsent';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -52,29 +58,36 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/reports" element={<ServiceReports />} />
-        <Route path="/reports/new" element={<NewReport />} />
-        <Route path="/reports/:id" element={<ReportDetail />} />
-        <Route path="/clients" element={<Clients />} />
-        <Route path="/sites" element={<Sites />} />
-        <Route path="/staff" element={<StaffMembers />} />
-        <Route path="/staff/:id" element={<StaffDashboard />} />
-        <Route path="/quotations" element={<Quotations />} />
-        <Route path="/quotations/new" element={<QuotationForm />} />
-        <Route path="/quotations/:id" element={<QuotationForm />} />
-        <Route path="/pr" element={<PurchaseRequisitions />} />
-        <Route path="/pr/new" element={<PRForm />} />
-        <Route path="/pr/:id" element={<PRForm />} />
-        <Route path="/schedule" element={<ScheduleCalendar />} />
-        <Route path="/installation" element={<InstallationReports />} />
-        <Route path="/installation/new" element={<InstallationReportForm />} />
-        <Route path="/installation/:id/edit" element={<InstallationReportForm />} />
-        <Route path="/installation/:id" element={<InstallationReportDetail />} />
-        <Route path="/claims" element={<Claims />} />
-        <Route path="/claims/new" element={<ClaimForm />} />
-        <Route path="/claims/:id" element={<ClaimForm />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/oauth-consent" element={<OAuthConsent />} />
+      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/reports" element={<ServiceReports />} />
+          <Route path="/reports/new" element={<NewReport />} />
+          <Route path="/reports/:id" element={<ReportDetail />} />
+          <Route path="/clients" element={<Clients />} />
+          <Route path="/sites" element={<Sites />} />
+          <Route path="/staff" element={<StaffMembers />} />
+          <Route path="/staff/:id" element={<StaffDashboard />} />
+          <Route path="/quotations" element={<Quotations />} />
+          <Route path="/quotations/new" element={<QuotationForm />} />
+          <Route path="/quotations/:id" element={<QuotationForm />} />
+          <Route path="/pr" element={<PurchaseRequisitions />} />
+          <Route path="/pr/new" element={<PRForm />} />
+          <Route path="/pr/:id" element={<PRForm />} />
+          <Route path="/schedule" element={<ScheduleCalendar />} />
+          <Route path="/installation" element={<InstallationReports />} />
+          <Route path="/installation/new" element={<InstallationReportForm />} />
+          <Route path="/installation/:id/edit" element={<InstallationReportForm />} />
+          <Route path="/installation/:id" element={<InstallationReportDetail />} />
+          <Route path="/claims" element={<Claims />} />
+          <Route path="/claims/new" element={<ClaimForm />} />
+          <Route path="/claims/:id" element={<ClaimForm />} />
+        </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
