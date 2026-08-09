@@ -41,7 +41,7 @@ export default function ServiceReports() {
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
-  const [clientFilter, setClientFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState(searchParams.get('client') || 'all');
   const [periodFilter, setPeriodFilter] = useState('all');
 
   const { data: reports = [], isLoading } = useQuery({
