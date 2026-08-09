@@ -70,7 +70,7 @@ export default function Dashboard() {
   const escalated = filteredReports.filter((r) => r.status === 'escalated').length;
 
   // By status
-  const STATUS_LIST = ['reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'];
+  const STATUS_LIST = ['resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'];
   const STATUS_COLORS = { reported: '#3b82f6', resolved: '#10b981', escalated: '#ef4444', quote: '#f59e0b', approved: '#8b5cf6', schedule: '#06b6d4', complete: '#22c55e' };
   const statusCounts = STATUS_LIST.map((s) => ({
     name: s.charAt(0).toUpperCase() + s.slice(1),
