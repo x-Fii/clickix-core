@@ -49,6 +49,10 @@ export default function NewReport() {
     site_id: '', site_name: '', site_location: '',
     l1_attended_staff_name: '', l1_attended_staff_id: '', l1_attended_staff_email: '',
     do_number: '',
+    l1_issue_statement: '',
+    l1_issue_pillar: '',
+    l1_rectification_done: '',
+    l1_summary: '',
     l1_remarks: '',
     whatsapp_response_id: '',
   });
@@ -216,8 +220,20 @@ export default function NewReport() {
             </Field>
           </div>
 
-          {/* L1 Remarks */}
-          <div className="mb-6">
+          {/* L1 Session Details */}
+          <div className="mb-6 space-y-4">
+            <Field label="Issue Statement">
+              <Textarea value={form.l1_issue_statement} onChange={e => setF('l1_issue_statement', e.target.value)} placeholder="Describe the issue reported..." className="bg-background resize-none" rows={3} />
+            </Field>
+            <Field label="Issue Pillar">
+              <Input value={form.l1_issue_pillar} onChange={e => setF('l1_issue_pillar', e.target.value)} placeholder="e.g. Hardware, Software, Network, CMS..." className="bg-background" />
+            </Field>
+            <Field label="Rectification Done">
+              <Textarea value={form.l1_rectification_done} onChange={e => setF('l1_rectification_done', e.target.value)} placeholder="Describe the rectification actions taken..." className="bg-background resize-none" rows={3} />
+            </Field>
+            <Field label="Summary">
+              <Textarea value={form.l1_summary} onChange={e => setF('l1_summary', e.target.value)} placeholder="Summary of this L1 session..." className="bg-background resize-none" rows={3} />
+            </Field>
             <Field label="Remarks / Notes">
               <Textarea value={form.l1_remarks} onChange={e => setF('l1_remarks', e.target.value)} placeholder="Any additional remarks or notes for this L1 session..." className="bg-background resize-none" rows={3} />
             </Field>
