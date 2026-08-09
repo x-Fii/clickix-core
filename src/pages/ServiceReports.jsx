@@ -63,7 +63,7 @@ export default function ServiceReports() {
 
   const filtered = reports.filter((r) => {
     const matchStatus = statusFilter === 'all' ? true
-      : statusFilter === 'open' ? !['resolved', 'complete', 'billed'].includes(r.status)
+      : statusFilter === 'open' ? !['resolved', 'escalated', 'quote', 'complete', 'billed'].includes(r.status)
       : r.status === statusFilter;
     const matchClient = clientFilter === 'all' || r.client_id === clientFilter;
     const matchPeriod = inPeriod(r);
