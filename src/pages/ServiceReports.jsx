@@ -8,38 +8,83 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, FileText, ClipboardList } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, isWithinInterval, parseISO } from 'date-fns';
 
 const STATUSES = ['all', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete', 'billed'];
+const PERIODS = [
+  { key: 'all', label: 'All Time' },
+  { key: 'today', label: 'Today' },
+  { key: '7d', label: 'Last 7 days' },
+  { key: '30d', label: 'Last 30 days' },
+  { key: 'this_week', label: 'This Week' },
+  { key: 'this_month', label: 'This Month' },
+  { key: 'this_year', label: 'This Year' },
+];
+
+function periodRange(period) {
+  if (period === 'all') return null;
+  const now = new Date();
+  switch (period) {
+    case 'today': return { start: startOfDay(now), end: endOfDay(now) };
+    case '7d': return { start: startOfDay(subDays(now, 7)), end: endOfDay(now) };
+    case '30d': return { start: startOfDay(subDays(now, 30)), end: endOfDay(now) };
+    case 'this_week': return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    case 'this_month': return { start: startOfMonth(now), end: endOfMonth(now) };
+    case 'this_year': return { start: startOfYear(now), end: endOfYear(now) };
+    default: return null;
+  }
+}
 
 export default function ServiceReports() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState('all');
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['service-reports'],
     queryFn: () => base44.entities.ServiceReport.list('-created_date', 500)
   });
 
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => base44.entities.Client.list()
+  });
+
+  const range = periodRange(periodFilter);
+  const inPeriod = (r) => {
+    if (!range) return true;
+    const d = r.created_date ? parseISO(r.created_date) : null;
+    return d && isWithinInterval(d, range);
+  };
+
   const filtered = reports.filter((r) => {
     const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+    const matchClient = clientFilter === 'all' || r.client_id === clientFilter;
+    const matchPeriod = inPeriod(r);
     const q = search.toLowerCase();
     const matchSearch = !q || [r.running_number, r.client_name, r.site_name, r.reported_by, r.do_number].
     some((f) => f?.toLowerCase().includes(q));
-    return matchStatus && matchSearch;
+    return matchStatus && matchClient && matchPeriod && matchSearch;
   });
 
+  // Base set for counts: respect client & period filters (status counts stay relative to that set)
+  const scoped = reports.filter((r) => {
+    const matchClient = clientFilter === 'all' || r.client_id === clientFilter;
+    const matchPeriod = inPeriod(r);
+    return matchClient && matchPeriod;
+  });
   const counts = {
-    all: reports.length,
-    reported: reports.filter((r) => r.status === 'reported').length,
-    resolved: reports.filter((r) => r.status === 'resolved').length,
-    escalated: reports.filter((r) => r.status === 'escalated').length,
-    quote: reports.filter((r) => r.status === 'quote').length,
-    approved: reports.filter((r) => r.status === 'approved').length,
-    schedule: reports.filter((r) => r.status === 'schedule').length,
-    complete: reports.filter((r) => r.status === 'complete').length,
-    billed: reports.filter((r) => r.status === 'billed').length,
+    all: scoped.length,
+    reported: scoped.filter((r) => r.status === 'reported').length,
+    resolved: scoped.filter((r) => r.status === 'resolved').length,
+    escalated: scoped.filter((r) => r.status === 'escalated').length,
+    quote: scoped.filter((r) => r.status === 'quote').length,
+    approved: scoped.filter((r) => r.status === 'approved').length,
+    schedule: scoped.filter((r) => r.status === 'schedule').length,
+    complete: scoped.filter((r) => r.status === 'complete').length,
+    billed: scoped.filter((r) => r.status === 'billed').length,
   };
 
   return (
@@ -88,6 +133,15 @@ export default function ServiceReports() {
             className="pl-9 bg-card" />
           
         </div>
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="w-44 bg-card">
+            <SelectValue placeholder="Client" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Clients</SelectItem>
+            {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-40 bg-card">
             <SelectValue placeholder="Status" />
@@ -96,6 +150,14 @@ export default function ServiceReports() {
             {STATUSES.map((s) =>
             <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
             )}
+          </SelectContent>
+        </Select>
+        <Select value={periodFilter} onValueChange={setPeriodFilter}>
+          <SelectTrigger className="w-40 bg-card">
+            <SelectValue placeholder="Period" />
+          </SelectTrigger>
+          <SelectContent>
+            {PERIODS.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
