@@ -245,6 +245,7 @@ export default function PurchaseRequisitions() {
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">SR / IR No.</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Requester</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Site</th>
+                  <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Purpose</th>
                   <th className="text-left px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Date</th>
                   <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Total (MYR)</th>
                   <th className="text-right px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider">Approved (MYR)</th>
@@ -261,6 +262,7 @@ export default function PurchaseRequisitions() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">{[...(pr.sr_numbers || []), ...(pr.ir_numbers || [])].join(', ') || pr.sr_number || pr.ir_number || '—'}</td>
                     <td className="px-4 py-3">{pr.requester_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.site_name || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs truncate" title={pr.purpose_of_purchase || ''}>{pr.purpose_of_purchase || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.pr_date ? format(parseISO(pr.pr_date), 'dd MMM yyyy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{pr.grand_total != null ? pr.grand_total.toFixed(2) : '—'}</td>
                     <td className="text-right font-mono text-sm text-emerald-400 pt-3 pr-3 pb-3 pl-3">{pr.approved_amount != null ? pr.approved_amount.toFixed(2) : '—'}</td>
