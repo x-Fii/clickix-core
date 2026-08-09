@@ -126,7 +126,7 @@ export default function ServiceReports() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
         { label: 'Total',     value: counts.all,      color: 'text-foreground' },
-        { label: 'Resolved',  value: counts.resolved,  color: 'text-teal-400' },
+        { label: 'Resolved At L1',  value: counts.resolved,  color: 'text-teal-400' },
         { label: 'Escalated', value: counts.escalated, color: 'text-amber-400' },
         { label: 'Quote',     value: counts.quote,     color: 'text-yellow-400' },
         { label: 'Approved',  value: counts.approved,  color: 'text-purple-400' },
