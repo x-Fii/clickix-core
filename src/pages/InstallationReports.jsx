@@ -6,11 +6,38 @@ import { Plus, Search, Trash2, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from
 '@/components/ui/alert-dialog';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from 'date-fns';
+
+const STATUSES = ['all', 'pending', 'scheduled', 'completed', 'billed', 'cancelled'];
+const PERIODS = [
+  { key: 'all', label: 'All Time' },
+  { key: 'today', label: 'Today' },
+  { key: '7d', label: 'Last 7 days' },
+  { key: '30d', label: 'Last 30 days' },
+  { key: 'this_week', label: 'This Week' },
+  { key: 'this_month', label: 'This Month' },
+  { key: 'this_year', label: 'This Year' },
+];
+
+function periodRange(period) {
+  if (period === 'all') return null;
+  const now = new Date();
+  switch (period) {
+    case 'today': return { start: startOfDay(now), end: endOfDay(now) };
+    case '7d': return { start: startOfDay(subDays(now, 7)), end: endOfDay(now) };
+    case '30d': return { start: startOfDay(subDays(now, 30)), end: endOfDay(now) };
+    case 'this_week': return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    case 'this_month': return { start: startOfMonth(now), end: endOfMonth(now) };
+    case 'this_year': return { start: startOfYear(now), end: endOfYear(now) };
+    default: return null;
+  }
+}
 
 const STATUS_CONFIG = {
   pending: { label: 'Pending', className: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
@@ -27,6 +54,9 @@ const TYPE_CONFIG = {
 
 export default function InstallationReports() {
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState('all');
   const [deleteId, setDeleteId] = useState(null);
   const queryClient = useQueryClient();
 
@@ -35,23 +65,43 @@ export default function InstallationReports() {
     queryFn: () => base44.entities.InstallationReport.list('-created_date', 200)
   });
 
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => base44.entities.Client.list()
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.InstallationReport.delete(id),
     onSuccess: () => queryClient.invalidateQueries(['installation-reports'])
   });
 
-  const filtered = reports.filter((r) =>
-  [r.report_number, r.client_name, r.site_name, r.attended_staff_name, r.do_number].
-  join(' ').toLowerCase().includes(search.toLowerCase())
-  );
+  const range = periodRange(periodFilter);
+  const inPeriod = (r) => {
+    if (!range) return true;
+    const d = r.created_date ? parseISO(r.created_date) : null;
+    return d && isWithinInterval(d, range);
+  };
+
+  const scoped = reports.filter((r) => {
+    const matchClient = clientFilter === 'all' || r.client_id === clientFilter;
+    const matchPeriod = inPeriod(r);
+    return matchClient && matchPeriod;
+  });
+
+  const filtered = scoped.filter((r) => {
+    const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+    const matchSearch = [r.report_number, r.client_name, r.site_name, r.attended_staff_name, r.do_number].
+      join(' ').toLowerCase().includes(search.toLowerCase());
+    return matchStatus && matchSearch;
+  });
 
   const counts = {
-    all: reports.length,
-    pending: reports.filter((r) => r.status === 'pending').length,
-    scheduled: reports.filter((r) => r.status === 'scheduled').length,
-    completed: reports.filter((r) => r.status === 'completed').length,
-    billed: reports.filter((r) => r.status === 'billed').length,
-    cancelled: reports.filter((r) => r.status === 'cancelled').length
+    all: scoped.length,
+    pending: scoped.filter((r) => r.status === 'pending').length,
+    scheduled: scoped.filter((r) => r.status === 'scheduled').length,
+    completed: scoped.filter((r) => r.status === 'completed').length,
+    billed: scoped.filter((r) => r.status === 'billed').length,
+    cancelled: scoped.filter((r) => r.status === 'cancelled').length
   };
 
   return (
@@ -86,10 +136,31 @@ export default function InstallationReports() {
         )}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Search reports…" className="pl-8" value={search} onChange={(e) => setSearch(e.target.value)} />
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder="Search reports…" className="pl-8 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="w-44 bg-card"><SelectValue placeholder="Client" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Clients</SelectItem>
+            {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40 bg-card"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            {STATUSES.map((s) => <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : STATUS_CONFIG[s]?.label || s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={periodFilter} onValueChange={setPeriodFilter}>
+          <SelectTrigger className="w-40 bg-card"><SelectValue placeholder="Period" /></SelectTrigger>
+          <SelectContent>
+            {PERIODS.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
