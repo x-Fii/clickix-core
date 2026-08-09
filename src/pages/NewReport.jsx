@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
@@ -110,7 +110,7 @@ export default function NewReport() {
     const allItems = affectedSections.flatMap(s => s.items);
     if (allItems.every(i => !i.device_type)) { toast.error('Please add at least one affected item'); return; }
 
-    const status = l1Status === 'resolved' ? 'resolved' : 'escalated';
+    const status = l1Status === 'resolved' ? 'resolved' : l1Status === 'escalate' ? 'escalated' : 'reported';
     createReport.mutate({
       ...form,
       l1_status: l1Status,
@@ -123,7 +123,8 @@ export default function NewReport() {
     });
 
     if (l1Status === 'resolved') toast.success('Report submitted — marking as resolved');
-    else toast.success('Report saved — escalating to L2');
+    else if (l1Status === 'escalate') toast.success('Report saved — escalating to L2');
+    else toast.success('Report saved — marking as pending');
   };
 
   return (
@@ -298,7 +299,7 @@ export default function NewReport() {
         {/* Status Actions */}
         <div className="bg-card border border-border rounded-xl p-6">
           <SectionHeader title="L1 Resolution" subtitle="Mark the outcome of this remote support session" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               type="button"
               onClick={() => handleSubmit('resolved')}
@@ -321,6 +322,18 @@ export default function NewReport() {
               <div>
                 <p className="font-semibold text-amber-400 text-sm">Escalate to L2</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Issue requires onsite support. Escalate to L2 team.</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSubmit('pending')}
+              disabled={createReport.isPending}
+              className="flex items-center gap-3 p-4 rounded-xl border-2 border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/15 transition-colors text-left"
+            >
+              <Clock size={24} className="text-sky-400 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-sky-400 text-sm">Pending</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Awaiting further info or action. Save as pending for follow-up.</p>
               </div>
             </button>
           </div>

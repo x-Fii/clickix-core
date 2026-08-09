@@ -106,7 +106,8 @@
       "type": "string",
       "enum": [
         "resolved",
-        "escalate"
+        "escalate",
+        "pending"
       ]
     },
     "l1_submitted": {
