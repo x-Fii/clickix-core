@@ -66,7 +66,7 @@ export default function Dashboard() {
 
   // KPIs
   const total = filteredReports.length;
-  const open = filteredReports.filter((r) => !['resolved', 'complete'].includes(r.status)).length;
+  const open = filteredReports.filter((r) => !['resolved', 'complete', 'billed'].includes(r.status)).length;
   const complete = filteredReports.filter((r) => r.status === 'complete').length;
   const escalated = filteredReports.filter((r) => r.status === 'escalated').length;
   const resolvedAtL1 = filteredReports.filter((r) => r.status === 'resolved').length;
