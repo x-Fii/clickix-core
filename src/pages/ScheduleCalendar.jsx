@@ -8,7 +8,8 @@ import {
   addWeeks, subWeeks, startOfWeek, endOfWeek,
   getDay, isToday, parseISO
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Filter, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StatusBadge from '@/components/StatusBadge';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +37,8 @@ export default function ScheduleCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
+  const [clientFilter, setClientFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'sr' | 'ir'
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['service-reports'],
@@ -47,22 +50,37 @@ export default function ScheduleCalendar() {
     queryFn: () => base44.entities.InstallationReport.list('-created_date', 500),
   });
 
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => base44.entities.Client.list(),
+  });
+
+  const showSR = typeFilter === 'all' || typeFilter === 'sr';
+  const showIR = typeFilter === 'all' || typeFilter === 'ir';
+  const clientMatch = (r) => clientFilter === 'all' || r.client_id === clientFilter;
+
   // Build a map: dateStr -> events[] (service reports + installation reports)
   const dateMap = {};
-  reports.forEach(r => {
-    const dateStr = getReportDate(r);
-    if (!dateStr) return;
-    const key = dateStr.slice(0, 10);
-    if (!dateMap[key]) dateMap[key] = [];
-    dateMap[key].push({ ...r, _type: 'sr' });
-  });
-  installationReports.forEach(r => {
-    const dateStr = r.scheduled_date || r.installation_date || r.created_date;
-    if (!dateStr) return;
-    const key = dateStr.slice(0, 10);
-    if (!dateMap[key]) dateMap[key] = [];
-    dateMap[key].push({ ...r, _type: 'ir' });
-  });
+  if (showSR) {
+    reports.forEach(r => {
+      if (!clientMatch(r)) return;
+      const dateStr = getReportDate(r);
+      if (!dateStr) return;
+      const key = dateStr.slice(0, 10);
+      if (!dateMap[key]) dateMap[key] = [];
+      dateMap[key].push({ ...r, _type: 'sr' });
+    });
+  }
+  if (showIR) {
+    installationReports.forEach(r => {
+      if (!clientMatch(r)) return;
+      const dateStr = r.scheduled_date || r.installation_date || r.created_date;
+      if (!dateStr) return;
+      const key = dateStr.slice(0, 10);
+      if (!dateMap[key]) dateMap[key] = [];
+      dateMap[key].push({ ...r, _type: 'ir' });
+    });
+  }
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -96,12 +114,16 @@ export default function ScheduleCalendar() {
   ];
 
   // Upcoming scheduled visits (next 30 days) — both SR and IR
-  const upcomingSR = reports
-    .filter(r => r.status === 'schedule' && r.scheduled_date)
-    .map(r => ({ ...r, _type: 'sr' }));
-  const upcomingIR = installationReports
-    .filter(r => r.status === 'scheduled' && r.scheduled_date)
-    .map(r => ({ ...r, _type: 'ir' }));
+  const upcomingSR = showSR
+    ? reports
+      .filter(r => r.status === 'schedule' && r.scheduled_date && clientMatch(r))
+      .map(r => ({ ...r, _type: 'sr' }))
+    : [];
+  const upcomingIR = showIR
+    ? installationReports
+      .filter(r => r.status === 'scheduled' && r.scheduled_date && clientMatch(r))
+      .map(r => ({ ...r, _type: 'ir' }))
+    : [];
   const upcoming = [...upcomingSR, ...upcomingIR]
     .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
     .slice(0, 10);
@@ -151,6 +173,38 @@ export default function ScheduleCalendar() {
             >Today</button>
           </div>
         </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Filter size={14} />
+          <span className="font-medium">Filter</span>
+        </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[160px] h-8 text-xs bg-card"><SelectValue placeholder="Job type" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All job types</SelectItem>
+            <SelectItem value="sr">Service Reports</SelectItem>
+            <SelectItem value="ir">Installation Reports</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="w-[220px] h-8 text-xs bg-card"><SelectValue placeholder="All clients" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All clients</SelectItem>
+            {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(clientFilter !== 'all' || typeFilter !== 'all') && (
+          <button
+            type="button"
+            onClick={() => { setClientFilter('all'); setTypeFilter('all'); }}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X size={12} /> Clear
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
