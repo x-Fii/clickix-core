@@ -4,13 +4,38 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, FileText, Eye, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from 'date-fns';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle } from
 '@/components/ui/alert-dialog';
+
+const PERIODS = [
+  { key: 'all', label: 'All Time' },
+  { key: 'today', label: 'Today' },
+  { key: '7d', label: 'Last 7 days' },
+  { key: '30d', label: 'Last 30 days' },
+  { key: 'this_week', label: 'This Week' },
+  { key: 'this_month', label: 'This Month' },
+  { key: 'this_year', label: 'This Year' },
+];
+
+function periodRange(period) {
+  if (period === 'all') return null;
+  const now = new Date();
+  switch (period) {
+    case 'today': return { start: startOfDay(now), end: endOfDay(now) };
+    case '7d': return { start: startOfDay(subDays(now, 7)), end: endOfDay(now) };
+    case '30d': return { start: startOfDay(subDays(now, 30)), end: endOfDay(now) };
+    case 'this_week': return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    case 'this_month': return { start: startOfMonth(now), end: endOfMonth(now) };
+    case 'this_year': return { start: startOfYear(now), end: endOfYear(now) };
+    default: return null;
+  }
+}
 
 const statusColors = {
   draft: 'bg-slate-500/15 text-slate-400 border-slate-500/25',
@@ -23,6 +48,8 @@ export default function Quotations() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState('all');
   const [deleteId, setDeleteId] = useState(null);
 
   const { data: quotations = [], isLoading } = useQuery({
@@ -30,15 +57,29 @@ export default function Quotations() {
     queryFn: () => base44.entities.Quotation.list('-created_date')
   });
 
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => base44.entities.Client.list()
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Quotation.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['quotations'] })
   });
 
+  const range = periodRange(periodFilter);
+  const inPeriod = (q) => {
+    if (!range) return true;
+    const d = q.quotation_date ? parseISO(q.quotation_date) : (q.created_date ? parseISO(q.created_date) : null);
+    return d && isWithinInterval(d, range);
+  };
+
   const filtered = quotations.filter((q) =>
-  q.quotation_number?.toLowerCase().includes(search.toLowerCase()) ||
+  (clientFilter === 'all' || q.client_id === clientFilter) &&
+  inPeriod(q) &&
+  (q.quotation_number?.toLowerCase().includes(search.toLowerCase()) ||
   q.client_name?.toLowerCase().includes(search.toLowerCase()) ||
-  q.sr_number?.toLowerCase().includes(search.toLowerCase())
+  q.sr_number?.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -53,14 +94,32 @@ export default function Quotations() {
         </Button>
       </div>
 
-      <div className="relative mb-5">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search by quotation no., client, or SR no..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 bg-background" />
-        
+      <div className="flex gap-3 flex-wrap mb-5">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by quotation no., client, or SR no..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-background" />
+        </div>
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="w-44 bg-background">
+            <SelectValue placeholder="Client" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Clients</SelectItem>
+            {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={periodFilter} onValueChange={setPeriodFilter}>
+          <SelectTrigger className="w-40 bg-background">
+            <SelectValue placeholder="Period" />
+          </SelectTrigger>
+          <SelectContent>
+            {PERIODS.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ?
