@@ -6,7 +6,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import StatusBadge from '@/components/StatusBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ClipboardList, CheckCircle, AlertTriangle, Clock, TrendingUp, Users, Filter, X, ShieldCheck, Wrench } from 'lucide-react';
+import { ClipboardList, CheckCircle, AlertTriangle, Clock, TrendingUp, Users, Filter, X, ShieldCheck } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO } from 'date-fns';
 import ScheduleCalendarWidget from '@/components/ScheduleCalendarWidget';
 
@@ -115,13 +115,6 @@ export default function Dashboard() {
     return { date: dateStr, jobs: count };
   });
 
-  // Installation reports (same client + period filters)
-  const filteredInstallReports = installReports.filter((r) =>
-    (clientFilter === 'all' || r.client_id === clientFilter) &&
-    inPeriod(r.created_date)
-  );
-  const installTotal = filteredInstallReports.length;
-
   const recentReports = filteredReports.slice(0, 8);
 
   // Staff performance
@@ -177,8 +170,7 @@ export default function Dashboard() {
   { label: 'Total Reports', value: total, icon: ClipboardList, color: 'text-blue-400', to: '/reports' },
   { label: 'Resolved At L1', value: resolvedAtL1, icon: ShieldCheck, color: 'text-teal-400', to: '/reports?status=resolved' },
   { label: 'Open Jobs', value: open, icon: Clock, color: 'text-amber-400', to: '/reports?status=open' },
-  { label: 'Completed', value: completed, icon: CheckCircle, color: 'text-emerald-400', to: '/reports?status=completed' },
-  { label: 'Installations', value: installTotal, icon: Wrench, color: 'text-cyan-400', to: '/installation' }];
+  { label: 'Completed', value: completed, icon: CheckCircle, color: 'text-emerald-400', to: '/reports?status=completed' }];
 
 
   return (
@@ -232,7 +224,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map(({ label, value, icon: Icon, color, to }) =>
         <Link key={label} to={to} className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 hover:bg-muted/20 transition-colors">
             <div className="flex items-center justify-between mb-3">
