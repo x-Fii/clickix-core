@@ -3,34 +3,81 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import StatusBadge from '@/components/StatusBadge';
-import { ClipboardList, CheckCircle, AlertTriangle, Clock, TrendingUp, Users } from 'lucide-react';
-import { format, subDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { ClipboardList, CheckCircle, AlertTriangle, Clock, TrendingUp, Users, Filter, X } from 'lucide-react';
+import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO } from 'date-fns';
 import ScheduleCalendarWidget from '@/components/ScheduleCalendarWidget';
+
+const PERIOD_OPTIONS = [
+  { value: 'all', label: 'All Time' },
+  { value: '7d', label: 'Last 7 Days' },
+  { value: '30d', label: 'Last 30 Days' },
+  { value: 'month', label: 'This Month' },
+  { value: 'lmonth', label: 'Last Month' },
+  { value: 'year', label: 'This Year' },
+];
+
+function periodRange(period) {
+  const now = new Date();
+  if (period === 'all') return null;
+  if (period === '7d') return { start: subDays(now, 7), end: now };
+  if (period === '30d') return { start: subDays(now, 30), end: now };
+  if (period === 'month') return { start: startOfMonth(now), end: endOfMonth(now) };
+  if (period === 'lmonth') {
+    const m = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return { start: startOfMonth(m), end: endOfMonth(m) };
+  }
+  if (period === 'year') return { start: startOfYear(now), end: endOfYear(now) };
+  return null;
+}
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444'];
 const DEVICE_COLORS = { PC: '#3b82f6', TV: '#10b981', 'Network Device': '#f59e0b', Cabling: '#8b5cf6', 'CMS Software': '#06b6d4', Other: '#6b7280' };
 
 export default function Dashboard() {
+  const [clientFilter, setClientFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState('all');
+
   const { data: reports = [] } = useQuery({
     queryKey: ['service-reports'],
     queryFn: () => base44.entities.ServiceReport.list('-created_date', 500)
   });
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => base44.entities.Client.list()
+  });
+
+  // Apply general filters (client + period) to the operations data.
+  const range = periodRange(periodFilter);
+  const inPeriod = (dateStr) => {
+    if (!range) return true;
+    if (!dateStr) return false;
+    const d = new Date(dateStr.slice(0, 10));
+    return d >= range.start && d <= range.end;
+  };
+  const filteredReports = reports.filter((r) =>
+    (clientFilter === 'all' || r.client_id === clientFilter) &&
+    inPeriod(r.created_date)
+  );
+  // Trend uses client filter only (period would empty a 7-day window for non-recent periods).
+  const trendReports = reports.filter((r) => clientFilter === 'all' || r.client_id === clientFilter);
 
   // KPIs
-  const total = reports.length;
-  const open = reports.filter((r) => !['resolved', 'complete'].includes(r.status)).length;
-  const complete = reports.filter((r) => r.status === 'complete').length;
-  const escalated = reports.filter((r) => r.status === 'escalated').length;
+  const total = filteredReports.length;
+  const open = filteredReports.filter((r) => !['resolved', 'complete'].includes(r.status)).length;
+  const complete = filteredReports.filter((r) => r.status === 'complete').length;
+  const escalated = filteredReports.filter((r) => r.status === 'escalated').length;
 
   // By status
   const statusCounts = ['reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'].map((s) => ({
     name: s.charAt(0).toUpperCase() + s.slice(1),
-    value: reports.filter((r) => r.status === s).length
+    value: filteredReports.filter((r) => r.status === s).length
   }));
 
   // By device type
   const deviceMap = {};
-  reports.forEach((r) => {
+  filteredReports.forEach((r) => {
     (r.l1_affected_items || []).forEach((item) => {
       const dt = item.device_type || 'Other';
       deviceMap[dt] = (deviceMap[dt] || 0) + 1;
@@ -40,7 +87,7 @@ export default function Dashboard() {
 
   // By client
   const clientMap = {};
-  reports.forEach((r) => {
+  filteredReports.forEach((r) => {
     if (r.client_name) clientMap[r.client_name] = (clientMap[r.client_name] || 0) + 1;
   });
   const clientData = Object.entries(clientMap).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value }));
@@ -49,14 +96,14 @@ export default function Dashboard() {
   const trendData = Array.from({ length: 7 }, (_, i) => {
     const date = subDays(new Date(), 6 - i);
     const dateStr = format(date, 'MMM d');
-    const count = reports.filter((r) => {
+    const count = trendReports.filter((r) => {
       const cd = new Date(r.created_date);
       return format(cd, 'MMM d') === dateStr;
     }).length;
     return { date: dateStr, jobs: count };
   });
 
-  const recentReports = reports.slice(0, 8);
+  const recentReports = filteredReports.slice(0, 8);
 
   // Staff performance
   const [perfMonth, setPerfMonth] = useState(format(new Date(), 'yyyy-MM'));
@@ -77,8 +124,10 @@ export default function Dashboard() {
     };
 
     const staffMap = {};
+    const clientMatch = (r) => clientFilter === 'all' || r.client_id === clientFilter;
     // Count SR L1
     reports.forEach((r) => {
+      if (!clientMatch(r)) return;
       if (inMonth(r.l1_date) && r.l1_attended_staff_name) {
         const key = r.l1_attended_staff_name;
         if (!staffMap[key]) staffMap[key] = { name: key, sr_l1: 0, sr_l2: 0, ir: 0 };
@@ -92,6 +141,7 @@ export default function Dashboard() {
     });
     // Count IR
     installReports.forEach((r) => {
+      if (!clientMatch(r)) return;
       if (inMonth(r.installation_date) && r.attended_staff_name) {
         const key = r.attended_staff_name;
         if (!staffMap[key]) staffMap[key] = { name: key, sr_l1: 0, sr_l2: 0, ir: 0 };
@@ -117,6 +167,48 @@ export default function Dashboard() {
       <div>
         <h1 className="text-2xl font-semibold font-heading">Operations Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Click IX Sdn Bhd — Service Management Overview</p>
+      </div>
+
+      {/* General Filter */}
+      <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Filter size={14} />
+          <span className="font-medium">Filters</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 flex-1">
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Client</Label>
+            <Select value={clientFilter} onValueChange={setClientFilter}>
+              <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue placeholder="All clients" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All clients</SelectItem>
+                {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Period</Label>
+            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+              <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PERIOD_OPTIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {(clientFilter !== 'all' || periodFilter !== 'all') && (
+            <button
+              type="button"
+              onClick={() => { setClientFilter('all'); setPeriodFilter('all'); }}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={12} /> Clear
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground font-mono">
+          {total} report{total !== 1 ? 's' : ''}
+          {range ? ` · ${format(range.start, 'dd MMM')} – ${format(range.end, 'dd MMM yyyy')}` : ''}
+        </p>
       </div>
 
       {/* KPIs */}
