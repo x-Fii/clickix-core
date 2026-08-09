@@ -58,7 +58,11 @@ export default function InstallationReportForm() {
 
   const [uploading, setUploading] = useState(false);
   const [uploadingStamp, setUploadingStamp] = useState(false);
-  const loadedRef = useRef(false);
+  // Tracks the report id we've already seeded the form for, so the form is
+  // populated exactly once per report (whether the data came from a fresh
+  // fetch or from React Query cache) and never re-seeded while editing.
+  const seededRef = useRef(null);
+  const filtersSeededRef = useRef(null);
 
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
@@ -66,17 +70,7 @@ export default function InstallationReportForm() {
 
   const { data: existing } = useQuery({
     queryKey: ['installation-report', id],
-    queryFn: async () => {
-      const arr = await base44.entities.InstallationReport.filter({ id });
-      // Guard inside queryFn: only seed form state on the first load.
-      // Subsequent refetches (which produce a new `existing` reference) must
-      // NOT overwrite in-progress edits.
-      if (loadedRef.current) return arr;
-      loadedRef.current = true;
-      const r = arr[0];
-      if (r) setForm(f => ({ ...f, ...r }));
-      return arr;
-    },
+    queryFn: () => base44.entities.InstallationReport.filter({ id }),
     enabled: isEdit,
     select: data => data[0],
   });
@@ -84,19 +78,29 @@ export default function InstallationReportForm() {
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
 
-  // When editing, restore the Region/State filter dropdowns from the
-  // report's saved site so they reflect the current selection instead of
-  // appearing empty. These are filter-only UI state (not persisted on the
-  // report), so they must be derived from the loaded site.
+  // Seed the form from the loaded report exactly once per report id. Doing
+  // this in an effect (rather than inside the queryFn) guarantees the seed
+  // runs even when the report is served from React Query cache — which is
+  // what previously caused "original info removed" on re-edit. The id guard
+  // prevents refetches (new `existing` reference) from overwriting edits.
   useEffect(() => {
-    if (loadedRef.current && existing?.site_id && sites.length > 0) {
-      const s = sites.find(x => x.id === existing.site_id);
-      if (s) {
-        setSiteRegionFilter(s.region || '');
-        setSiteStateFilter(s.state || '');
-      }
+    if (!isEdit || !existing || seededRef.current === id) return;
+    seededRef.current = id;
+    setForm(f => ({ ...f, ...existing }));
+  }, [existing, id, isEdit]);
+
+  // Restore the Region/State filter dropdowns from the saved site once per
+  // report (after both the report and the sites list are available). These
+  // are filter-only UI state, not persisted on the report.
+  useEffect(() => {
+    if (!isEdit || !existing || filtersSeededRef.current === id || !existing.site_id || sites.length === 0) return;
+    const s = sites.find(x => x.id === existing.site_id);
+    if (s) {
+      setSiteRegionFilter(s.region || '');
+      setSiteStateFilter(s.state || '');
+      filtersSeededRef.current = id;
     }
-  }, [existing, sites]);
+  }, [existing, sites, id, isEdit]);
 
   const regionOptions = [...new Set(sites.map(s => s.region).filter(Boolean))].sort();
   const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
