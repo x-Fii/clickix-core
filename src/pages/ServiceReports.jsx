@@ -186,8 +186,8 @@ export default function ServiceReports() {
                   <Link to={`/reports/${r.id}`} className="hover:underline">{r.running_number || '—'}</Link>
                 </td>
                 <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.whatsapp_response_id || '—'}</td>
-                <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.do_number || '—'}</td>
-                <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.l2_work_order_number || '—'}</td>
+                <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.status === 'resolved' ? 'N/A' : (r.do_number || '—')}</td>
+                <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.status === 'resolved' ? 'N/A' : (r.l2_work_order_number || '—')}</td>
                 <td className="px-4 py-3 font-medium text-xs">{r.client_name || '—'}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{r.site_name || '—'}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{r.reported_by || '—'}</td>
