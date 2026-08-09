@@ -75,7 +75,7 @@ export default function SignaturePad({ value, onChange, readOnly = false }) {
 
   return (
     <div className="space-y-2">
-      <div className="relative border border-border rounded-lg overflow-hidden bg-white" style={{ height: '150px' }}>
+      <div className="relative border border-border rounded-lg overflow-hidden bg-white" style={{ height: '300px' }}>
         <canvas
           ref={canvasRef}
           className="w-full h-full cursor-crosshair touch-none"
