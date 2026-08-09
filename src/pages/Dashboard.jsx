@@ -232,6 +232,24 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Jobs by Client */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <p className="text-sm font-medium mb-4">Jobs by Client</p>
+        {clientData.length === 0 ?
+        <div className="flex items-center justify-center h-[180px] text-muted-foreground text-sm">No data yet</div> :
+
+        <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={clientData} layout="vertical" barSize={20}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+              <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+              <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
+              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        }
+      </div>
+
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-card border border-border rounded-xl p-5">
@@ -284,45 +302,26 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Charts row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card border border-border rounded-xl p-5">
-          <p className="text-sm font-medium mb-4">Jobs by Client</p>
-          {clientData.length === 0 ?
-          <div className="flex items-center justify-center h-[180px] text-muted-foreground text-sm">No data yet</div> :
-
-          <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={clientData} layout="vertical" barSize={16}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          }
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-5">
-          <p className="text-sm font-medium mb-4 flex items-center gap-2">
-            <TrendingUp size={14} className="text-primary" /> 7-Day Job Trend
-          </p>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={trendData}>
-              <defs>
-                <linearGradient id="jobGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-              <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-              <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
-              <Area type="monotone" dataKey="jobs" stroke="#3b82f6" fill="url(#jobGrad)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+      {/* 7-Day Job Trend */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <p className="text-sm font-medium mb-4 flex items-center gap-2">
+          <TrendingUp size={14} className="text-primary" /> 7-Day Job Trend
+        </p>
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={trendData}>
+            <defs>
+              <linearGradient id="jobGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+            <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+            <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
+            <Area type="monotone" dataKey="jobs" stroke="#3b82f6" fill="url(#jobGrad)" strokeWidth={2} />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Staff Performance */}
