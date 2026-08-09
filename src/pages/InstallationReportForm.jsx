@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -83,6 +83,20 @@ export default function InstallationReportForm() {
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
+
+  // When editing, restore the Region/State filter dropdowns from the
+  // report's saved site so they reflect the current selection instead of
+  // appearing empty. These are filter-only UI state (not persisted on the
+  // report), so they must be derived from the loaded site.
+  useEffect(() => {
+    if (loadedRef.current && existing?.site_id && sites.length > 0) {
+      const s = sites.find(x => x.id === existing.site_id);
+      if (s) {
+        setSiteRegionFilter(s.region || '');
+        setSiteStateFilter(s.state || '');
+      }
+    }
+  }, [existing, sites]);
 
   const regionOptions = [...new Set(sites.map(s => s.region).filter(Boolean))].sort();
   const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
