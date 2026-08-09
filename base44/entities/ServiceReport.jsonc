@@ -111,9 +111,6 @@
     "l1_rectification_done": {
       "type": "string"
     },
-    "l1_summary": {
-      "type": "string"
-    },
     "l1_remarks": {
       "type": "string"
     },

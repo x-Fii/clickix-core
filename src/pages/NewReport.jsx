@@ -53,7 +53,6 @@ export default function NewReport() {
     l1_issue_statement: '',
     l1_issue_pillar: [],
     l1_rectification_done: '',
-    l1_summary: '',
     l1_remarks: '',
     whatsapp_response_id: '',
   });
@@ -267,9 +266,6 @@ export default function NewReport() {
             </Field>
             <Field label="Rectification Done">
               <Textarea value={form.l1_rectification_done} onChange={e => setF('l1_rectification_done', e.target.value)} placeholder="Describe the rectification actions taken..." className="bg-background resize-none" rows={3} />
-            </Field>
-            <Field label="Summary">
-              <Textarea value={form.l1_summary} onChange={e => setF('l1_summary', e.target.value)} placeholder="Summary of this L1 session..." className="bg-background resize-none" rows={3} />
             </Field>
             <Field label="Remarks / Notes">
               <Textarea value={form.l1_remarks} onChange={e => setF('l1_remarks', e.target.value)} placeholder="Any additional remarks or notes for this L1 session..." className="bg-background resize-none" rows={3} />
