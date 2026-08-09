@@ -70,10 +70,16 @@ export default function Dashboard() {
   const escalated = filteredReports.filter((r) => r.status === 'escalated').length;
 
   // By status
-  const statusCounts = ['reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'].map((s) => ({
+  const STATUS_LIST = ['reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete'];
+  const STATUS_COLORS = { reported: '#3b82f6', resolved: '#10b981', escalated: '#ef4444', quote: '#f59e0b', approved: '#8b5cf6', schedule: '#06b6d4', complete: '#22c55e' };
+  const statusCounts = STATUS_LIST.map((s) => ({
     name: s.charAt(0).toUpperCase() + s.slice(1),
     value: filteredReports.filter((r) => r.status === s).length
   }));
+  const stackedStatusData = [{
+    name: 'Total',
+    ...STATUS_LIST.reduce((acc, s) => { acc[s] = filteredReports.filter((r) => r.status === s).length; return acc; }, {})
+  }];
 
   // By device type
   const deviceMap = {};
@@ -229,14 +235,24 @@ export default function Dashboard() {
         <div className="bg-card border border-border rounded-xl p-5">
           <p className="text-sm font-medium mb-4">Jobs by Status</p>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={statusCounts} barSize={24}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-              <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+            <BarChart data={stackedStatusData} barSize={48} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
               <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              {STATUS_LIST.map((s) =>
+                <Bar key={s} dataKey={s} stackId="a" fill={STATUS_COLORS[s]} name={s.charAt(0).toUpperCase() + s.slice(1)} />
+              )}
             </BarChart>
           </ResponsiveContainer>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {statusCounts.map((sc) =>
+              <div key={sc.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="w-2 h-2 rounded-full" style={{ background: STATUS_COLORS[sc.name.toLowerCase()] }} />
+                {sc.name} ({sc.value})
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-card border border-border rounded-xl p-5">
