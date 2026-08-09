@@ -341,6 +341,9 @@ export default function NewReport() {
                 </p>
               ))
             )}
+            <p>• <span className="text-muted-foreground">Issue Statement:</span> {form.l1_issue_statement || <span className="italic text-muted-foreground">—</span>}</p>
+            <p>• <span className="text-muted-foreground">Issue Pillar:</span> {(Array.isArray(form.l1_issue_pillar) ? form.l1_issue_pillar : []).join(', ') || <span className="italic text-muted-foreground">—</span>}</p>
+            <p>• <span className="text-muted-foreground">Rectification Done:</span> {form.l1_rectification_done || <span className="italic text-muted-foreground">—</span>}</p>
             <p>• <span className="text-muted-foreground">Remarks:</span> {form.l1_remarks || <span className="italic text-muted-foreground">—</span>}</p>
           </div>
         </div>
