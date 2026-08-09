@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
-const CATEGORIES = ['Hardware', 'Software', 'Networking', 'Cabling', 'Consumables', 'Services', 'Other'];
+const CATEGORIES = ['Hardware', 'Software', 'Consumables', 'Services', 'Mileage', 'Accommodation', 'Others'];
 const PAYMENT_TERMS = ['30 Days', '60 Days', '90 Days', 'COD', 'Advance Payment', 'Upon Delivery'];
 
 const Field = ({ label, children }) => (
@@ -516,9 +516,9 @@ export default function PRForm() {
                     <td className="py-2 pr-2 text-center text-xs text-muted-foreground font-mono">{i + 1}</td>
                     <td className="py-2 pr-2"><Input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8" placeholder="Item description" /></td>
                     <td className="py-2 pr-2">
-                     {item.category === 'Other' || (item.category && !CATEGORIES.includes(item.category)) ? (
+                     {item.category === 'Others' || (item.category && !CATEGORIES.includes(item.category)) ? (
                        <div className="flex gap-1">
-                         <Input value={item.category === 'Other' ? '' : item.category} onChange={e => updateItem(i, 'category', e.target.value || 'Other')} className="bg-background text-xs h-8" placeholder="Specify category..." autoFocus />
+                         <Input value={item.category === 'Others' ? '' : item.category} onChange={e => updateItem(i, 'category', e.target.value || 'Others')} className="bg-background text-xs h-8" placeholder="Specify category..." autoFocus />
                          <button onClick={() => updateItem(i, 'category', '')} className="text-muted-foreground hover:text-foreground text-xs px-1">✕</button>
                        </div>
                      ) : (
