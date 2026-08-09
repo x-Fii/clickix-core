@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import StatusBadge from '@/components/StatusBadge';
@@ -37,7 +37,6 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444'
 const DEVICE_COLORS = { PC: '#3b82f6', TV: '#10b981', 'Network Device': '#f59e0b', Cabling: '#8b5cf6', 'CMS Software': '#06b6d4', Other: '#6b7280' };
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const [clientFilter, setClientFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
 
@@ -99,9 +98,7 @@ export default function Dashboard() {
   filteredReports.forEach((r) => {
     if (r.client_name) clientMap[r.client_name] = (clientMap[r.client_name] || 0) + 1;
   });
-  const clientIdByName = {};
-  clients.forEach((c) => { clientIdByName[c.company_name] = c.id; });
-  const clientData = Object.entries(clientMap).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value, id: clientIdByName[name] }));
+  const clientData = Object.entries(clientMap).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value }));
 
   // Last 7 days trend
   const trendData = Array.from({ length: 7 }, (_, i) => {
@@ -247,7 +244,7 @@ export default function Dashboard() {
               <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
               <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
               <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(d) => d?.id && navigate(`/reports?client=${d.id}`)} />
+              <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         }
