@@ -1225,38 +1225,6 @@ export default function ReportDetail() {
         {/* L2 Section */}
         {isL2Stage &&
         <>
-            <div className="bg-card border border-border rounded-xl p-6">
-              <SectionHeader title="L2 Onsite Support — Job Details" />
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <Field label="Attended By (L2 Staff)">
-                  {isReadOnly ?
-                <div className="text-sm py-1">{l2Form.l2_attended_staff_name || '—'}</div> :
-
-                <div className="border border-input rounded-md bg-background p-2 space-y-1 max-h-36 overflow-y-auto">
-                      {l2Staff.length === 0 && <p className="text-xs text-muted-foreground">No L2 staff found</p>}
-                      {l2Staff.map((s) => {
-                    const checked = l2Form.l2_attended_staff_ids ?
-                    l2Form.l2_attended_staff_ids.split(',').filter(Boolean).includes(s.id) :
-                    l2Form.l2_attended_staff_name?.split(',').map((n) => n.trim()).includes(s.name) ?? false;
-                    return (
-                      <label key={s.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5">
-                            <input type="checkbox" checked={checked} onChange={() => handleStaffToggle(s.id)} className="accent-primary" />
-                            <span className="text-sm">{s.name}</span>
-                            {s.staff_id && <span className="text-xs text-muted-foreground font-mono">({s.staff_id})</span>}
-                          </label>);
-
-                  })}
-                    </div>
-                }
-                </Field>
-                <Field label="Staff Email"><Input value={l2Form.l2_attended_staff_email} onChange={(e) => setLF('l2_attended_staff_email', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
-                <Field label="DO Number"><Input value={l2Form.do_number || ''} onChange={(e) => setLF('do_number', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
-                <Field label="Attend Date & Time"><Input type="datetime-local" value={l2Form.l2_attend_date ? `${l2Form.l2_attend_date}T${l2Form.l2_attend_time || '00:00'}` : ''} onChange={(e) => { const v = e.target.value; if (!v) { setLF('l2_attend_date', ''); setLF('l2_attend_time', ''); return; } const [d, t] = v.split('T'); setLF('l2_attend_date', d); setLF('l2_attend_time', t || ''); }} className="bg-background" readOnly={isReadOnly} /></Field>
-                <Field label="Site PIC Name"><Input value={l2Form.l2_site_pic_name} onChange={(e) => setLF('l2_site_pic_name', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
-                <Field label="Site PIC ID"><Input value={l2Form.l2_site_pic_id} onChange={(e) => setLF('l2_site_pic_id', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
-              </div>
-            </div>
-
             {/* Quotation */}
             <div className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center justify-between mb-5">
@@ -1320,6 +1288,97 @@ export default function ReportDetail() {
               }
             </div>
             }
+
+            <div className="bg-card border border-border rounded-xl p-6">
+              <SectionHeader title="L2 Onsite Support — Job Details" />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <Field label="Attended By (L2 Staff)">
+                  {isReadOnly ?
+                <div className="text-sm py-1">{l2Form.l2_attended_staff_name || '—'}</div> :
+
+                <div className="border border-input rounded-md bg-background p-2 space-y-1 max-h-36 overflow-y-auto">
+                      {l2Staff.length === 0 && <p className="text-xs text-muted-foreground">No L2 staff found</p>}
+                      {l2Staff.map((s) => {
+                    const checked = l2Form.l2_attended_staff_ids ?
+                    l2Form.l2_attended_staff_ids.split(',').filter(Boolean).includes(s.id) :
+                    l2Form.l2_attended_staff_name?.split(',').map((n) => n.trim()).includes(s.name) ?? false;
+                    return (
+                      <label key={s.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5">
+                            <input type="checkbox" checked={checked} onChange={() => handleStaffToggle(s.id)} className="accent-primary" />
+                            <span className="text-sm">{s.name}</span>
+                            {s.staff_id && <span className="text-xs text-muted-foreground font-mono">({s.staff_id})</span>}
+                          </label>);
+
+                  })}
+                    </div>
+                }
+                </Field>
+                <Field label="Staff Email"><Input value={l2Form.l2_attended_staff_email} onChange={(e) => setLF('l2_attended_staff_email', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="DO Number"><Input value={l2Form.do_number || ''} onChange={(e) => setLF('do_number', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Attend Date & Time"><Input type="datetime-local" value={l2Form.l2_attend_date ? `${l2Form.l2_attend_date}T${l2Form.l2_attend_time || '00:00'}` : ''} onChange={(e) => { const v = e.target.value; if (!v) { setLF('l2_attend_date', ''); setLF('l2_attend_time', ''); return; } const [d, t] = v.split('T'); setLF('l2_attend_date', d); setLF('l2_attend_time', t || ''); }} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Site PIC Name"><Input value={l2Form.l2_site_pic_name} onChange={(e) => setLF('l2_site_pic_name', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Site PIC ID"><Input value={l2Form.l2_site_pic_id} onChange={(e) => setLF('l2_site_pic_id', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+              </div>
+            </div>
+
+            {/* Pre-Job Site Assessment & Post-Job Site Remarks */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <SectionHeader title="Pre-Job Site Assessment & Post-Job Site Remarks" subtitle="Onsite assessment and post-job remarks" />
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Field label="Pre-Job Site Assessment">
+                    <Textarea value={l2Form.l2_job_description} onChange={(e) => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={4} readOnly={isReadOnly} />
+                  </Field>
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Assessment Photos (max 5)</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {jobDescPhotos.map((url, pi) =>
+                    <div key={pi} className="relative group">
+                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                          {!isReadOnly &&
+                      <button onClick={() => setJobDescPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X size={8} />
+                            </button>
+                      }
+                        </div>
+                    )}
+                      {!isReadOnly && jobDescPhotos.length < 5 &&
+                    <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                          {uploadingPhoto === 'jobdesc-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
+                          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handlePhotoUpload('jobdesc', 0, e.target.files); e.target.value = ''; }} />
+                        </label>
+                    }
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <Field label="Post-Job Site Remarks">
+                    <Textarea value={l2Form.l2_remarks} onChange={(e) => setLF('l2_remarks', e.target.value)} className="bg-background resize-none" rows={2} readOnly={isReadOnly} />
+                  </Field>
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Post-Job Photos (max 5)</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {remarksPhotos.map((url, pi) =>
+                    <div key={pi} className="relative group">
+                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                          {!isReadOnly &&
+                      <button onClick={() => setRemarksPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X size={8} />
+                            </button>
+                      }
+                        </div>
+                    )}
+                      {!isReadOnly && remarksPhotos.length < 5 &&
+                    <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                          {uploadingPhoto === 'remarks-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
+                          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handlePhotoUpload('remarks', 0, e.target.files); e.target.value = ''; }} />
+                        </label>
+                    }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* L2 Items — continuation of L1 */}
             <div className="bg-card border border-border rounded-xl p-6">
@@ -1440,65 +1499,6 @@ export default function ReportDetail() {
                     <input type="file" className="hidden" onChange={(e) => handleDocUpload(e.target.files)} />
                   </label>
               }
-              </div>
-            </div>
-
-            {/* Pre-Job Site Assessment & Post-Job Site Remarks */}
-            <div className="bg-card border border-border rounded-xl p-6">
-              <SectionHeader title="Pre-Job Site Assessment & Post-Job Site Remarks" subtitle="Onsite assessment and post-job remarks" />
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <Field label="Pre-Job Site Assessment">
-                    <Textarea value={l2Form.l2_job_description} onChange={(e) => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={4} readOnly={isReadOnly} />
-                  </Field>
-                  <div className="mt-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Assessment Photos (max 5)</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {jobDescPhotos.map((url, pi) =>
-                    <div key={pi} className="relative group">
-                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
-                          {!isReadOnly &&
-                      <button onClick={() => setJobDescPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
-                              <X size={8} />
-                            </button>
-                      }
-                        </div>
-                    )}
-                      {!isReadOnly && jobDescPhotos.length < 5 &&
-                    <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                          {uploadingPhoto === 'jobdesc-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
-                          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handlePhotoUpload('jobdesc', 0, e.target.files); e.target.value = ''; }} />
-                        </label>
-                    }
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <Field label="Post-Job Site Remarks">
-                    <Textarea value={l2Form.l2_remarks} onChange={(e) => setLF('l2_remarks', e.target.value)} className="bg-background resize-none" rows={2} readOnly={isReadOnly} />
-                  </Field>
-                  <div className="mt-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Post-Job Photos (max 5)</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {remarksPhotos.map((url, pi) =>
-                    <div key={pi} className="relative group">
-                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
-                          {!isReadOnly &&
-                      <button onClick={() => setRemarksPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
-                              <X size={8} />
-                            </button>
-                      }
-                        </div>
-                    )}
-                      {!isReadOnly && remarksPhotos.length < 5 &&
-                    <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                          {uploadingPhoto === 'remarks-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
-                          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handlePhotoUpload('remarks', 0, e.target.files); e.target.value = ''; }} />
-                        </label>
-                    }
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
