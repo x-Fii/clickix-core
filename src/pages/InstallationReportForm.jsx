@@ -512,7 +512,7 @@ export default function InstallationReportForm() {
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Schedule & Attendance</h2>
           <div className={rowClass}>
             <div className="space-y-1">
-              <Label>Actual Installation Date</Label>
+              <Label>Installation Start Date</Label>
               <Input type="date" value={form.installation_date} onChange={e => set('installation_date', e.target.value)} />
             </div>
             <div className="space-y-1">
