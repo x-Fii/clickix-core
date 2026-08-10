@@ -6,7 +6,7 @@ import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameDay, isSameMonth, addMonths, subMonths,
   addWeeks, subWeeks, startOfWeek, endOfWeek,
-  getDay, isToday, parseISO
+  getDay, isToday, parseISO, addDays, differenceInCalendarDays
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, CalendarDays, Filter, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -101,6 +101,29 @@ export default function ScheduleCalendar() {
     if (dayOffset < 0 || dayOffset >= calDays.length) return null;
     return calDays[dayOffset];
   });
+
+  // Multi-day installation jobs — rendered as bars spanning consecutive day cells
+  const multiDayEvents = (showIR ? installationReports : [])
+    .filter(clientMatch)
+    .map(r => {
+      const s = r.scheduled_date || r.installation_date;
+      const e = r.scheduled_end_date || s;
+      if (!s) return null;
+      const start = parseISO(s.slice(0, 10));
+      const end = parseISO((e || s).slice(0, 10));
+      if (isNaN(start) || isNaN(end)) return null;
+      if (differenceInCalendarDays(end, start) < 1) return null;
+      return { id: r.id, status: r.status, site_name: r.site_name, report_number: r.report_number, start, end };
+    })
+    .filter(Boolean);
+  const multiDayIds = new Set(multiDayEvents.map(e => e.id));
+
+  // Group month cells into week rows; keep a real date for every slot (incl. padding)
+  const cellDates = Array.from({ length: totalCells }, (_, i) => addDays(monthStart, i - startPad));
+  const rows = [];
+  for (let i = 0; i < totalCells; i += 7) {
+    rows.push({ dates: cellDates.slice(i, i + 7), days: cells.slice(i, i + 7) });
+  }
 
   // Weekly view days
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -226,47 +249,80 @@ export default function ScheduleCalendar() {
           </div>
 
           {view === 'month' ? (
-            /* Monthly grid */
-            <div className="grid grid-cols-7">
-              {cells.map((day, i) => {
-                if (!day) return (
-                  <div key={i} className="min-h-[120px] border-b border-r border-border/40 bg-muted/10" />
-                );
-                const key = format(day, 'yyyy-MM-dd');
-                const dayReports = dateMap[key] || [];
-                const isSelected = selectedDay && isSameDay(day, selectedDay);
-                const today = isToday(day);
-                const inMonth = isSameMonth(day, currentMonth);
+            /* Monthly grid — multi-day jobs render as bars spanning across day cells */
+            <div>
+              {rows.map((row, ri) => {
+                const rowStart = row.dates[0];
+                const rowEnd = row.dates[6];
+                const spans = multiDayEvents
+                  .filter(ev => !(ev.end < rowStart || ev.start > rowEnd))
+                  .map(ev => {
+                    const colStart = Math.max(0, differenceInCalendarDays(ev.start, rowStart));
+                    const colEnd = Math.min(6, differenceInCalendarDays(ev.end, rowStart));
+                    return { ...ev, colStart, colEnd, span: colEnd - colStart + 1 };
+                  });
                 return (
-                  <button
-                    key={key}
-                    onClick={() => setSelectedDay(isSameDay(day, selectedDay) ? null : day)}
-                    className={cn(
-                      'min-h-[120px] border-b border-r border-border/40 px-2 pb-2 pt-10 text-left transition-colors relative flex flex-col items-stretch justify-start',
-                      isSelected ? 'bg-primary/10 border-primary/30' : 'hover:bg-muted/40',
-                      !inMonth && 'opacity-30',
+                  <div key={ri} className="relative grid grid-cols-7 border-b border-border/40">
+                    {spans.length > 0 && (
+                      <div className="absolute inset-x-0 top-9 z-10 pointer-events-none">
+                        {spans.map((sp, si) => {
+                          const sc = STATUS_COLORS[sp.status] || STATUS_COLORS.reported;
+                          return (
+                            <Link
+                              key={si}
+                              to={`/installation/${sp.id}`}
+                              onClick={e => e.stopPropagation()}
+                              style={{ left: `${(sp.colStart / 7) * 100}%`, width: `${(sp.span / 7) * 100}%` }}
+                              className={cn('absolute h-5 top-0 px-1.5 flex items-center text-[10px] font-mono border rounded pointer-events-auto overflow-hidden', sc.pill)}
+                            >
+                              <span className="truncate">📦 {sp.site_name || sp.report_number}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     )}
-                  >
-                    <div className={cn(
-                      'absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold',
-                      today ? 'bg-primary text-primary-foreground' : 'text-foreground',
-                    )}>
-                      {format(day, 'd')}
-                    </div>
-                    <div className="space-y-0.5">
-                      {dayReports.slice(0, 3).map((r, ri) => {
-                        const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
-                        return (
-                          <div key={ri} className={cn('text-[10px] px-1.5 py-0.5 rounded border break-words font-mono', sc.pill)}>
-                            {r._type === 'ir' ? '📦 ' : ''}{r.site_name || r.running_number || r.report_number}
+                    {row.days.map((day, ci) => {
+                      if (!day) return (
+                        <div key={ci} className="min-h-[120px] border-r border-border/40 bg-muted/10" />
+                      );
+                      const key = format(day, 'yyyy-MM-dd');
+                      const dayReports = (dateMap[key] || []).filter(r => !multiDayIds.has(r.id));
+                      const isSelected = selectedDay && isSameDay(day, selectedDay);
+                      const today = isToday(day);
+                      const inMonth = isSameMonth(day, currentMonth);
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setSelectedDay(isSameDay(day, selectedDay) ? null : day)}
+                          className={cn(
+                            'min-h-[120px] border-r border-border/40 px-2 pb-2 pt-14 text-left transition-colors relative flex flex-col items-stretch justify-start',
+                            isSelected ? 'bg-primary/10 border-primary/30' : 'hover:bg-muted/40',
+                            !inMonth && 'opacity-30',
+                          )}
+                        >
+                          <div className={cn(
+                            'absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-semibold',
+                            today ? 'bg-primary text-primary-foreground' : 'text-foreground',
+                          )}>
+                            {format(day, 'd')}
                           </div>
-                        );
-                      })}
-                      {dayReports.length > 3 && (
-                        <div className="text-[10px] text-muted-foreground px-1 font-mono">+{dayReports.length - 3} more</div>
-                      )}
-                    </div>
-                  </button>
+                          <div className="space-y-0.5">
+                            {dayReports.slice(0, 3).map((r, ri) => {
+                              const sc = STATUS_COLORS[r.status] || STATUS_COLORS.reported;
+                              return (
+                                <div key={ri} className={cn('text-[10px] px-1.5 py-0.5 rounded border break-words font-mono', sc.pill)}>
+                                  {r._type === 'ir' ? '📦 ' : ''}{r.site_name || r.running_number || r.report_number}
+                                </div>
+                              );
+                            })}
+                            {dayReports.length > 3 && (
+                              <div className="text-[10px] text-muted-foreground px-1 font-mono">+{dayReports.length - 3} more</div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 );
               })}
             </div>
