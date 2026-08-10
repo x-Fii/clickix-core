@@ -47,6 +47,9 @@
     "scheduled_date": {
       "type": "string"
     },
+    "scheduled_end_date": {
+      "type": "string"
+    },
     "installation_date": {
       "type": "string"
     },

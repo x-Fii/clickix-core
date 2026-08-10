@@ -41,7 +41,7 @@ export default function InstallationReportForm() {
     site_id: '', site_name: '', site_location: '',
     reported_by: '',
     do_number: '',
-    scheduled_date: '', installation_date: '', installation_finish_date: '', attend_time: '',
+    scheduled_date: '', scheduled_end_date: '', installation_date: '', installation_finish_date: '', attend_time: '',
     attended_staff_name: '', attended_staff_id: '', attended_staff_email: '',
     work_order_number: '', site_pic_name: '',
     equipment_sections: [blankSection()],
@@ -388,6 +388,17 @@ export default function InstallationReportForm() {
                 <SelectContent>{staff.filter(s => s.is_active).map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            <div className="space-y-1">
+              <Label>Schedule Start Date</Label>
+              <Input type="date" value={form.scheduled_date} onChange={e => {
+                const v = e.target.value;
+                setForm(f => ({ ...f, scheduled_date: v, status: f.status === 'pending' ? 'scheduled' : f.status }));
+              }} />
+            </div>
+            <div className="space-y-1">
+              <Label>Schedule End Date</Label>
+              <Input type="date" value={form.scheduled_end_date} min={form.scheduled_date || undefined} onChange={e => set('scheduled_end_date', e.target.value)} />
+            </div>
           </div>
         </div>
 
@@ -500,10 +511,6 @@ export default function InstallationReportForm() {
         <div className={sectionClass}>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Schedule & Attendance</h2>
           <div className={rowClass}>
-            <div className="space-y-1">
-              <Label>Scheduled Date</Label>
-              <Input type="date" value={form.scheduled_date} onChange={e => set('scheduled_date', e.target.value)} />
-            </div>
             <div className="space-y-1">
               <Label>Actual Installation Date</Label>
               <Input type="date" value={form.installation_date} onChange={e => set('installation_date', e.target.value)} />

@@ -74,11 +74,17 @@ export default function ScheduleCalendar() {
   if (showIR) {
     installationReports.forEach(r => {
       if (!clientMatch(r)) return;
-      const dateStr = r.scheduled_date || r.installation_date || r.created_date;
-      if (!dateStr) return;
-      const key = dateStr.slice(0, 10);
-      if (!dateMap[key]) dateMap[key] = [];
-      dateMap[key].push({ ...r, _type: 'ir' });
+      const startStr = r.scheduled_date || r.installation_date || r.created_date;
+      if (!startStr) return;
+      const startDate = parseISO(startStr.slice(0, 10));
+      const endDate = r.scheduled_end_date ? parseISO(r.scheduled_end_date.slice(0, 10)) : startDate;
+      let days;
+      try { days = eachDayOfInterval({ start: startDate, end: endDate }); } catch { days = [startDate]; }
+      days.forEach(d => {
+        const key = format(d, 'yyyy-MM-dd');
+        if (!dateMap[key]) dateMap[key] = [];
+        if (!dateMap[key].some(x => x.id === r.id)) dateMap[key].push({ ...r, _type: 'ir' });
+      });
     });
   }
 
