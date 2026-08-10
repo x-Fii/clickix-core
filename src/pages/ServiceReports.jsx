@@ -133,6 +133,7 @@ export default function ServiceReports() {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
+        { label: 'L1 Pending', value: counts.l1Pending, color: 'text-cyan-400' },
         { label: 'Resolved At L1',  value: counts.resolved,  color: 'text-teal-400' },
         { label: 'Escalated', value: counts.escalated, color: 'text-amber-400' },
         { label: 'Quote',     value: counts.quote,     color: 'text-yellow-400' },
@@ -140,7 +141,6 @@ export default function ServiceReports() {
         { label: 'Schedule',  value: counts.schedule,  color: 'text-blue-400' },
         { label: 'Complete',  value: counts.complete,  color: 'text-emerald-400' },
         { label: 'Billed',    value: counts.billed,    color: 'text-pink-400' },
-        { label: 'L1 Pending', value: counts.l1Pending, color: 'text-cyan-400' },
         ].map((s) =>
         <div key={s.label} className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">{s.label}</p>
