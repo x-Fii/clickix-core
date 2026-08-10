@@ -127,9 +127,12 @@ export default function ServiceReports() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
+        <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Total</p>
+        <p className="text-2xl font-bold font-mono text-foreground">{counts.all}</p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-        { label: 'Total',     value: counts.all,      color: 'text-foreground' },
         { label: 'Resolved At L1',  value: counts.resolved,  color: 'text-teal-400' },
         { label: 'Escalated', value: counts.escalated, color: 'text-amber-400' },
         { label: 'Quote',     value: counts.quote,     color: 'text-yellow-400' },
