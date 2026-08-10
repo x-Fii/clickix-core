@@ -114,6 +114,18 @@
                 "anydesk": {
                   "type": "string"
                 },
+                "length": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "num_ports": {
+                  "type": "number"
+                },
+                "num_gang": {
+                  "type": "number"
+                },
                 "notes": {
                   "type": "string"
                 },
@@ -188,6 +200,18 @@
           },
           "anydesk": {
             "type": "string"
+          },
+          "length": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "num_ports": {
+            "type": "number"
+          },
+          "num_gang": {
+            "type": "number"
           },
           "notes": {
             "type": "string"

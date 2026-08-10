@@ -210,7 +210,7 @@ export default function InstallationReportForm() {
         if (existingIdx >= 0) {
           items.splice(existingIdx, 1);
         } else {
-          items.push({ device_type: device.type, device_name: device.fillIn ? '' : device.name, serial_number: '', model: '', sku: '', anydesk: '', notes: '', photos: [] });
+          items.push({ device_type: device.type, device_name: device.fillIn ? '' : device.name, serial_number: '', model: '', sku: '', anydesk: '', length: '', quantity: '', num_ports: '', num_gang: '', notes: '', photos: [] });
         }
         return { ...sec, items };
       });
@@ -619,12 +619,12 @@ export default function InstallationReportForm() {
                         className="absolute top-2 right-2 text-muted-foreground hover:text-destructive">
                         <Trash2 size={12} />
                       </button>
-                      <div className="space-y-1">
-                        <Label className="text-xs">SKU</Label>
-                        <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU / Serial Number" />
-                      </div>
                       {(item.device_name === 'PC' || item.device_name === 'HDMI Extender') && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">SKU</Label>
+                            <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU / Serial Number" />
+                          </div>
                           <div className="space-y-1">
                             <Label className="text-xs">Model</Label>
                             <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
@@ -635,9 +635,45 @@ export default function InstallationReportForm() {
                           </div>
                         </div>
                       )}
+                      {(item.device_name === 'HDMI' || item.device_name === 'LAN') && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Length</Label>
+                            <Input className="h-8 text-xs" value={item.length || ''} onChange={e => updateSectionItem(si, ii, 'length', e.target.value)} placeholder="Length" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Quantity</Label>
+                            <Input type="number" className="h-8 text-xs" value={item.quantity || ''} onChange={e => updateSectionItem(si, ii, 'quantity', e.target.value)} placeholder="Quantity" />
+                          </div>
+                        </div>
+                      )}
+                      {item.device_name === 'Network Switch' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Model</Label>
+                            <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Number of Ports</Label>
+                            <Input type="number" className="h-8 text-xs" value={item.num_ports || ''} onChange={e => updateSectionItem(si, ii, 'num_ports', e.target.value)} placeholder="Ports" />
+                          </div>
+                        </div>
+                      )}
+                      {item.device_name === 'Power Extension' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Number of Gang</Label>
+                            <Input type="number" className="h-8 text-xs" value={item.num_gang || ''} onChange={e => updateSectionItem(si, ii, 'num_gang', e.target.value)} placeholder="Gang" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Quantity</Label>
+                            <Input type="number" className="h-8 text-xs" value={item.quantity || ''} onChange={e => updateSectionItem(si, ii, 'quantity', e.target.value)} placeholder="Quantity" />
+                          </div>
+                        </div>
+                      )}
                       <div className="space-y-1">
-                        <Label className="text-xs">Notes</Label>
-                        <Input className="h-8 text-xs" value={item.notes} onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)} placeholder="Additional notes" />
+                        <Label className="text-xs">Remarks</Label>
+                        <Input className="h-8 text-xs" value={item.notes} onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)} placeholder="Remarks" />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Photos</Label>
