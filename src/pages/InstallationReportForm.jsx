@@ -511,7 +511,7 @@ export default function InstallationReportForm() {
         {/* Schedule & Attendance */}
         <div className={sectionClass}>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Schedule & Attendance</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label>Installation Start Date</Label>
               <Input type="datetime-local" value={toDatetimeLocal(form.installation_date)} onChange={e => set('installation_date', e.target.value)} />
@@ -520,9 +520,9 @@ export default function InstallationReportForm() {
               <Label>Installation Finish Date</Label>
               <Input type="datetime-local" value={toDatetimeLocal(form.installation_finish_date)} onChange={e => set('installation_finish_date', e.target.value)} />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 md:col-span-2">
               <Label>Technician</Label>
-              <div className="grid grid-cols-2 gap-1 border border-input rounded-md bg-background p-2 max-h-36 overflow-y-auto content-start">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-1 border border-input rounded-md bg-background p-2 max-h-36 overflow-y-auto content-start">
                 {staff.length === 0 && <p className="text-xs text-muted-foreground">No staff found</p>}
                 {staff.map(s => {
                   const selectedIds = form.attended_staff_id ? form.attended_staff_id.split(',').filter(Boolean) : [];
