@@ -369,6 +369,7 @@ export default function InstallationReportForm() {
   const sectionClass = 'bg-card border border-border rounded-xl p-5 space-y-4';
   const rowClass = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
   const jobLocked = form.status === 'scheduled' || form.status === 'completed' || form.status === 'cancelled';
+  const isImage = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i.test(url || '');
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -843,17 +844,35 @@ export default function InstallationReportForm() {
         {/* Supporting Documents */}
         <div className={sectionClass}>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Supporting Documents</h2>
-          <div className="space-y-2">
-            {form.supporting_documents.map((url, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                <a href={url} target="_blank" rel="noreferrer" className="underline truncate max-w-xs">Document {i + 1}</a>
-                <button type="button" onClick={() => set('supporting_documents', form.supporting_documents.filter((_, j) => j !== i))} className="text-destructive"><X size={12} /></button>
-              </div>
-            ))}
-            <label className="flex items-center gap-2 cursor-pointer text-xs text-primary hover:underline">
-              <Upload size={13} /> {uploading ? 'Uploading…' : 'Upload document'}
-              <input type="file" className="hidden" disabled={uploading} onChange={handleDocUpload} />
-            </label>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-3 items-start">
+              {(form.supporting_documents || []).map((url, i) => isImage(url) ? (
+                <div key={i} className="relative group">
+                  <img src={url} alt="" className="w-24 h-24 object-cover rounded border border-border" />
+                  <button type="button" onClick={() => set('supporting_documents', form.supporting_documents.filter((_, j) => j !== i))}
+                    className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:flex items-center justify-center">
+                    <X size={10} />
+                  </button>
+                </div>
+              ) : null)}
+              <label className="w-24 h-24 border border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors gap-1">
+                <Upload size={16} className="text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">{uploading ? 'Uploading…' : 'Add Photos'}</span>
+                <input type="file" accept="image/*" multiple className="hidden" disabled={uploading} onChange={e => handleMultiPhotoUpload(e, 'supporting_documents')} />
+              </label>
+            </div>
+            <div className="space-y-2">
+              {(form.supporting_documents || []).map((url, i) => !isImage(url) ? (
+                <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <a href={url} target="_blank" rel="noreferrer" className="underline truncate max-w-xs">Document {i + 1}</a>
+                  <button type="button" onClick={() => set('supporting_documents', form.supporting_documents.filter((_, j) => j !== i))} className="text-destructive"><X size={12} /></button>
+                </div>
+              ) : null)}
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-primary hover:underline">
+                <Upload size={13} /> {uploading ? 'Uploading…' : 'Upload document'}
+                <input type="file" className="hidden" disabled={uploading} onChange={handleDocUpload} />
+              </label>
+            </div>
           </div>
         </div>
 
