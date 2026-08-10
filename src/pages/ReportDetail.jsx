@@ -1223,60 +1223,6 @@ export default function ReportDetail() {
         <>
             <div className="bg-card border border-border rounded-xl p-6">
               <SectionHeader title="L2 Onsite Support — Job Details" />
-              <div className="grid grid-cols-1 gap-4 mb-4">
-                <div>
-                  <Field label="Pre-Job Site Assessment">
-                    <Textarea value={l2Form.l2_job_description} onChange={(e) => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={4} readOnly={isReadOnly} />
-                  </Field>
-                  <div className="mt-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Assessment Photos</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {jobDescPhotos.map((url, pi) =>
-                    <div key={pi} className="relative group">
-                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
-                          {!isReadOnly &&
-                      <button onClick={() => setJobDescPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
-                              <X size={8} />
-                            </button>
-                      }
-                        </div>
-                    )}
-                      {!isReadOnly &&
-                    <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                          {uploadingPhoto === 'jobdesc-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload('jobdesc', 0, e.target.files)} />
-                        </label>
-                    }
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <Field label="Post-Job Site Remarks">
-                    <Textarea value={l2Form.l2_remarks} onChange={(e) => setLF('l2_remarks', e.target.value)} className="bg-background resize-none" rows={2} readOnly={isReadOnly} />
-                  </Field>
-                  <div className="mt-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Post-Job Photos</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {remarksPhotos.map((url, pi) =>
-                    <div key={pi} className="relative group">
-                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
-                          {!isReadOnly &&
-                      <button onClick={() => setRemarksPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
-                              <X size={8} />
-                            </button>
-                      }
-                        </div>
-                    )}
-                      {!isReadOnly &&
-                    <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                          {uploadingPhoto === 'remarks-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload('remarks', 0, e.target.files)} />
-                        </label>
-                    }
-                    </div>
-                  </div>
-                </div>
-              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Field label="Attended By (L2 Staff)">
                   {isReadOnly ?
@@ -1511,6 +1457,65 @@ export default function ReportDetail() {
                     <input type="file" className="hidden" onChange={(e) => handleDocUpload(e.target.files)} />
                   </label>
               }
+              </div>
+            </div>
+
+            {/* Pre-Job Site Assessment & Post-Job Site Remarks */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <SectionHeader title="Pre-Job Site Assessment & Post-Job Site Remarks" subtitle="Onsite assessment and post-job remarks" />
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Field label="Pre-Job Site Assessment">
+                    <Textarea value={l2Form.l2_job_description} onChange={(e) => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={4} readOnly={isReadOnly} />
+                  </Field>
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Assessment Photos</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {jobDescPhotos.map((url, pi) =>
+                    <div key={pi} className="relative group">
+                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                          {!isReadOnly &&
+                      <button onClick={() => setJobDescPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X size={8} />
+                            </button>
+                      }
+                        </div>
+                    )}
+                      {!isReadOnly &&
+                    <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                          {uploadingPhoto === 'jobdesc-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload('jobdesc', 0, e.target.files)} />
+                        </label>
+                    }
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <Field label="Post-Job Site Remarks">
+                    <Textarea value={l2Form.l2_remarks} onChange={(e) => setLF('l2_remarks', e.target.value)} className="bg-background resize-none" rows={2} readOnly={isReadOnly} />
+                  </Field>
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Post-Job Photos</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {remarksPhotos.map((url, pi) =>
+                    <div key={pi} className="relative group">
+                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                          {!isReadOnly &&
+                      <button onClick={() => setRemarksPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X size={8} />
+                            </button>
+                      }
+                        </div>
+                    )}
+                      {!isReadOnly &&
+                    <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                          {uploadingPhoto === 'remarks-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload('remarks', 0, e.target.files)} />
+                        </label>
+                    }
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
