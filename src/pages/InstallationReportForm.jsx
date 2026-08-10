@@ -18,6 +18,9 @@ const RELATED_DEVICES = [
   { name: 'HDMI Extender', type: 'Other' },
   { name: 'HDMI', type: 'Other' },
   { name: 'LAN', type: 'Network Device' },
+  { name: 'Network Switch', type: 'Network Device' },
+  { name: 'Power Extension', type: 'Other' },
+  { name: 'Other', type: 'Other', fillIn: true },
 ];
 
 function generateReportNumber() {
@@ -201,11 +204,13 @@ export default function InstallationReportForm() {
       const arr = f.equipment_sections.map((sec, s) => {
         if (s !== si) return sec;
         const items = [...(sec.items || [])];
-        const existingIdx = items.findIndex(it => it.device_name === device.name);
+        const existingIdx = device.fillIn
+          ? items.findIndex(it => it.device_type === device.type && it.device_name === '')
+          : items.findIndex(it => it.device_name === device.name);
         if (existingIdx >= 0) {
           items.splice(existingIdx, 1);
         } else {
-          items.push({ device_type: device.type, device_name: device.name, serial_number: '', notes: '', photos: [] });
+          items.push({ device_type: device.type, device_name: device.fillIn ? '' : device.name, serial_number: '', notes: '', photos: [] });
         }
         return { ...sec, items };
       });
@@ -597,11 +602,13 @@ export default function InstallationReportForm() {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <span className="text-xs text-muted-foreground">Related devices</span>
                     {RELATED_DEVICES.map(dev => {
-                      const checked = (sec.items || []).some(it => it.device_name === dev.name);
+                      const checked = dev.fillIn
+                        ? (sec.items || []).some(it => it.device_type === dev.type && it.device_name === '')
+                        : (sec.items || []).some(it => it.device_name === dev.name);
                       return (
                         <label key={dev.name} className="flex items-center gap-1.5 text-xs cursor-pointer hover:text-primary transition-colors">
                           <input type="checkbox" checked={checked} onChange={() => toggleRelatedDevice(si, dev)} className="accent-primary" />
-                          {dev.name}
+                          {dev.fillIn ? `${dev.name} (fill in)` : dev.name}
                         </label>
                       );
                     })}
