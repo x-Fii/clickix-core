@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ArrowLeft, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import SignaturePad from '@/components/SignaturePad';
@@ -77,6 +78,40 @@ export default function InstallationReportForm() {
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
+  const [showAddSite, setShowAddSite] = useState(false);
+  const [newSite, setNewSite] = useState({ client_id: '', site_name: '', site_location: '', state: '', region: '', pic_name: '', pic_phone: '' });
+
+  const siteCreateMutation = useMutation({
+    mutationFn: data => base44.entities.Site.create(data),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries(['sites']);
+      const c = clients.find(x => x.id === created.client_id) || clients.find(x => x.id === newSite.client_id);
+      setForm(f => ({
+        ...f,
+        client_id: created.client_id,
+        client_name: created.client_name || c?.company_name || '',
+        site_id: created.id,
+        site_name: created.site_name,
+        site_location: created.site_location || '',
+        site_pic_name: created.pic_name || '',
+      }));
+      setSiteRegionFilter(created.region || '');
+      setSiteStateFilter(created.state || '');
+      setShowAddSite(false);
+      setNewSite({ client_id: '', site_name: '', site_location: '', state: '', region: '', pic_name: '', pic_phone: '' });
+      toast({ title: 'Site created', description: `${created.site_name} added and selected.` });
+    },
+    onError: () => toast({ title: 'Failed to create site', variant: 'destructive' }),
+  });
+
+  const handleAddSite = () => {
+    if (!newSite.client_id || !newSite.site_name) {
+      toast({ title: 'Client and Site Name are required', variant: 'destructive' });
+      return;
+    }
+    const c = clients.find(x => x.id === newSite.client_id);
+    siteCreateMutation.mutate({ ...newSite, client_name: c?.company_name || '', status: ['active'] });
+  };
 
   // Seed the form from the loaded report exactly once per report id. Doing
   // this in an effect (rather than inside the queryFn) guarantees the seed
@@ -358,13 +393,18 @@ export default function InstallationReportForm() {
 
         {/* Client & Site */}
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Client & Site</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Client & Site</h2>
+            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddSite(true)}>
+              <Plus size={14} /> Add New Site
+            </Button>
+          </div>
           <div className={rowClass}>
             <div className="space-y-1">
               <Label>Client</Label>
               <Select value={form.client_id} onValueChange={v => {
                 const c = clients.find(x => x.id === v);
-                setForm(f => ({ ...f, client_id: v, client_name: c?.company_name || '', site_id: '', site_name: '', site_location: '' }));
+                setForm(f => ({ ...f, client_id: v, client_name: c?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
               }}>
                 <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
                 <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent>
@@ -394,22 +434,67 @@ export default function InstallationReportForm() {
               <Label>Site / Outlet</Label>
               <Select value={form.site_id} onValueChange={v => {
                 const s = sites.find(x => x.id === v);
-                setForm(f => ({ ...f, site_id: v, site_name: s?.site_name || '', site_location: s?.site_location || '' }));
+                setForm(f => ({ ...f, site_id: v, site_name: s?.site_name || '', site_location: s?.site_location || '', site_pic_name: s?.pic_name || '' }));
               }}>
                 <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
                 <SelectContent>{filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}{s.state ? ` — ${s.state}` : ''}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Site Location</Label>
-              <Input value={form.site_location} onChange={e => set('site_location', e.target.value)} placeholder="Address" />
+              <Label>Site Location <span className="text-muted-foreground/60 normal-case font-normal lowercase tracking-normal">(autofill)</span></Label>
+              <Input value={form.site_location} readOnly placeholder="Autofilled from selected site" className="bg-muted/40 cursor-not-allowed" />
             </div>
             <div className="space-y-1">
-              <Label>Site PIC Name</Label>
-              <Input value={form.site_pic_name} onChange={e => set('site_pic_name', e.target.value)} placeholder="Person in charge" />
+              <Label>Site PIC Name <span className="text-muted-foreground/60 normal-case font-normal lowercase tracking-normal">(autofill)</span></Label>
+              <Input value={form.site_pic_name} readOnly placeholder="Autofilled from selected site" className="bg-muted/40 cursor-not-allowed" />
             </div>
           </div>
         </div>
+
+        <Dialog open={showAddSite} onOpenChange={setShowAddSite}>
+          <DialogContent className="sm:max-w-[520px]">
+            <DialogHeader>
+              <DialogTitle>Add New Site</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-3 py-2">
+              <div className="space-y-1 col-span-2">
+                <Label>Client</Label>
+                <Select value={newSite.client_id} onValueChange={v => setNewSite(n => ({ ...n, client_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                  <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 col-span-2">
+                <Label>Site / Outlet Name</Label>
+                <Input value={newSite.site_name} onChange={e => setNewSite(n => ({ ...n, site_name: e.target.value }))} placeholder="Site name" />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <Label>Site Location</Label>
+                <Input value={newSite.site_location} onChange={e => setNewSite(n => ({ ...n, site_location: e.target.value }))} placeholder="Address" />
+              </div>
+              <div className="space-y-1">
+                <Label>Region</Label>
+                <Input value={newSite.region} onChange={e => setNewSite(n => ({ ...n, region: e.target.value }))} placeholder="Region" />
+              </div>
+              <div className="space-y-1">
+                <Label>State</Label>
+                <Input value={newSite.state} onChange={e => setNewSite(n => ({ ...n, state: e.target.value }))} placeholder="State" />
+              </div>
+              <div className="space-y-1">
+                <Label>PIC Name</Label>
+                <Input value={newSite.pic_name} onChange={e => setNewSite(n => ({ ...n, pic_name: e.target.value }))} placeholder="Person in charge" />
+              </div>
+              <div className="space-y-1">
+                <Label>PIC Phone</Label>
+                <Input value={newSite.pic_phone} onChange={e => setNewSite(n => ({ ...n, pic_phone: e.target.value }))} placeholder="Phone" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowAddSite(false)}>Cancel</Button>
+              <Button type="button" onClick={handleAddSite} disabled={siteCreateMutation.isLoading}>{siteCreateMutation.isLoading ? 'Saving...' : 'Save Site'}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Schedule & Attendance */}
         <div className={sectionClass}>
