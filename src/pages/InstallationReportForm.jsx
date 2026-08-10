@@ -28,7 +28,7 @@ function generateReportNumber() {
 }
 
 const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '', photos: [] });
-const blankSection = () => ({ section_name: '', items: [blankItem()] });
+const blankSection = () => ({ section_name: '', items: [] });
 const blankDecommItem = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '', photos: [] });
 const blankDecommSection = () => ({ section_name: '', items: [blankDecommItem()] });
 
@@ -612,14 +612,7 @@ export default function InstallationReportForm() {
                         className="absolute top-2 right-2 text-muted-foreground hover:text-destructive">
                         <Trash2 size={12} />
                       </button>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Device Type</Label>
-                          <Select value={item.device_type || undefined} onValueChange={v => updateSectionItem(si, ii, 'device_type', v)}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
-                            <SelectContent>{DEVICE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <Label className="text-xs">Device Name / Model</Label>
                           <Input className="h-8 text-xs" value={item.device_name} onChange={e => updateSectionItem(si, ii, 'device_name', e.target.value)} placeholder="Name / Model" />
@@ -653,9 +646,6 @@ export default function InstallationReportForm() {
                       </div>
                     </div>
                   ))}
-                  <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => addItemToSection(si)}>
-                    <Plus size={12} className="mr-1" /> Add Item
-                  </Button>
                 </div>
               </div>
             ))}
