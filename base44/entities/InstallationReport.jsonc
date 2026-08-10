@@ -105,6 +105,15 @@
                 "serial_number": {
                   "type": "string"
                 },
+                "model": {
+                  "type": "string"
+                },
+                "sku": {
+                  "type": "string"
+                },
+                "anydesk": {
+                  "type": "string"
+                },
                 "notes": {
                   "type": "string"
                 },
@@ -169,6 +178,15 @@
             "type": "string"
           },
           "serial_number": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "anydesk": {
             "type": "string"
           },
           "notes": {

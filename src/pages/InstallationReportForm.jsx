@@ -210,7 +210,7 @@ export default function InstallationReportForm() {
         if (existingIdx >= 0) {
           items.splice(existingIdx, 1);
         } else {
-          items.push({ device_type: device.type, device_name: device.fillIn ? '' : device.name, serial_number: '', notes: '', photos: [] });
+          items.push({ device_type: device.type, device_name: device.fillIn ? '' : device.name, serial_number: '', model: '', sku: '', anydesk: '', notes: '', photos: [] });
         }
         return { ...sec, items };
       });
@@ -629,6 +629,22 @@ export default function InstallationReportForm() {
                           <Input className="h-8 text-xs" value={item.serial_number} onChange={e => updateSectionItem(si, ii, 'serial_number', e.target.value)} placeholder="S/N" />
                         </div>
                       </div>
+                      {(item.device_name === 'PC' || item.device_name === 'HDMI Extender') && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Model</Label>
+                            <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">SKU</Label>
+                            <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Anydesk</Label>
+                            <Input className="h-8 text-xs" value={item.anydesk || ''} onChange={e => updateSectionItem(si, ii, 'anydesk', e.target.value)} placeholder="Anydesk ID" />
+                          </div>
+                        </div>
+                      )}
                       <div className="space-y-1">
                         <Label className="text-xs">Notes</Label>
                         <Input className="h-8 text-xs" value={item.notes} onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)} placeholder="Additional notes" />
