@@ -61,6 +61,7 @@ export default function InstallationReportForm() {
     pre_job_assessment_photos: [],
     technician_notes: '',
     supporting_photos: [],
+    delivery_photos: [],
     supporting_documents: [],
     ack_signature: '', ack_name: '', ack_phone: '', ack_company_stamp: '', ack_timestamp: '',
     submitted: false, submitted_at: '', admin_email: '',
@@ -299,12 +300,18 @@ export default function InstallationReportForm() {
     });
   };
 
-  const handlePhotoSupportUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleMultiPhotoUpload = async (e, field) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const selected = files.slice(0, 10);
+    if (files.length > 10) toast({ title: 'Maximum 10 photos at once', variant: 'destructive' });
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(f => ({ ...f, supporting_photos: [...(f.supporting_photos || []), file_url] }));
+    const uploaded = [];
+    for (const file of selected) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      uploaded.push(file_url);
+    }
+    setForm(f => ({ ...f, [field]: [...(f[field] || []), ...uploaded] }));
     setUploading(false);
     e.target.value = '';
   };
@@ -791,8 +798,9 @@ export default function InstallationReportForm() {
         </div>
 
         {/* Supporting Photos */}
+        {/* Pre-Job Photos */}
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Supporting Photos</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Pre-Job Photos</h2>
           <div className="flex flex-wrap gap-3 items-start">
             {(form.supporting_photos || []).map((url, i) => (
               <div key={i} className="relative group">
@@ -805,8 +813,29 @@ export default function InstallationReportForm() {
             ))}
             <label className="w-24 h-24 border border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors gap-1">
               <Upload size={16} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">{uploading ? 'Uploading…' : 'Add Photo'}</span>
-              <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handlePhotoSupportUpload} />
+              <span className="text-[10px] text-muted-foreground">{uploading ? 'Uploading…' : 'Add Photos'}</span>
+              <input type="file" accept="image/*" multiple className="hidden" disabled={uploading} onChange={e => handleMultiPhotoUpload(e, 'supporting_photos')} />
+            </label>
+          </div>
+        </div>
+
+        {/* Delivery Photos */}
+        <div className={sectionClass}>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Delivery Photos</h2>
+          <div className="flex flex-wrap gap-3 items-start">
+            {(form.delivery_photos || []).map((url, i) => (
+              <div key={i} className="relative group">
+                <img src={url} alt="" className="w-24 h-24 object-cover rounded border border-border" />
+                <button type="button" onClick={() => set('delivery_photos', form.delivery_photos.filter((_, j) => j !== i))}
+                  className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:flex items-center justify-center">
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+            <label className="w-24 h-24 border border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors gap-1">
+              <Upload size={16} className="text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground">{uploading ? 'Uploading…' : 'Add Photos'}</span>
+              <input type="file" accept="image/*" multiple className="hidden" disabled={uploading} onChange={e => handleMultiPhotoUpload(e, 'delivery_photos')} />
             </label>
           </div>
         </div>

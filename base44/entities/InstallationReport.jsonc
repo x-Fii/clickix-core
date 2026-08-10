@@ -283,6 +283,12 @@
         "type": "string"
       }
     },
+    "delivery_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "supporting_documents": {
       "type": "array",
       "items": {
