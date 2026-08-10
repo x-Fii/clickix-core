@@ -172,7 +172,8 @@ export default function Claims() {
     c.claimant_name?.toLowerCase().includes(search.toLowerCase()) ||
     c.pr_number?.toLowerCase().includes(search.toLowerCase()) ||
     c.sr_number?.toLowerCase().includes(search.toLowerCase()) ||
-    c.client_name?.toLowerCase().includes(search.toLowerCase());
+    c.client_name?.toLowerCase().includes(search.toLowerCase()) ||
+    (Array.isArray(c.site_names) ? c.site_names.join(', ') : c.site_name || '')?.toLowerCase().includes(search.toLowerCase());
 
     const matchStatus = statusFilter === 'all' || c.status === statusFilter;
     const matchClient = clientFilter === 'all' || c.client_name === clientFilter;
@@ -198,6 +199,7 @@ export default function Claims() {
               { header: 'PR No.', accessor: 'pr_number' },
               { header: 'SR / IR No.', accessor: (r) => r.sr_number || r.ir_number || '' },
               { header: 'Claimant', accessor: 'claimant_name' },
+              { header: 'Site', accessor: (r) => (Array.isArray(r.site_names) ? r.site_names.join(', ') : r.site_name || '') },
               { header: 'Type', accessor: 'claim_type' },
               { header: 'Date', accessor: 'claim_date' },
               { header: 'Total (MYR)', accessor: (r) => (r.grand_total != null ? r.grand_total.toFixed(2) : '') },
@@ -237,7 +239,7 @@ export default function Claims() {
       <div className="flex gap-3 mb-5 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search by claim no., claimant, PR, SR, or client..." value={search}
+          <Input placeholder="Search by claim no., claimant, PR, SR, client, or site..." value={search}
           onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-background" />
         </div>
         <Select value={clientFilter} onValueChange={setClientFilter}>
@@ -287,8 +289,8 @@ export default function Claims() {
             <table className="w-full text-sm min-w-[760px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  {['Claim No.', 'PR No.', 'SR / IR No.', 'Claimant', 'Type', 'Date', 'Total (MYR)', 'Status', ''].map((h) =>
-              <th key={h} className={`px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider ${h === 'Total (MYR)' ? 'text-right' : h === '' ? '' : 'text-left'}`}>{h}</th>
+                  {['Claim No.', 'PR No.', 'SR / IR No.', 'Claimant', 'Site', 'Type', 'Date', 'Total (MYR)', 'Status', ''].map((h) =>
+                  <th key={h} className={`px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider ${h === 'Total (MYR)' ? 'text-right' : h === '' ? '' : 'text-left'}`}>{h}</th>
               )}
                 </tr>
               </thead>
@@ -299,6 +301,7 @@ export default function Claims() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.pr_number || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.sr_number || c.ir_number || '—'}</td>
                     <td className="px-4 py-3">{c.claimant_name || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground max-w-[180px] truncate">{Array.isArray(c.site_names) ? c.site_names.join(', ') : (c.site_name || '—')}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_type || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_date ? format(parseISO(c.claim_date), 'dd MMM yyyy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{c.grand_total != null ? c.grand_total.toFixed(2) : '—'}</td>
