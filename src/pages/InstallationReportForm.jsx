@@ -334,6 +334,7 @@ export default function InstallationReportForm() {
 
   const sectionClass = 'bg-card border border-border rounded-xl p-5 space-y-4';
   const rowClass = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
+  const jobLocked = form.status === 'scheduled' || form.status === 'completed' || form.status === 'cancelled';
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -348,119 +349,115 @@ export default function InstallationReportForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Basic Info */}
+        {/* Job Detail */}
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Report Info</h2>
-          <div className={rowClass}>
-            <div className="space-y-1">
-              <Label>Report Type</Label>
-              <Select value={form.report_type} onValueChange={v => set('report_type', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="commissioning">Commissioning</SelectItem>
-                  <SelectItem value="decommissioning">Decommissioning</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={v => set('status', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>DO Number</Label>
-              <Input value={form.do_number} onChange={e => set('do_number', e.target.value)} placeholder="DO-XXXX" />
-            </div>
-            <div className="space-y-1">
-              <Label>Quotation Number</Label>
-              <Input value={form.work_order_number} onChange={e => set('work_order_number', e.target.value)} placeholder="WO-XXXX" />
-            </div>
-            <div className="space-y-1">
-              <Label>Schedule Start Date</Label>
-              <Input type="date" value={form.scheduled_date} onChange={e => {
-                const v = e.target.value;
-                setForm(f => ({ ...f, scheduled_date: v, status: f.status === 'pending' ? 'scheduled' : f.status }));
-              }} />
-            </div>
-            <div className="space-y-1">
-              <Label>Schedule End Date</Label>
-              <Input type="date" value={form.scheduled_end_date} min={form.scheduled_date || undefined} onChange={e => set('scheduled_end_date', e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label>Created By</Label>
-              <Select value={form.reported_by || undefined} onValueChange={v => set('reported_by', v)}>
-                <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
-                <SelectContent>{staff.filter(s => s.is_active).map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}</SelectContent>
-              </Select>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Job Detail</h2>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">Status</Label>
+                <Select value={form.status} onValueChange={v => set('status', v)}>
+                  <SelectTrigger className="w-36 h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddSite(true)} disabled={jobLocked}>
+                <Plus size={14} /> Add New Site
+              </Button>
             </div>
           </div>
-        </div>
-
-        {/* Client & Site */}
-        <div className={sectionClass}>
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Client & Site</h2>
-            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddSite(true)}>
-              <Plus size={14} /> Add New Site
-            </Button>
-          </div>
-          <div className={rowClass}>
-            <div className="space-y-1">
-              <Label>Client</Label>
-              <Select value={form.client_id} onValueChange={v => {
-                const c = clients.find(x => x.id === v);
-                setForm(f => ({ ...f, client_id: v, client_name: c?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
-              }}>
-                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-                <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent>
-              </Select>
+          <fieldset disabled={jobLocked} className="space-y-4 m-0 p-0 border-0">
+            <div className={rowClass}>
+              <div className="space-y-1">
+                <Label>Report Type</Label>
+                <Select value={form.report_type} onValueChange={v => set('report_type', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="commissioning">Commissioning</SelectItem>
+                    <SelectItem value="decommissioning">Decommissioning</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>DO Number</Label>
+                <Input value={form.do_number} onChange={e => set('do_number', e.target.value)} placeholder="DO-XXXX" />
+              </div>
+              <div className="space-y-1">
+                <Label>Quotation Number</Label>
+                <Input value={form.work_order_number} onChange={e => set('work_order_number', e.target.value)} placeholder="WO-XXXX" />
+              </div>
+              <div className="space-y-1">
+                <Label>Schedule Start Date</Label>
+                <Input type="date" value={form.scheduled_date} onChange={e => set('scheduled_date', e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Schedule End Date</Label>
+                <Input type="date" value={form.scheduled_end_date} min={form.scheduled_date || undefined} onChange={e => set('scheduled_end_date', e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Created By</Label>
+                <Select value={form.reported_by || undefined} onValueChange={v => set('reported_by', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
+                  <SelectContent>{staff.filter(s => s.is_active).map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label>Region</Label>
-              <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); }}>
-                <SelectTrigger><SelectValue placeholder="All regions" /></SelectTrigger>
-                <SelectContent>
-                  {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {siteRegionFilter && <button type="button" onClick={() => { setSiteRegionFilter(''); setSiteStateFilter(''); }} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
-            </div>
-            <div className="space-y-1">
-              <Label>State</Label>
-              <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); }}>
-                <SelectTrigger><SelectValue placeholder="All states" /></SelectTrigger>
-                <SelectContent>
-                  {stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
-            </div>
-            <div className="space-y-1">
-              <Label>Site / Outlet</Label>
-              <Select value={form.site_id} onValueChange={v => {
-                const s = sites.find(x => x.id === v);
-                setForm(f => ({ ...f, site_id: v, site_name: s?.site_name || '', site_location: s?.site_location || '', site_pic_name: s?.pic_name || '' }));
-              }}>
-                <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
+            <div className={rowClass}>
+              <div className="space-y-1">
+                <Label>Client</Label>
+                <Select value={form.client_id} onValueChange={v => {
+                  const c = clients.find(x => x.id === v);
+                  setForm(f => ({ ...f, client_id: v, client_name: c?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                  <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Region</Label>
+                <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); }}>
+                  <SelectTrigger><SelectValue placeholder="All regions" /></SelectTrigger>
+                  <SelectContent>
+                    {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {siteRegionFilter && <button type="button" onClick={() => { setSiteRegionFilter(''); setSiteStateFilter(''); }} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
+              </div>
+              <div className="space-y-1">
+                <Label>State</Label>
+                <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); }}>
+                  <SelectTrigger><SelectValue placeholder="All states" /></SelectTrigger>
+                  <SelectContent>
+                    {stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
+              </div>
+              <div className="space-y-1">
+                <Label>Site / Outlet</Label>
+                <Select value={form.site_id} onValueChange={v => {
+                  const s = sites.find(x => x.id === v);
+                  setForm(f => ({ ...f, site_id: v, site_name: s?.site_name || '', site_location: s?.site_location || '', site_pic_name: s?.pic_name || '' }));
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
                 <SelectContent>{filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}{s.state ? ` — ${s.state}` : ''}</SelectItem>)}</SelectContent>
-              </Select>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Site Location <span className="text-muted-foreground/60 normal-case font-normal lowercase tracking-normal">(autofill)</span></Label>
+                <Input value={form.site_location} readOnly placeholder="Autofilled from selected site" className="bg-muted/40 cursor-not-allowed" />
+              </div>
+              <div className="space-y-1">
+                <Label>Site PIC Name <span className="text-muted-foreground/60 normal-case font-normal lowercase tracking-normal">(autofill)</span></Label>
+                <Input value={form.site_pic_name} readOnly placeholder="Autofilled from selected site" className="bg-muted/40 cursor-not-allowed" />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label>Site Location <span className="text-muted-foreground/60 normal-case font-normal lowercase tracking-normal">(autofill)</span></Label>
-              <Input value={form.site_location} readOnly placeholder="Autofilled from selected site" className="bg-muted/40 cursor-not-allowed" />
-            </div>
-            <div className="space-y-1">
-              <Label>Site PIC Name <span className="text-muted-foreground/60 normal-case font-normal lowercase tracking-normal">(autofill)</span></Label>
-              <Input value={form.site_pic_name} readOnly placeholder="Autofilled from selected site" className="bg-muted/40 cursor-not-allowed" />
-            </div>
-          </div>
+          </fieldset>
         </div>
 
         <Dialog open={showAddSite} onOpenChange={setShowAddSite}>
