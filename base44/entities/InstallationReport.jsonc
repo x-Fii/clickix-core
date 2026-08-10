@@ -77,6 +77,29 @@
     "pre_job_assessment": {
       "type": "string"
     },
+    "pre_job_assessment_sections": {
+      "type": "object",
+      "properties": {
+        "overall": {
+          "type": "string"
+        },
+        "power": {
+          "type": "string"
+        },
+        "internet": {
+          "type": "string"
+        },
+        "cables": {
+          "type": "string"
+        },
+        "server_rack": {
+          "type": "string"
+        },
+        "others": {
+          "type": "string"
+        }
+      }
+    },
     "pre_job_assessment_photos": {
       "type": "array",
       "items": {

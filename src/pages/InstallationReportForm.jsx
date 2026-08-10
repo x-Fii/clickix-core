@@ -785,7 +785,21 @@ export default function InstallationReportForm() {
         {/* Pre-Job Site Assessment */}
         <div className={sectionClass}>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Pre-Job Site Assessment</h2>
-          <Textarea value={form.pre_job_assessment} onChange={e => set('pre_job_assessment', e.target.value)} placeholder="Describe the site condition and assessment before work begins…" rows={4} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              { key: 'overall', label: '1. Overall' },
+              { key: 'power', label: '2. Power' },
+              { key: 'internet', label: '3. Internet' },
+              { key: 'cables', label: '4. Cables' },
+              { key: 'server_rack', label: '5. Server Rack / Shelves' },
+              { key: 'others', label: '6. Others' },
+            ].map(s => (
+              <div key={s.key} className="space-y-1">
+                <Label className="text-xs font-semibold">{s.label}</Label>
+                <Textarea value={(form.pre_job_assessment_sections || {})[s.key] || ''} onChange={e => setForm(f => ({ ...f, pre_job_assessment_sections: { ...(f.pre_job_assessment_sections || {}), [s.key]: e.target.value } }))} placeholder={`Describe ${s.label.replace(/^\d+\.\s*/, '')}…`} rows={3} className="text-sm" />
+              </div>
+            ))}
+          </div>
           <div className="flex flex-wrap gap-2 items-start mt-1">
             {(form.pre_job_assessment_photos || []).map((url, i) => (
               <div key={i} className="relative group">
