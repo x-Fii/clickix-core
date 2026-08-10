@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, Users, Building2, Globe, Phone } from 'lucide-react';
+import { Plus, Pencil, Users, Building2, Globe, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import ExportButtons from '@/components/ExportButtons';
 import { propagateClientChange } from '@/lib/propagateChanges';
@@ -21,7 +21,6 @@ const empty = { company_name: '', contact_person: '', pic_designation: '', conta
 export default function Clients() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
 
@@ -50,11 +49,6 @@ export default function Clients() {
       setOpen(false);
       toast.success(editId ? 'Client updated' : 'Client added');
     },
-  });
-
-  const remove = useMutation({
-    mutationFn: (id) => base44.entities.Client.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); setDeleteId(null); toast.success('Client removed'); },
   });
 
   const openNew = () => { setForm(empty); setEditId(null); setOpen(true); };
@@ -169,7 +163,6 @@ export default function Clients() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}><Pencil size={12} /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setDeleteId(c.id)}><Trash2 size={12} /></Button>
                     </div>
                   </td>
                 </tr>
@@ -243,15 +236,6 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="bg-card border-border">
-          <AlertDialogHeader><AlertDialogTitle>Delete Client</AlertDialogTitle><AlertDialogDescription>This will permanently remove this client. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => remove.mutate(deleteId)} className="bg-destructive hover:bg-destructive/80">Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

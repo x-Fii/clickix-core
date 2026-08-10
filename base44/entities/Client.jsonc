@@ -64,5 +64,8 @@
   },
   "required": [
     "company_name"
-  ]
+  ],
+  "rls": {
+    "delete": false
+  }
 }
