@@ -167,6 +167,9 @@ export default function InstallationReportForm() {
       toast({ title: isEdit ? 'Report updated' : 'Report created' });
       navigate(`/installation/${result.id || id}`);
     },
+    onError: (err) => {
+      toast({ title: 'Failed to save report', description: err?.message || 'Please check your inputs and try again.', variant: 'destructive' });
+    },
   });
 
   const set = (field, value) => setForm(f => ({ ...f, [field]: value }));
@@ -361,9 +364,31 @@ export default function InstallationReportForm() {
     setForm(f => ({ ...f, ack_signature: file_url, ack_timestamp: new Date().toISOString() }));
   };
 
+  const NUMBER_FIELDS = ['quantity', 'num_ports', 'num_gang'];
+  const sanitizeItem = (item) => {
+    const out = { ...item };
+    NUMBER_FIELDS.forEach((k) => {
+      if (out[k] === '' || out[k] === null || out[k] === undefined) {
+        delete out[k];
+      } else {
+        const n = Number(out[k]);
+        out[k] = Number.isNaN(n) ? undefined : n;
+        if (out[k] === undefined) delete out[k];
+      }
+    });
+    return out;
+  };
+  const sanitize = (data) => ({
+    ...data,
+    equipment_sections: (data.equipment_sections || []).map(sec => ({ ...sec, items: (sec.items || []).map(sanitizeItem) })),
+    decommission_sections: (data.decommission_sections || []).map(sec => ({ ...sec, items: (sec.items || []).map(sanitizeItem) })),
+    equipment_installed: (data.equipment_installed || []).map(sanitizeItem),
+    equipment_decommissioned: (data.equipment_decommissioned || []).map(sanitizeItem),
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    mutation.mutate(form);
+    mutation.mutate(sanitize(form));
   };
 
   const sectionClass = 'bg-card border border-border rounded-xl p-5 space-y-4';
