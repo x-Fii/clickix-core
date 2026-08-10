@@ -140,14 +140,14 @@ export default function InstallationReports() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-        { label: 'Total', value: counts.all, color: 'text-foreground' },
-        { label: 'Pending', value: counts.pending, color: 'text-slate-400' },
-        { label: 'Scheduled', value: counts.scheduled, color: 'text-blue-400' },
-        { label: 'Completed', value: counts.completed, color: 'text-emerald-400' },
-        { label: 'Billed', value: counts.billed, color: 'text-pink-400' },
-        { label: 'Cancelled', value: counts.cancelled, color: 'text-red-400' }].
+        { label: 'Total', value: counts.all, color: 'text-foreground', filter: 'all' },
+        { label: 'Pending', value: counts.pending, color: 'text-slate-400', filter: 'pending' },
+        { label: 'Scheduled', value: counts.scheduled, color: 'text-blue-400', filter: 'scheduled' },
+        { label: 'Completed', value: counts.completed, color: 'text-emerald-400', filter: 'completed' },
+        { label: 'Billed', value: counts.billed, color: 'text-pink-400', filter: 'billed' },
+        { label: 'Cancelled', value: counts.cancelled, color: 'text-red-400', filter: 'cancelled' }].
         map((s) =>
-        <div key={s.label} className="bg-card border border-border rounded-xl p-4">
+        <div key={s.label} onClick={() => setStatusFilter(s.filter)} className={`bg-card border rounded-xl p-4 cursor-pointer transition-colors hover:border-primary/50 ${statusFilter === s.filter ? 'border-primary ring-1 ring-primary/30' : 'border-border'}`}>
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">{s.label}</p>
             <p className={`text-2xl font-bold font-mono mt-1 ${s.color}`}>{s.value}</p>
           </div>
