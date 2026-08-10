@@ -1409,6 +1409,34 @@ export default function ReportDetail() {
                   </div>
               )}
               </div>
+
+              {/* Replacement Items */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm">Replacement Items</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Parts or devices replaced during onsite visit</p>
+                  </div>
+                  {!isReadOnly && <Button variant="outline" size="sm" onClick={addReplacement} className="gap-1 text-xs"><Plus size={12} /> Add Replacement</Button>}
+                </div>
+                {replacements.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No replacements recorded.</p>}
+                <div className="space-y-3">
+                  {replacements.map((r, i) =>
+                <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 bg-muted/30 rounded-lg border border-border">
+                      <Input value={r.item_description} onChange={(e) => updateReplacement(i, 'item_description', e.target.value)} placeholder="Item description" className="bg-background text-xs" readOnly={isReadOnly} />
+                      <Input value={r.old_item_detail} onChange={(e) => updateReplacement(i, 'old_item_detail', e.target.value)} placeholder="Old item detail (S/N, model)" className="bg-background text-xs" readOnly={isReadOnly} />
+                      <div className="flex gap-2">
+                        <Input value={r.new_item_detail} onChange={(e) => updateReplacement(i, 'new_item_detail', e.target.value)} placeholder="New item detail (S/N, model)" className="bg-background text-xs flex-1" readOnly={isReadOnly} />
+                        {!isReadOnly &&
+                    <button onClick={() => setReplacements((p) => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
+                            <X size={14} />
+                          </button>
+                    }
+                      </div>
+                    </div>
+                )}
+                </div>
+              </div>
             </div>
 
             {/* Add-on Items */}
@@ -1452,34 +1480,6 @@ export default function ReportDetail() {
                       {!isReadOnly &&
                   <button type="button" onClick={() => setL2Addons((p) => p.filter((_, idx) => idx !== i))} className="w-16 h-16 border border-border rounded flex items-center justify-center text-muted-foreground hover:text-destructive">
                           <X size={12} />
-                        </button>
-                  }
-                    </div>
-                  </div>
-              )}
-              </div>
-            </div>
-
-            {/* Replacements */}
-            <div className="bg-card border border-border rounded-xl p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="font-semibold text-sm">Replacement Items</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Parts or devices replaced during onsite visit</p>
-                </div>
-                {!isReadOnly && <Button variant="outline" size="sm" onClick={addReplacement} className="gap-1 text-xs"><Plus size={12} /> Add Replacement</Button>}
-              </div>
-              {replacements.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No replacements recorded.</p>}
-              <div className="space-y-3">
-                {replacements.map((r, i) =>
-              <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 bg-muted/30 rounded-lg border border-border">
-                    <Input value={r.item_description} onChange={(e) => updateReplacement(i, 'item_description', e.target.value)} placeholder="Item description" className="bg-background text-xs" readOnly={isReadOnly} />
-                    <Input value={r.old_item_detail} onChange={(e) => updateReplacement(i, 'old_item_detail', e.target.value)} placeholder="Old item detail (S/N, model)" className="bg-background text-xs" readOnly={isReadOnly} />
-                    <div className="flex gap-2">
-                      <Input value={r.new_item_detail} onChange={(e) => updateReplacement(i, 'new_item_detail', e.target.value)} placeholder="New item detail (S/N, model)" className="bg-background text-xs flex-1" readOnly={isReadOnly} />
-                      {!isReadOnly &&
-                  <button onClick={() => setReplacements((p) => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
-                          <X size={14} />
                         </button>
                   }
                     </div>
