@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Pencil, Trash2, Users, Building2, Globe, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import ExportButtons from '@/components/ExportButtons';
+import { propagateClientChange } from '@/lib/propagateChanges';
 
 const CMS_OPTIONS = ['CS Play', 'CS Sign Hub', 'CS Deals', 'CS Context', 'OmniBuy', 'DOTS'];
 const HARDWARE_OPTIONS = ['PC', 'Cable', 'Controller', 'TV', 'LED', 'Network Device'];
@@ -27,8 +28,28 @@ export default function Clients() {
   const { data: clients = [], isLoading } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
 
   const save = useMutation({
-    mutationFn: (data) => editId ? base44.entities.Client.update(editId, data) : base44.entities.Client.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); setOpen(false); toast.success(editId ? 'Client updated' : 'Client added'); },
+    mutationFn: async (data) => {
+      if (editId) {
+        const oldName = clients.find((c) => c.id === editId)?.company_name || '';
+        await base44.entities.Client.update(editId, data);
+        if (oldName && oldName !== data.company_name) {
+          await propagateClientChange(editId, oldName, data.company_name);
+        }
+      } else {
+        await base44.entities.Client.create(data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+      queryClient.invalidateQueries({ queryKey: ['service-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['installation-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-requisitions'] });
+      queryClient.invalidateQueries({ queryKey: ['claims'] });
+      setOpen(false);
+      toast.success(editId ? 'Client updated' : 'Client added');
+    },
   });
 
   const remove = useMutation({

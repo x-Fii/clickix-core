@@ -16,6 +16,7 @@ import StatusBadge from '@/components/StatusBadge';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import ExportButtons from '@/components/ExportButtons';
+import { propagateSiteChange } from '@/lib/propagateChanges';
 
 const MY_STATES = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'];
 const REGIONS = ['Central', 'Northern', 'Southern', 'East Coast', 'East Malaysia'];
@@ -50,8 +51,29 @@ export default function Sites() {
   const { data: installationReports = [] } = useQuery({ queryKey: ['installation-reports'], queryFn: () => base44.entities.InstallationReport.list() });
 
   const save = useMutation({
-    mutationFn: (data) => editId ? base44.entities.Site.update(editId, data) : base44.entities.Site.create(data),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ['sites'] });setOpen(false);toast.success(editId ? 'Site updated' : 'Site added');}
+    mutationFn: async (data) => {
+      if (editId) {
+        const old = sites.find((s) => s.id === editId) || {};
+        await base44.entities.Site.update(editId, data);
+        const nameChanged = old.site_name && old.site_name !== data.site_name;
+        const locChanged = data.site_location !== undefined && old.site_location !== data.site_location;
+        if (nameChanged || locChanged) {
+          await propagateSiteChange(editId, old.site_name, data.site_name, old.site_location, data.site_location);
+        }
+      } else {
+        await base44.entities.Site.create(data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+      queryClient.invalidateQueries({ queryKey: ['service-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['installation-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-requisitions'] });
+      queryClient.invalidateQueries({ queryKey: ['claims'] });
+      setOpen(false);
+      toast.success(editId ? 'Site updated' : 'Site added');
+    },
   });
 
   const remove = useMutation({
