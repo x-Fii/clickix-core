@@ -1437,17 +1437,16 @@ export default function ReportDetail() {
                 )}
                 </div>
               </div>
-            </div>
 
-            {/* Add-on Items */}
-            <div className="bg-card border border-border rounded-xl p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="font-semibold text-sm">Add-On Items (Onsite)</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Additional items found and attended onsite</p>
+              {/* Add-on Items */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm">Add-On Items (Onsite)</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Additional items found and attended onsite (not reported at L1)</p>
+                  </div>
+                  {!isReadOnly && <Button variant="outline" size="sm" onClick={addL2Addon} className="gap-1 text-xs"><Plus size={12} /> Add Item</Button>}
                 </div>
-                {!isReadOnly && <Button variant="outline" size="sm" onClick={addL2Addon} className="gap-1 text-xs"><Plus size={12} /> Add Item</Button>}
-              </div>
               {l2Addons.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No add-on items. Click "Add Item" if there are additional issues found onsite.</p>}
               <div className="space-y-4">
                 {l2Addons.map((item, i) =>
@@ -1485,6 +1484,7 @@ export default function ReportDetail() {
                     </div>
                   </div>
               )}
+              </div>
               </div>
             </div>
 
