@@ -13,6 +13,12 @@ import { useToast } from '@/components/ui/use-toast';
 import SignaturePad from '@/components/SignaturePad';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
+const RELATED_DEVICES = [
+  { name: 'PC', type: 'PC' },
+  { name: 'HDMI Extender', type: 'Other' },
+  { name: 'HDMI', type: 'Other' },
+  { name: 'LAN', type: 'Network Device' },
+];
 
 function generateReportNumber() {
   const now = new Date();
@@ -185,6 +191,22 @@ export default function InstallationReportForm() {
       const arr = f.equipment_sections.map((sec, s) => {
         if (s !== si) return sec;
         const items = sec.items.map((item, i) => i === ii ? { ...item, [field]: val } : item);
+        return { ...sec, items };
+      });
+      return { ...f, equipment_sections: arr };
+    });
+  };
+  const toggleRelatedDevice = (si, device) => {
+    setForm(f => {
+      const arr = f.equipment_sections.map((sec, s) => {
+        if (s !== si) return sec;
+        const items = [...(sec.items || [])];
+        const existingIdx = items.findIndex(it => it.device_name === device.name);
+        if (existingIdx >= 0) {
+          items.splice(existingIdx, 1);
+        } else {
+          items.push({ device_type: device.type, device_name: device.name, serial_number: '', notes: '', photos: [] });
+        }
         return { ...sec, items };
       });
       return { ...f, equipment_sections: arr };
@@ -571,6 +593,19 @@ export default function InstallationReportForm() {
                 </div>
                 {/* Items within section */}
                 <div className="space-y-3 pl-2 border-l-2 border-border">
+                  {/* Related devices quick select */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <span className="text-xs text-muted-foreground">Related devices</span>
+                    {RELATED_DEVICES.map(dev => {
+                      const checked = (sec.items || []).some(it => it.device_name === dev.name);
+                      return (
+                        <label key={dev.name} className="flex items-center gap-1.5 text-xs cursor-pointer hover:text-primary transition-colors">
+                          <input type="checkbox" checked={checked} onChange={() => toggleRelatedDevice(si, dev)} className="accent-primary" />
+                          {dev.name}
+                        </label>
+                      );
+                    })}
+                  </div>
                   {(sec.items || []).map((item, ii) => (
                     <div key={ii} className="border border-border rounded-lg p-3 space-y-2 relative bg-card">
                       <button type="button" onClick={() => removeItemFromSection(si, ii)}
