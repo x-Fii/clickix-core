@@ -11,7 +11,7 @@ import ExportButtons from '@/components/ExportButtons';
 import { Badge } from '@/components/ui/badge';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, isWithinInterval, parseISO } from 'date-fns';
 
-const STATUSES = ['all', 'open', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete', 'completed', 'billed'];
+const STATUSES = ['all', 'open', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete', 'completed', 'billed', 'l1Pending'];
 const PERIODS = [
   { key: 'all', label: 'All Time' },
   { key: 'today', label: 'Today' },
@@ -65,6 +65,7 @@ export default function ServiceReports() {
     const matchStatus = statusFilter === 'all' ? true
       : statusFilter === 'open' ? !['resolved', 'complete', 'billed'].includes(r.status)
       : statusFilter === 'completed' ? ['complete', 'billed'].includes(r.status)
+      : statusFilter === 'l1Pending' ? r.l1_status === 'pending'
       : r.status === statusFilter;
     const matchClient = clientFilter === 'all' || r.client_id === clientFilter;
     const matchPeriod = inPeriod(r);
@@ -133,16 +134,16 @@ export default function ServiceReports() {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-        { label: 'L1 Pending', value: counts.l1Pending, color: 'text-cyan-400' },
-        { label: 'Resolved At L1',  value: counts.resolved,  color: 'text-teal-400' },
-        { label: 'Escalated', value: counts.escalated, color: 'text-amber-400' },
-        { label: 'Quote',     value: counts.quote,     color: 'text-yellow-400' },
-        { label: 'Approved',  value: counts.approved,  color: 'text-purple-400' },
-        { label: 'Schedule',  value: counts.schedule,  color: 'text-blue-400' },
-        { label: 'Complete',  value: counts.complete,  color: 'text-emerald-400' },
-        { label: 'Billed',    value: counts.billed,    color: 'text-pink-400' },
+        { label: 'L1 Pending', value: counts.l1Pending, color: 'text-cyan-400', filter: 'l1Pending' },
+        { label: 'Resolved At L1',  value: counts.resolved,  color: 'text-teal-400', filter: 'resolved' },
+        { label: 'Escalated', value: counts.escalated, color: 'text-amber-400', filter: 'escalated' },
+        { label: 'Quote',     value: counts.quote,     color: 'text-yellow-400', filter: 'quote' },
+        { label: 'Approved',  value: counts.approved,  color: 'text-purple-400', filter: 'approved' },
+        { label: 'Schedule',  value: counts.schedule,  color: 'text-blue-400', filter: 'schedule' },
+        { label: 'Complete',  value: counts.complete,  color: 'text-emerald-400', filter: 'complete' },
+        { label: 'Billed',    value: counts.billed,    color: 'text-pink-400', filter: 'billed' },
         ].map((s) =>
-        <div key={s.label} className="bg-card border border-border rounded-xl p-4">
+        <div key={s.label} onClick={() => setStatusFilter(s.filter)} className={`bg-card border rounded-xl p-4 cursor-pointer transition-colors hover:border-primary/50 ${statusFilter === s.filter ? 'border-primary ring-1 ring-primary/30' : 'border-border'}`}>
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">{s.label}</p>
             <p className={`text-2xl font-bold font-mono mt-1 ${s.color}`}>{s.value}</p>
           </div>
@@ -175,7 +176,7 @@ export default function ServiceReports() {
           </SelectTrigger>
           <SelectContent>
             {STATUSES.map((s) =>
-            <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s === 'open' ? 'Open Jobs' : s === 'completed' ? 'Completed' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+            <SelectItem key={s} value={s}>{s === 'all' ? 'All Statuses' : s === 'open' ? 'Open Jobs' : s === 'completed' ? 'Completed' : s === 'l1Pending' ? 'L1 Pending' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
             )}
           </SelectContent>
         </Select>
