@@ -85,6 +85,7 @@ export default function ReportDetail() {
         l2_work_order_number: r.l2_work_order_number || '',
         l2_site_pic_name: r.l2_site_pic_name || '',
         l2_site_pic_id: r.l2_site_pic_id || '',
+        do_number: r.do_number || '',
         quote_date: r.quote_date || '',
         approved_date: r.approved_date || '',
         scheduled_date: r.scheduled_date || ''
@@ -1048,7 +1049,6 @@ export default function ReportDetail() {
             <ReadField label="Site Name" value={report.site_name} />
             <ReadField label="Site Location" value={report.site_location} />
             <ReadField label="Reported By" value={report.reported_by} />
-            <ReadField label="DO Number" value={report.do_number} />
             <ReadField label="Whatsapp Response ID" value={report.whatsapp_response_id} />
             <ReadField label="Report Date" value={report.l1_date} />
             <ReadField label="Created" value={report.created_date ? format(new Date(report.created_date), 'dd MMM yyyy HH:mm') : ''} />
@@ -1245,10 +1245,9 @@ export default function ReportDetail() {
                     </div>
                 }
                 </Field>
-                <Field label="Staff ID"><Input value={l2Form.l2_attended_staff_id} onChange={(e) => setLF('l2_attended_staff_id', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
                 <Field label="Staff Email"><Input value={l2Form.l2_attended_staff_email} onChange={(e) => setLF('l2_attended_staff_email', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
-                <Field label="Attend Date"><Input type="date" value={l2Form.l2_attend_date} onChange={(e) => setLF('l2_attend_date', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
-                <Field label="Attend Time"><Input type="time" value={l2Form.l2_attend_time} onChange={(e) => setLF('l2_attend_time', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="DO Number"><Input value={l2Form.do_number || ''} onChange={(e) => setLF('do_number', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
+                <Field label="Attend Date & Time"><Input type="datetime-local" value={l2Form.l2_attend_date ? `${l2Form.l2_attend_date}T${l2Form.l2_attend_time || '00:00'}` : ''} onChange={(e) => { const v = e.target.value; if (!v) { setLF('l2_attend_date', ''); setLF('l2_attend_time', ''); return; } const [d, t] = v.split('T'); setLF('l2_attend_date', d); setLF('l2_attend_time', t || ''); }} className="bg-background" readOnly={isReadOnly} /></Field>
                 <Field label="Work Order No."><Input value={l2Form.l2_work_order_number} onChange={(e) => setLF('l2_work_order_number', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
                 <Field label="Approver Name"><Input value={l2Form.l2_approver_name} onChange={(e) => setLF('l2_approver_name', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
                 <Field label="Approver Email"><Input type="email" value={l2Form.l2_approver_email} onChange={(e) => setLF('l2_approver_email', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
