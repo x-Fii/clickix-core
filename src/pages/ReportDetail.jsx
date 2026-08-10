@@ -229,6 +229,17 @@ export default function ReportDetail() {
     updateReport.mutate({ status: newStatus, ...extraData });
   };
 
+  const handleApprove = () => {
+    updateReport.mutate({
+      l2_work_order_number: l2Form.l2_work_order_number,
+      l2_approver_name: l2Form.l2_approver_name,
+      l2_approver_email: l2Form.l2_approver_email,
+      l2_approver_detail: l2Form.l2_approver_email,
+      approved_date: l2Form.approved_date || format(new Date(), 'yyyy-MM-dd'),
+      status: 'approved'
+    });
+  };
+
   const handleComplete = async () => {
     setSaving(true);
     try {
@@ -927,6 +938,7 @@ export default function ReportDetail() {
 
   const statusIdx = L2_FLOW.indexOf(report.status);
   const isReadOnly = (report.status === 'complete' || report.status === 'billed') && !editing;
+  const approvalLocked = ['approved', 'schedule', 'complete', 'billed'].includes(report.status);
 
   return (
     <div className="p-6 max-w-4xl mx-auto pb-20">
@@ -1248,13 +1260,30 @@ export default function ReportDetail() {
                 <Field label="Staff Email"><Input value={l2Form.l2_attended_staff_email} onChange={(e) => setLF('l2_attended_staff_email', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
                 <Field label="DO Number"><Input value={l2Form.do_number || ''} onChange={(e) => setLF('do_number', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
                 <Field label="Attend Date & Time"><Input type="datetime-local" value={l2Form.l2_attend_date ? `${l2Form.l2_attend_date}T${l2Form.l2_attend_time || '00:00'}` : ''} onChange={(e) => { const v = e.target.value; if (!v) { setLF('l2_attend_date', ''); setLF('l2_attend_time', ''); return; } const [d, t] = v.split('T'); setLF('l2_attend_date', d); setLF('l2_attend_time', t || ''); }} className="bg-background" readOnly={isReadOnly} /></Field>
-                <Field label="Work Order No."><Input value={l2Form.l2_work_order_number} onChange={(e) => setLF('l2_work_order_number', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
-                <Field label="Approver Name"><Input value={l2Form.l2_approver_name} onChange={(e) => setLF('l2_approver_name', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
-                <Field label="Approver Email"><Input type="email" value={l2Form.l2_approver_email} onChange={(e) => setLF('l2_approver_email', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
-                <ReadField label="Approved Date" value={report.approved_date || l2Form.approved_date} />
                 <Field label="Site PIC Name"><Input value={l2Form.l2_site_pic_name} onChange={(e) => setLF('l2_site_pic_name', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
                 <Field label="Site PIC ID"><Input value={l2Form.l2_site_pic_id} onChange={(e) => setLF('l2_site_pic_id', e.target.value)} className="bg-background" readOnly={isReadOnly} /></Field>
               </div>
+            </div>
+
+            {/* Approval */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <SectionHeader title="Approval" subtitle="Work order, approver details and approval date" />
+                {approvalLocked && <span className="text-xs text-emerald-400 font-mono">✓ Approved &amp; locked</span>}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Work Order No."><Input value={l2Form.l2_work_order_number || ''} onChange={(e) => setLF('l2_work_order_number', e.target.value)} className="bg-background" readOnly={approvalLocked} /></Field>
+                <Field label="Approved Date"><Input type="date" value={l2Form.approved_date || ''} onChange={(e) => setLF('approved_date', e.target.value)} className="bg-background" readOnly={approvalLocked} /></Field>
+                <Field label="Approver Name"><Input value={l2Form.l2_approver_name || ''} onChange={(e) => setLF('l2_approver_name', e.target.value)} className="bg-background" readOnly={approvalLocked} /></Field>
+                <Field label="Approver Email"><Input type="email" value={l2Form.l2_approver_email || ''} onChange={(e) => setLF('l2_approver_email', e.target.value)} className="bg-background" readOnly={approvalLocked} /></Field>
+              </div>
+              {!approvalLocked &&
+            <div className="mt-4 flex justify-end">
+                  <Button size="sm" onClick={handleApprove} disabled={updateReport.isPending} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+                    <Check size={14} /> {updateReport.isPending ? 'Approving...' : 'Approve & Lock'}
+                  </Button>
+                </div>
+              }
             </div>
 
             {/* L2 Items — continuation of L1 */}
