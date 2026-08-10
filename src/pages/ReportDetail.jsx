@@ -198,14 +198,18 @@ export default function ReportDetail() {
 
   
   const handlePhotoUpload = async (type, index, files) => {
-    const file = files[0];
-    if (!file) return;
+    const fileArr = Array.from(files || []);
+    if (!fileArr.length) return;
     setUploadingPhoto(`${type}-${index}`);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    if (type === 'l2item') updateL2Item(index, 'photos', [...(l2Items[index].photos || []), file_url]);
-    if (type === 'addon') updateAddon(index, 'photos', [...(l2Addons[index].photos || []), file_url]);
-    if (type === 'jobdesc') setJobDescPhotos((prev) => [...prev, file_url]);
-    if (type === 'remarks') setRemarksPhotos((prev) => [...prev, file_url]);
+    const uploaded = [];
+    for (const file of fileArr) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      uploaded.push(file_url);
+    }
+    if (type === 'l2item') updateL2Item(index, 'photos', [...(l2Items[index].photos || []), ...uploaded]);
+    if (type === 'addon') updateAddon(index, 'photos', [...(l2Addons[index].photos || []), ...uploaded]);
+    if (type === 'jobdesc') setJobDescPhotos((prev) => [...prev, ...uploaded].slice(0, 5));
+    if (type === 'remarks') setRemarksPhotos((prev) => [...prev, ...uploaded].slice(0, 5));
     setUploadingPhoto(null);
   };
   
@@ -1469,7 +1473,7 @@ export default function ReportDetail() {
                     <Textarea value={l2Form.l2_job_description} onChange={(e) => setLF('l2_job_description', e.target.value)} className="bg-background resize-none" rows={4} readOnly={isReadOnly} />
                   </Field>
                   <div className="mt-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Assessment Photos</Label>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Assessment Photos (max 5)</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {jobDescPhotos.map((url, pi) =>
                     <div key={pi} className="relative group">
@@ -1481,10 +1485,10 @@ export default function ReportDetail() {
                       }
                         </div>
                     )}
-                      {!isReadOnly &&
+                      {!isReadOnly && jobDescPhotos.length < 5 &&
                     <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
                           {uploadingPhoto === 'jobdesc-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload('jobdesc', 0, e.target.files)} />
+                          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handlePhotoUpload('jobdesc', 0, e.target.files); e.target.value = ''; }} />
                         </label>
                     }
                     </div>
@@ -1495,7 +1499,7 @@ export default function ReportDetail() {
                     <Textarea value={l2Form.l2_remarks} onChange={(e) => setLF('l2_remarks', e.target.value)} className="bg-background resize-none" rows={2} readOnly={isReadOnly} />
                   </Field>
                   <div className="mt-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Post-Job Photos</Label>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Post-Job Photos (max 5)</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {remarksPhotos.map((url, pi) =>
                     <div key={pi} className="relative group">
@@ -1507,10 +1511,10 @@ export default function ReportDetail() {
                       }
                         </div>
                     )}
-                      {!isReadOnly &&
+                      {!isReadOnly && remarksPhotos.length < 5 &&
                     <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
                           {uploadingPhoto === 'remarks-0' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload('remarks', 0, e.target.files)} />
+                          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handlePhotoUpload('remarks', 0, e.target.files); e.target.value = ''; }} />
                         </label>
                     }
                     </div>
