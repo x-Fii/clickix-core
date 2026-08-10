@@ -619,25 +619,15 @@ export default function InstallationReportForm() {
                         className="absolute top-2 right-2 text-muted-foreground hover:text-destructive">
                         <Trash2 size={12} />
                       </button>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Device Name / Model</Label>
-                          <Input className="h-8 text-xs" value={item.device_name} onChange={e => updateSectionItem(si, ii, 'device_name', e.target.value)} placeholder="Name / Model" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Serial Number</Label>
-                          <Input className="h-8 text-xs" value={item.serial_number} onChange={e => updateSectionItem(si, ii, 'serial_number', e.target.value)} placeholder="S/N" />
-                        </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">SKU</Label>
+                        <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU / Serial Number" />
                       </div>
                       {(item.device_name === 'PC' || item.device_name === 'HDMI Extender') && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div className="space-y-1">
                             <Label className="text-xs">Model</Label>
                             <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">SKU</Label>
-                            <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU" />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">Anydesk</Label>
