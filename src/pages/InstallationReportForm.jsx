@@ -675,24 +675,6 @@ export default function InstallationReportForm() {
                         <Label className="text-xs">Remarks</Label>
                         <Input className="h-8 text-xs" value={item.notes} onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)} placeholder="Remarks" />
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Photos</Label>
-                        <div className="flex flex-wrap gap-2 items-center">
-                          {(item.photos || []).map((url, pi) => (
-                            <div key={pi} className="relative group">
-                              <img src={url} alt="" className="w-14 h-14 object-cover rounded border border-border" />
-                              <button type="button" onClick={() => removeSectionItemPhoto(si, ii, pi)}
-                                className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:block">
-                                <X size={10} />
-                              </button>
-                            </div>
-                          ))}
-                          <label className="w-14 h-14 border border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                            <Upload size={13} className="text-muted-foreground" />
-                            <input type="file" accept="image/*" className="hidden" onChange={e => handleSectionItemPhotoUpload(e, si, ii)} />
-                          </label>
-                        </div>
-                      </div>
                     </div>
                   ))}
                 </div>
