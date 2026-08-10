@@ -59,6 +59,7 @@ export default function ReportDetail() {
   const [remarksPhotos, setRemarksPhotos] = useState([]);
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedQuotationId, setSelectedQuotationId] = useState('');
   const loadedRef = useRef(false);
 
   const { data: report, isLoading } = useQuery({
@@ -121,6 +122,60 @@ export default function ReportDetail() {
 
   
   const { data: staffList = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
+  const { data: quotations = [] } = useQuery({ queryKey: ['quotations'], queryFn: () => base44.entities.Quotation.list('-created_date', 200) });
+
+  const linkQuotation = useMutation({
+    mutationFn: async ({ quoteId }) => {
+      const q = quotations.find((x) => x.id === quoteId) || {};
+      await base44.entities.Quotation.update(quoteId, {
+        sr_id: report?.id,
+        sr_number: report?.running_number,
+        sr_ids: [...(q.sr_ids || []), report?.id].filter(Boolean),
+        sr_numbers: [...(q.sr_numbers || []), report?.running_number].filter(Boolean),
+        client_id: report?.client_id || q.client_id,
+        client_name: report?.client_name || q.client_name,
+        site_name: report?.site_name || q.site_name
+      });
+      await base44.entities.ServiceReport.update(report.id, { status: 'quote', quote_date: format(new Date(), 'yyyy-MM-dd') });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['service-report', id] });
+      queryClient.invalidateQueries({ queryKey: ['service-reports'] });
+      setSelectedQuotationId('');
+      toast.success('Quotation linked — status set to Quote');
+    }
+  });
+
+  const createQuotation = useMutation({
+    mutationFn: async () => {
+      const created = await base44.entities.Quotation.create({
+        quotation_number: `QT-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 900 + 100)}`,
+        quotation_date: format(new Date(), 'yyyy-MM-dd'),
+        sr_id: report.id,
+        sr_number: report.running_number,
+        sr_ids: [report.id],
+        sr_numbers: [report.running_number],
+        client_id: report.client_id || '',
+        client_name: report.client_name || '',
+        site_name: report.site_name || '',
+        site_location: report.site_location ? [report.site_location] : [],
+        status: 'draft',
+        items: [{ item_code: '', item_type: '', description: '', quantity: 1, unit_cost: 0, total: 0, taxable: true }],
+        subtotal: 0,
+        tax_amount: 0,
+        grand_total: 0
+      });
+      await base44.entities.ServiceReport.update(report.id, { status: 'quote', quote_date: format(new Date(), 'yyyy-MM-dd') });
+      return created;
+    },
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['service-report', id] });
+      toast.success('Quotation created');
+      navigate(`/quotations/${created.id}`);
+    }
+  });
 
 
   
@@ -939,6 +994,8 @@ export default function ReportDetail() {
   const statusIdx = L2_FLOW.indexOf(report.status);
   const isReadOnly = (report.status === 'complete' || report.status === 'billed') && !editing;
   const approvalLocked = ['approved', 'schedule', 'complete', 'billed'].includes(report.status);
+  const linkedQuotation = quotations.find((q) => q.sr_id === report.id || (q.sr_ids || []).includes(report.id) || q.sr_number === report.running_number);
+  const unlinkedQuotations = quotations.filter((q) => !q.sr_id && (!q.sr_ids || q.sr_ids.length === 0) && !q.sr_number);
 
   return (
     <div className="p-6 max-w-4xl mx-auto pb-20">
@@ -1008,22 +1065,7 @@ export default function ReportDetail() {
 
           {/* Status action buttons */}
           <div className="mt-5 pt-4 border-t border-border flex flex-wrap gap-3">
-            {report.status === 'escalated' &&
-          <div className="flex items-center gap-2">
-                <Input type="date" className="w-40 h-8 text-xs bg-background" value={l2Form.quote_date} onChange={(e) => setLF('quote_date', e.target.value)} />
-                <Button size="sm" onClick={() => advanceStatus('quote', { quote_date: l2Form.quote_date })} disabled={!l2Form.quote_date}>
-                  Submit Quotation →
-                </Button>
-              </div>
-          }
-            {report.status === 'quote' &&
-          <div className="flex items-center gap-2">
-                <Input type="date" className="w-40 h-8 text-xs bg-background" value={l2Form.approved_date} onChange={(e) => setLF('approved_date', e.target.value)} />
-                <Button size="sm" onClick={() => advanceStatus('approved', { approved_date: l2Form.approved_date })} disabled={!l2Form.approved_date}>
-                  Mark Approved →
-                </Button>
-              </div>
-          }
+            {/* Quotation linking and Approval are handled in dedicated sections below */}
             {report.status === 'approved' &&
           <div className="flex items-center gap-2">
                 <Input type="date" className="w-40 h-8 text-xs bg-background" value={l2Form.scheduled_date} onChange={(e) => setLF('scheduled_date', e.target.value)} />
@@ -1265,7 +1307,49 @@ export default function ReportDetail() {
               </div>
             </div>
 
+            {/* Quotation */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <SectionHeader title="Quotation" subtitle="Link a quotation to proceed to approval" />
+                {linkedQuotation ? <span className="text-xs text-emerald-400 font-mono">✓ Quoted</span> : <span className="text-xs text-amber-400 font-mono">Pending Quotation</span>}
+              </div>
+              {linkedQuotation ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <ReadField label="Quotation Number" value={linkedQuotation.quotation_number} />
+                    <ReadField label="Quotation Date" value={linkedQuotation.quotation_date} />
+                    <ReadField label="Quotation Status" value={linkedQuotation.status} />
+                    <ReadField label="Grand Total" value={linkedQuotation.grand_total != null ? `RM ${Number(linkedQuotation.grand_total).toFixed(2)}` : ''} />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/quotations/${linkedQuotation.id}`)}>View Quotation</Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <Field label="Link Existing Quotation">
+                      <Select value={selectedQuotationId || undefined} onValueChange={setSelectedQuotationId}>
+                        <SelectTrigger className="bg-background"><SelectValue placeholder="Select an unlinked quotation" /></SelectTrigger>
+                        <SelectContent>
+                          {unlinkedQuotations.length === 0 ? <SelectItem value="_none" disabled>No unlinked quotations</SelectItem> : unlinkedQuotations.map((q) => <SelectItem key={q.id} value={q.id}>{q.quotation_number}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Button size="sm" onClick={() => linkQuotation.mutate({ quoteId: selectedQuotationId })} disabled={!selectedQuotationId || linkQuotation.isPending} className="gap-2">
+                      {linkQuotation.isPending ? 'Linking…' : 'Link Quotation'}
+                    </Button>
+                  </div>
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-2">Or create a new quotation prefilled from this report:</p>
+                    <Button variant="outline" size="sm" onClick={() => createQuotation.mutate()} disabled={createQuotation.isPending} className="gap-2">
+                      <Plus size={14} /> {createQuotation.isPending ? 'Creating…' : 'Create Quotation'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Approval */}
+            {(report.status === 'quote' || approvalLocked) &&
             <div className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center justify-between mb-5">
                 <SectionHeader title="Approval" subtitle="Work order, approver details and approval date" />
@@ -1285,6 +1369,7 @@ export default function ReportDetail() {
                 </div>
               }
             </div>
+            }
 
             {/* L2 Items — continuation of L1 */}
             <div className="bg-card border border-border rounded-xl p-6">
