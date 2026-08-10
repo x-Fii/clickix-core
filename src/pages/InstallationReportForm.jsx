@@ -382,13 +382,6 @@ export default function InstallationReportForm() {
               <Input value={form.work_order_number} onChange={e => set('work_order_number', e.target.value)} placeholder="WO-XXXX" />
             </div>
             <div className="space-y-1">
-              <Label>Reported By</Label>
-              <Select value={form.reported_by || undefined} onValueChange={v => set('reported_by', v)}>
-                <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
-                <SelectContent>{staff.filter(s => s.is_active).map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
               <Label>Schedule Start Date</Label>
               <Input type="date" value={form.scheduled_date} onChange={e => {
                 const v = e.target.value;
@@ -398,6 +391,13 @@ export default function InstallationReportForm() {
             <div className="space-y-1">
               <Label>Schedule End Date</Label>
               <Input type="date" value={form.scheduled_end_date} min={form.scheduled_date || undefined} onChange={e => set('scheduled_end_date', e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Created By</Label>
+              <Select value={form.reported_by || undefined} onValueChange={v => set('reported_by', v)}>
+                <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
+                <SelectContent>{staff.filter(s => s.is_active).map(s => <SelectItem key={s.id} value={s.name}>{s.name} ({s.role})</SelectItem>)}</SelectContent>
+              </Select>
             </div>
           </div>
         </div>
