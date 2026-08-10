@@ -8,8 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, UserCog } from 'lucide-react';
+import { Plus, Pencil, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import ExportButtons from '@/components/ExportButtons';
@@ -22,7 +21,6 @@ export default function StaffMembers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
   const [roleFilter, setRoleFilter] = useState('all');
@@ -33,12 +31,6 @@ export default function StaffMembers() {
     mutationFn: (data) => editId ? base44.entities.StaffMember.update(editId, data) : base44.entities.StaffMember.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['staff'] }); setOpen(false); toast.success(editId ? 'Staff updated' : 'Staff added'); },
     onError: (err) => { toast.error(err?.message?.includes('403') || err?.status === 403 ? 'Only admin users can manage staff members.' : `Error: ${err?.message || 'Failed to save'}`); },
-  });
-
-  const remove = useMutation({
-    mutationFn: (id) => base44.entities.StaffMember.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['staff'] }); setDeleteId(null); toast.success('Staff removed'); },
-    onError: (err) => { toast.error(err?.message?.includes('403') || err?.status === 403 ? 'Only admin users can manage staff members.' : `Error: ${err?.message || 'Failed to delete'}`); },
   });
 
   const openNew = () => { setForm(empty); setEditId(null); setOpen(true); };
@@ -122,7 +114,6 @@ export default function StaffMembers() {
                 <td className="px-5 py-3.5">
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(s)}><Pencil size={12} /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setDeleteId(s.id)}><Trash2 size={12} /></Button>
                   </div>
                 </td>
               </tr>
@@ -160,15 +151,6 @@ export default function StaffMembers() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="bg-card border-border">
-          <AlertDialogHeader><AlertDialogTitle>Remove Staff Member</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => remove.mutate(deleteId)} className="bg-destructive hover:bg-destructive/80">Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
