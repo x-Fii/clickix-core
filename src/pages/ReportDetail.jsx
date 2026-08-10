@@ -1373,7 +1373,7 @@ export default function ReportDetail() {
 
             {/* L2 Items — continuation of L1 */}
             <div className="bg-card border border-border rounded-xl p-6">
-              <SectionHeader title="L1 Items — Onsite Rectification" subtitle="Continuation of L1 affected items with onsite action" />
+              <SectionHeader title="Escalated L1 Items for Onsite Rectification" subtitle="Continuation of L1 affected items with onsite action" />
               <div className="space-y-4">
                 {l2Items.map((item, i) =>
               <div key={i} className="p-4 bg-muted/30 rounded-lg border border-border space-y-3">
