@@ -90,7 +90,7 @@ export default function InstallationReports() {
   });
 
   const filtered = scoped.filter((r) => {
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+    const matchStatus = statusFilter === 'all' || (r.status || 'pending') === statusFilter;
     const matchSearch = [r.report_number, r.client_name, r.site_name, r.attended_staff_name, r.do_number].
       join(' ').toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
@@ -98,7 +98,7 @@ export default function InstallationReports() {
 
   const counts = {
     all: scoped.length,
-    pending: scoped.filter((r) => r.status === 'pending').length,
+    pending: scoped.filter((r) => (r.status || 'pending') === 'pending').length,
     scheduled: scoped.filter((r) => r.status === 'scheduled').length,
     completed: scoped.filter((r) => r.status === 'completed').length,
     billed: scoped.filter((r) => r.status === 'billed').length,
