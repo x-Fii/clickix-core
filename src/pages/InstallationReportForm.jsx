@@ -782,30 +782,6 @@ export default function InstallationReportForm() {
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap gap-2 items-start mt-1">
-            {(form.pre_job_assessment_photos || []).map((url, i) => (
-              <div key={i} className="relative group">
-                <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
-                <button type="button" onClick={() => set('pre_job_assessment_photos', form.pre_job_assessment_photos.filter((_, j) => j !== i))}
-                  className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:flex items-center justify-center">
-                  <X size={10} />
-                </button>
-              </div>
-            ))}
-            <label className="w-20 h-20 border border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors gap-1">
-              <Upload size={14} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">{uploading ? 'Uploading…' : 'Add Photo'}</span>
-              <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                setUploading(true);
-                const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                setForm(f => ({ ...f, pre_job_assessment_photos: [...(f.pre_job_assessment_photos || []), file_url] }));
-                setUploading(false);
-                e.target.value = '';
-              }} />
-            </label>
-          </div>
         </div>
 
         {/* Post Job Technician Note */}
