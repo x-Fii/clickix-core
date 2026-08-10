@@ -384,10 +384,6 @@ export default function InstallationReportForm() {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>DO Number</Label>
-                <Input value={form.do_number} onChange={e => set('do_number', e.target.value)} placeholder="DO-XXXX" />
-              </div>
-              <div className="space-y-1">
                 <Label>Quotation Number</Label>
                 <Input value={form.work_order_number} onChange={e => set('work_order_number', e.target.value)} placeholder="WO-XXXX" />
               </div>
@@ -516,6 +512,10 @@ export default function InstallationReportForm() {
             <div className="space-y-1">
               <Label>Installation Finish Date</Label>
               <Input type="datetime-local" value={toDatetimeLocal(form.installation_finish_date)} onChange={e => set('installation_finish_date', e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>DO Number</Label>
+              <Input value={form.do_number} onChange={e => set('do_number', e.target.value)} placeholder="DO-XXXX" />
             </div>
             <div className="space-y-1 md:col-span-2">
               <Label>Technician</Label>
