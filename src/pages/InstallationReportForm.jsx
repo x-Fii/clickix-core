@@ -160,6 +160,7 @@ export default function InstallationReportForm() {
   });
 
   const set = (field, value) => setForm(f => ({ ...f, [field]: value }));
+  const toDatetimeLocal = (v) => v ? (v.length === 10 ? `${v}T00:00` : v) : '';
 
   // Equipment sections helpers (commissioning)
   const addSection = () => set('equipment_sections', [...(form.equipment_sections || []), blankSection()]);
@@ -513,15 +514,11 @@ export default function InstallationReportForm() {
           <div className={rowClass}>
             <div className="space-y-1">
               <Label>Installation Start Date</Label>
-              <Input type="date" value={form.installation_date} onChange={e => set('installation_date', e.target.value)} />
+              <Input type="datetime-local" value={toDatetimeLocal(form.installation_date)} onChange={e => set('installation_date', e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Installation Finish Date</Label>
-              <Input type="date" value={form.installation_finish_date} onChange={e => set('installation_finish_date', e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label>Attend Time</Label>
-              <Input type="time" value={form.attend_time} onChange={e => set('attend_time', e.target.value)} />
+              <Input type="datetime-local" value={toDatetimeLocal(form.installation_finish_date)} onChange={e => set('installation_finish_date', e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Technician</Label>
