@@ -1335,27 +1335,6 @@ export default function ReportDetail() {
                     <Field label="Onsite Rectification Steps">
                       <Textarea value={item.rectification_steps} onChange={(e) => updateL2Item(i, 'rectification_steps', e.target.value)} className="bg-background resize-none text-sm" rows={2} placeholder="Describe steps taken onsite..." readOnly={isReadOnly} />
                     </Field>
-                    <div>
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Photo Evidence</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {(item.photos || []).map((url, pi) =>
-                    <div key={pi} className="relative group">
-                            <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
-                            {!isReadOnly &&
-                      <button onClick={() => updateL2Item(i, 'photos', item.photos.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
-                                <X size={8} />
-                              </button>
-                      }
-                          </div>
-                    )}
-                        {!isReadOnly &&
-                    <label className="w-20 h-20 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                            {uploadingPhoto === `l2item-${i}` ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={14} className="text-muted-foreground" />}
-                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload('l2item', i, e.target.files)} />
-                          </label>
-                    }
-                      </div>
-                    </div>
                   </div>
               )}
               </div>
