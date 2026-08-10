@@ -9,8 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, MapPin, Phone, User, ExternalLink, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, MapPin, Phone, User, ExternalLink, ChevronRight, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import StatusBadge from '@/components/StatusBadge';
 import { format } from 'date-fns';
@@ -34,7 +33,6 @@ const empty = { client_id: '', client_name: '', site_name: '', site_location: ''
 export default function Sites() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
   const [clientFilter, setClientFilter] = useState('all');
@@ -74,11 +72,6 @@ export default function Sites() {
       setOpen(false);
       toast.success(editId ? 'Site updated' : 'Site added');
     },
-  });
-
-  const remove = useMutation({
-    mutationFn: (id) => base44.entities.Site.delete(id),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ['sites'] });setDeleteId(null);toast.success('Site removed');}
   });
 
   const openNew = () => {setForm(empty);setEditId(null);setOpen(true);};
@@ -231,7 +224,6 @@ export default function Sites() {
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); openEdit(s); }}><Pencil size={12} /></Button>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={e => { e.stopPropagation(); setDeleteId(s.id); }}><Trash2 size={12} /></Button>
                                   </div>
                                 </td>
                               </tr>
@@ -434,15 +426,6 @@ export default function Sites() {
         </SheetContent>
       </Sheet>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="bg-card border-border">
-          <AlertDialogHeader><AlertDialogTitle>Delete Site</AlertDialogTitle><AlertDialogDescription>This will permanently remove this site.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => remove.mutate(deleteId)} className="bg-destructive hover:bg-destructive/80">Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>);
 
 }

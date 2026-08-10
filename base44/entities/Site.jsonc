@@ -45,5 +45,8 @@
   "required": [
     "site_name",
     "client_id"
-  ]
+  ],
+  "rls": {
+    "delete": false
+  }
 }
