@@ -1009,21 +1009,34 @@ export default function InstallationReportDetail() {
                       <tr style={{ background: '#f3f4f6' }}>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>#</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Type</th>
-                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Name / Model</th>
+                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Name</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Serial Number</th>
+                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Specifications</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Notes</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(sec.items || []).map((item, ii) => (
+                      {(sec.items || []).map((item, ii) => {
+                        const specs = [
+                          item.model && `Model: ${item.model}`,
+                          item.sku && `SKU: ${item.sku}`,
+                          item.anydesk && `Anydesk: ${item.anydesk}`,
+                          item.length && `Length: ${item.length}`,
+                          (item.quantity != null && item.quantity !== '') && `Qty: ${item.quantity}`,
+                          (item.num_ports != null && item.num_ports !== '') && `Ports: ${item.num_ports}`,
+                          (item.num_gang != null && item.num_gang !== '') && `Gang: ${item.num_gang}`,
+                        ].filter(Boolean).join('\n');
+                        return (
                         <tr key={ii} style={{ background: ii % 2 === 0 ? '#fff' : '#f9fafb' }}>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{ii + 1}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.device_type}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.device_name}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb', fontFamily: 'monospace' }}>{item.serial_number}</td>
+                          <td style={{ padding: '7px', border: '1px solid #e5e7eb', whiteSpace: 'pre-line', fontSize: '10px', color: '#374151' }}>{specs || '—'}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.notes}</td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                   {(sec.items || []).some(item => item.photos && item.photos.length > 0) && (
