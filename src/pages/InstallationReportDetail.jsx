@@ -697,6 +697,7 @@ export default function InstallationReportDetail() {
       queryClient.invalidateQueries(['installation-reports']);
       toast({ title: 'Report marked as completed' });
     },
+    onError: (err) => toast({ title: 'Failed to mark complete', description: err?.message || 'Please try again.', variant: 'destructive' }),
   });
 
   const markBilledMutation = useMutation({
@@ -706,6 +707,7 @@ export default function InstallationReportDetail() {
       queryClient.invalidateQueries(['installation-reports']);
       toast({ title: 'Report marked as billed' });
     },
+    onError: (err) => toast({ title: 'Failed to mark billed', description: err?.message || 'Please try again.', variant: 'destructive' }),
   });
 
   if (isLoading) return (
