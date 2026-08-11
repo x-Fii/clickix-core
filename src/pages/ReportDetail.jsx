@@ -998,8 +998,9 @@ export default function ReportDetail() {
 };
 
   const statusIdx = L2_FLOW.indexOf(report.status);
-  const isReadOnly = (report.status === 'complete' || report.status === 'billed') && !editing;
+  const isReadOnly = (report.status === 'complete' || report.status === 'billed' || report.status === 'cancelled') && !editing;
   const approvalLocked = ['approved', 'schedule', 'complete', 'billed'].includes(report.status);
+  const canCancel = !['complete', 'billed', 'cancelled'].includes(report.status) && report.l1_submitted !== false;
   const linkedQuotation = quotations.find((q) => q.sr_id === report.id || (q.sr_ids || []).includes(report.id) || q.sr_number === report.running_number);
   const unlinkedQuotations = quotations.filter((q) => !q.sr_id && (!q.sr_ids || q.sr_ids.length === 0) && !q.sr_number);
 
@@ -1040,6 +1041,11 @@ export default function ReportDetail() {
           <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
             <Download size={14} /> PDF
           </Button>
+          {canCancel &&
+          <Button variant="destructive" size="sm" onClick={() => advanceStatus('cancelled')} disabled={updateReport.isPending} className="gap-2">
+            <X size={14} /> Cancel Report
+          </Button>
+          }
           {report.l1_submitted !== false &&
           <Button size="sm" onClick={handleSubmitToAdmin} className="gap-2">
             <Send size={14} /> Submit to Admin
@@ -1488,10 +1494,28 @@ export default function ReportDetail() {
                   </div>
                 )}
               </div>
+              {report.l1_issue_statement &&
+              <div style={{ marginTop: '10px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>ISSUE STATEMENT</div>
+                  <div style={{ fontSize: '12px', color: '#111827', whiteSpace: 'pre-wrap' }}>{report.l1_issue_statement}</div>
+                </div>
+              }
+              {report.l1_issue_pillar?.length > 0 &&
+              <div style={{ marginTop: '10px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>ISSUE PILLAR</div>
+                  <div style={{ fontSize: '12px', color: '#111827' }}>{report.l1_issue_pillar.filter(Boolean).join(', ')}</div>
+                </div>
+              }
+              {report.l1_rectification_done &&
+              <div style={{ marginTop: '10px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>RECTIFICATION DONE</div>
+                  <div style={{ fontSize: '12px', color: '#111827', whiteSpace: 'pre-wrap' }}>{report.l1_rectification_done}</div>
+                </div>
+              }
               {report.l1_remarks &&
               <div style={{ marginTop: '10px' }}>
-                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>ISSUES IDENTIFIED</div>
-                  <div style={{ fontSize: '12px', color: '#111827' }}>{report.l1_remarks}</div>
+                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>REMARKS</div>
+                  <div style={{ fontSize: '12px', color: '#111827', whiteSpace: 'pre-wrap' }}>{report.l1_remarks}</div>
                 </div>
               }
               {(report.l1_affected_sections?.length > 0 || report.l1_affected_items?.length > 0) &&

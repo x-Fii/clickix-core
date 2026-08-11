@@ -8,7 +8,8 @@ const statusConfig = {
   approved: { label: 'Approved', cls: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/25' },
   schedule: { label: 'Scheduled', cls: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/25' },
   complete: { label: 'Complete', cls: 'bg-green-500/15 text-green-400 border-green-500/25' },
-  billed: { label: 'Billed', cls: 'bg-pink-500/15 text-pink-400 border-pink-500/25' }
+  billed: { label: 'Billed', cls: 'bg-pink-500/15 text-pink-400 border-pink-500/25' },
+  cancelled: { label: 'Cancelled', cls: 'bg-red-500/15 text-red-400 border-red-500/25' }
 };
 
 export default function StatusBadge({ status, size = 'sm' }) {

@@ -15,7 +15,8 @@
         "approved",
         "schedule",
         "complete",
-        "billed"
+        "billed",
+        "cancelled"
       ]
     },
     "client_id": {

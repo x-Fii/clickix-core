@@ -11,7 +11,7 @@ import ExportButtons from '@/components/ExportButtons';
 import { Badge } from '@/components/ui/badge';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, isWithinInterval, parseISO } from 'date-fns';
 
-const STATUSES = ['all', 'open', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete', 'completed', 'billed', 'l1Pending'];
+const STATUSES = ['all', 'open', 'reported', 'resolved', 'escalated', 'quote', 'approved', 'schedule', 'complete', 'completed', 'billed', 'cancelled', 'l1Pending'];
 const PERIODS = [
   { key: 'all', label: 'All Time' },
   { key: 'today', label: 'Today' },
@@ -63,7 +63,7 @@ export default function ServiceReports() {
 
   const filtered = reports.filter((r) => {
     const matchStatus = statusFilter === 'all' ? true
-      : statusFilter === 'open' ? !['resolved', 'complete', 'billed'].includes(r.status)
+      : statusFilter === 'open' ? !['resolved', 'complete', 'billed', 'cancelled'].includes(r.status)
       : statusFilter === 'completed' ? ['complete', 'billed'].includes(r.status)
       : statusFilter === 'l1Pending' ? r.l1_status === 'pending'
       : r.status === statusFilter;
@@ -91,6 +91,7 @@ export default function ServiceReports() {
     schedule: scoped.filter((r) => r.status === 'schedule').length,
     complete: scoped.filter((r) => r.status === 'complete').length,
     billed: scoped.filter((r) => r.status === 'billed').length,
+    cancelled: scoped.filter((r) => r.status === 'cancelled').length,
     l1Pending: scoped.filter((r) => r.l1_status === 'pending').length,
   };
 
@@ -142,6 +143,7 @@ export default function ServiceReports() {
         { label: 'Schedule',  value: counts.schedule,  color: 'text-blue-400', filter: 'schedule' },
         { label: 'Complete',  value: counts.complete,  color: 'text-emerald-400', filter: 'complete' },
         { label: 'Billed',    value: counts.billed,    color: 'text-pink-400', filter: 'billed' },
+        { label: 'Cancelled', value: counts.cancelled, color: 'text-red-400', filter: 'cancelled' },
         ].map((s) =>
         <div key={s.label} onClick={() => setStatusFilter(s.filter)} className={`bg-card border rounded-xl p-4 cursor-pointer transition-colors hover:border-primary/50 ${statusFilter === s.filter ? 'border-primary ring-1 ring-primary/30' : 'border-border'}`}>
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">{s.label}</p>

@@ -20,6 +20,8 @@ export default function L1ReadOnly({ report }) {
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <ReadField label="Reported By" value={report.reported_by} />
+        <ReadField label="DO Number" value={report.do_number} />
         <ReadField label="L1 Staff" value={report.l1_attended_staff_name} />
         <ReadField label="Staff ID" value={report.l1_attended_staff_id} />
         <ReadField label="Staff Email" value={report.l1_attended_staff_email} />
@@ -27,6 +29,31 @@ export default function L1ReadOnly({ report }) {
         <ReadField label="Report ID" value={report.running_number} />
         <ReadField label="L1 Status" value={report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : ''} />
       </div>
+
+      {(report.l1_issue_statement || report.l1_issue_pillar?.length > 0 || report.l1_rectification_done) &&
+        <div className="mb-6 space-y-3">
+          {report.l1_issue_statement &&
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-1">Issue Statement</p>
+              <p className="text-sm whitespace-pre-wrap">{report.l1_issue_statement}</p>
+            </div>
+          }
+          {report.l1_issue_pillar?.length > 0 &&
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mr-1">Issue Pillar:</p>
+              {report.l1_issue_pillar.map((p, i) => (
+                <span key={i} className="text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">{p || 'Other'}</span>
+              ))}
+            </div>
+          }
+          {report.l1_rectification_done &&
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-1">Rectification Done</p>
+              <p className="text-sm whitespace-pre-wrap">{report.l1_rectification_done}</p>
+            </div>
+          }
+        </div>
+      }
       {(report.l1_affected_sections?.length > 0 || report.l1_affected_items?.length > 0) &&
       <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-3">Affected Items</p>
@@ -70,6 +97,11 @@ export default function L1ReadOnly({ report }) {
               const lines = [
               `• Response ID: ${report.whatsapp_response_id || '—'}`,
               `• Site Name: ${report.site_name || '—'}`,
+              `• Reported By: ${report.reported_by || '—'}`,
+              `• DO Number: ${report.do_number || '—'}`,
+              ...(report.l1_issue_statement ? [`• Issue Statement: ${report.l1_issue_statement}`] : []),
+              ...(report.l1_issue_pillar?.length ? [`• Issue Pillar: ${report.l1_issue_pillar.filter(Boolean).join(', ')}`] : []),
+              ...(report.l1_rectification_done ? [`• Rectification Done: ${report.l1_rectification_done}`] : []),
               ...(report.l1_affected_sections?.length > 0 ?
               report.l1_affected_sections.flatMap((sec, si) =>
               (sec.items || []).filter((i) => i.device_type || i.issue_description).map((item) =>
@@ -96,6 +128,11 @@ export default function L1ReadOnly({ report }) {
         <div className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs space-y-1 text-foreground leading-relaxed">
           <p>• <span className="text-muted-foreground">Response ID:</span> {report.whatsapp_response_id || '—'}</p>
           <p>• <span className="text-muted-foreground">Site Name:</span> {report.site_name || '—'}</p>
+          <p>• <span className="text-muted-foreground">Reported By:</span> {report.reported_by || '—'}</p>
+          <p>• <span className="text-muted-foreground">DO Number:</span> {report.do_number || '—'}</p>
+          {report.l1_issue_statement && <p>• <span className="text-muted-foreground">Issue Statement:</span> {report.l1_issue_statement}</p>}
+          {report.l1_issue_pillar?.length > 0 && <p>• <span className="text-muted-foreground">Issue Pillar:</span> {report.l1_issue_pillar.filter(Boolean).join(', ')}</p>}
+          {report.l1_rectification_done && <p>• <span className="text-muted-foreground">Rectification Done:</span> {report.l1_rectification_done}</p>}
           {report.l1_affected_sections?.length > 0 ?
           report.l1_affected_sections.map((sec, si) =>
           (sec.items || []).filter((i) => i.device_type || i.issue_description).map((item, ii) =>
