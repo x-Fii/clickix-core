@@ -9,7 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import StatusBadge from '@/components/StatusBadge';
 import SignaturePad from '@/components/SignaturePad';
-import { ArrowLeft, Download, Send, Plus, X, Upload, Edit2, Save, Copy, Check } from 'lucide-react';
+import L1DraftEditor from '@/components/L1DraftEditor';
+import L1ReadOnly from '@/components/L1ReadOnly';
+import { ArrowLeft, Download, Send, Plus, X, Upload, Edit2, Save, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -57,7 +59,7 @@ export default function ReportDetail() {
   const [uploadingStamp, setUploadingStamp] = useState(false);
   const [jobDescPhotos, setJobDescPhotos] = useState([]);
   const [remarksPhotos, setRemarksPhotos] = useState([]);
-  const [summaryCopied, setSummaryCopied] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [selectedQuotationId, setSelectedQuotationId] = useState('');
   const loadedRef = useRef(false);
@@ -1013,13 +1015,14 @@ export default function ReportDetail() {
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold font-mono">{report.running_number}</h1>
               <StatusBadge status={report.status} size="md" />
+              {report.l1_submitted === false && <span className="text-xs text-amber-400 font-mono">Draft</span>}
               {report.submitted && <span className="text-xs text-emerald-400 font-mono">✓ Submitted</span>}
             </div>
             <p className="text-xs text-muted-foreground mt-1">{report.client_name} · {report.site_name}</p>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
-          {canEdit && !editing &&
+          {canEdit && !editing && report.l1_submitted !== false &&
           <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-2">
               <Edit2 size={14} /> Edit
             </Button>
@@ -1037,9 +1040,11 @@ export default function ReportDetail() {
           <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
             <Download size={14} /> PDF
           </Button>
+          {report.l1_submitted !== false &&
           <Button size="sm" onClick={handleSubmitToAdmin} className="gap-2">
             <Send size={14} /> Submit to Admin
           </Button>
+          }
         </div>
       </div>
 
@@ -1114,113 +1119,7 @@ export default function ReportDetail() {
         </div>
 
         {/* L1 Section */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="pb-3 border-b border-border flex-1">
-              <h3 className="font-semibold text-sm">L1 Remote Support</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Remote attendance record</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-            <ReadField label="L1 Staff" value={report.l1_attended_staff_name} />
-            <ReadField label="Staff ID" value={report.l1_attended_staff_id} />
-            <ReadField label="Staff Email" value={report.l1_attended_staff_email} />
-            <ReadField label="Date" value={report.l1_date} />
-            <ReadField label="Report ID" value={report.running_number} />
-            <ReadField label="L1 Status" value={report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : ''} />
-          </div>
-          {(report.l1_affected_sections?.length > 0 || report.l1_affected_items?.length > 0) &&
-          <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-3">Affected Items</p>
-              {report.l1_affected_sections?.length > 0 ?
-            <div className="space-y-3">
-                  {report.l1_affected_sections.map((sec, si) =>
-              <div key={si} className="border border-primary/20 rounded-lg p-3 space-y-2 bg-muted/10">
-                      <p className="text-xs font-semibold text-primary">{sec.section_name || `Section ${si + 1}`}</p>
-                      <div className="space-y-1.5 pl-2 border-l-2 border-border">
-                        {(sec.items || []).map((item, ii) =>
-                  <div key={ii} className="flex gap-3 p-2 bg-card rounded text-sm border border-border">
-                            <span className="font-mono text-xs text-primary bg-primary/10 px-2 py-0.5 rounded flex-shrink-0 h-fit">{item.device_type}</span>
-                            <span className="font-medium flex-shrink-0">{item.device_name}</span>
-                            <span className="text-muted-foreground">{item.issue_description}</span>
-                          </div>
-                  )}
-                      </div>
-                    </div>
-              )}
-                </div> :
-
-            <div className="space-y-2">
-                  {report.l1_affected_items.map((item, i) =>
-              <div key={i} className="flex gap-3 p-3 bg-muted/30 rounded-lg text-sm">
-                      <span className="font-mono text-xs text-primary bg-primary/10 px-2 py-0.5 rounded flex-shrink-0 h-fit">{item.device_type}</span>
-                      <span className="font-medium flex-shrink-0">{item.device_name}</span>
-                      <span className="text-muted-foreground">{item.issue_description}</span>
-                    </div>
-              )}
-                </div>
-            }
-            </div>
-          }
-
-          {/* L1 Session Summary */}
-          <div className="mt-6 pt-5 border-t border-border">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono">L1 Session Summary</p>
-              <button
-                onClick={() => {
-                  const lines = [
-                  `• Response ID: ${report.whatsapp_response_id || '—'}`,
-                  `• Site Name: ${report.site_name || '—'}`,
-                  ...(report.l1_affected_sections?.length > 0 ?
-                  report.l1_affected_sections.flatMap((sec, si) =>
-                  (sec.items || []).filter((i) => i.device_type || i.issue_description).map((item) =>
-                  `• Section: ${sec.section_name || `Section ${si + 1}`}${item.device_type ? ` — Device: ${item.device_type}${item.device_name ? ` (${item.device_name})` : ''}` : ''}${item.issue_description ? ` — Issue: ${item.issue_description}` : ''}`
-                  )
-                  ) :
-                  (report.l1_affected_items || []).filter((i) => i.device_type).map((item) =>
-                  `• Device: ${item.device_type}${item.device_name ? ` (${item.device_name})` : ''}${item.issue_description ? ` — Issue: ${item.issue_description}` : ''}`
-                  )),
-
-                  `• Remarks: ${report.l1_remarks || '—'}`,
-                  `• L1 Status: ${report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : '—'}`];
-
-                  navigator.clipboard.writeText(lines.join('\n'));
-                  setSummaryCopied(true);
-                  setTimeout(() => setSummaryCopied(false), 2000);
-                }}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border hover:bg-muted/50">
-                
-                {summaryCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                {summaryCopied ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
-            <div className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs space-y-1 text-foreground leading-relaxed">
-              <p>• <span className="text-muted-foreground">Response ID:</span> {report.whatsapp_response_id || '—'}</p>
-              <p>• <span className="text-muted-foreground">Site Name:</span> {report.site_name || '—'}</p>
-              {report.l1_affected_sections?.length > 0 ?
-              report.l1_affected_sections.map((sec, si) =>
-              (sec.items || []).filter((i) => i.device_type || i.issue_description).map((item, ii) =>
-              <p key={`${si}-${ii}`}>
-                      • <span className="text-muted-foreground">Section:</span> {sec.section_name || `Section ${si + 1}`}
-                      {item.device_type && <> — <span className="text-muted-foreground">Device:</span> {item.device_type}{item.device_name ? ` (${item.device_name})` : ''}</>}
-                      {item.issue_description && <> — <span className="text-muted-foreground">Issue:</span> {item.issue_description}</>}
-                    </p>
-              )
-              ) :
-
-              (report.l1_affected_items || []).filter((i) => i.device_type).map((item, i) =>
-              <p key={i}>
-                    • <span className="text-muted-foreground">Device:</span> {item.device_type}{item.device_name ? ` (${item.device_name})` : ''}
-                    {item.issue_description && <> — <span className="text-muted-foreground">Issue:</span> {item.issue_description}</>}
-                  </p>
-              )
-              }
-              <p className="uppercase">• <span className="text-muted-foreground">Remarks:</span> {report.l1_remarks || '—'}</p>
-              <p>• <span className="text-muted-foreground">L1 Status:</span> <span className="font-bold">{report.l1_status ? report.l1_status.charAt(0).toUpperCase() + report.l1_status.slice(1) : '—'}</span></p>
-            </div>
-          </div>
-        </div>
+        {report.l1_submitted === false ? <L1DraftEditor report={report} /> : <L1ReadOnly report={report} />}
 
         {/* L2 Section */}
         {isL2Stage &&

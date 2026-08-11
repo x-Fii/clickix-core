@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
@@ -106,6 +106,18 @@ export default function NewReport() {
   const addItemToSection = (si) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: [...s.items, emptyItem()] } : s));
   const removeItemFromSection = (si, ii) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.filter((_, i) => i !== ii) } : s));
   const updateSectionItem = (si, ii, field, val) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.map((item, i) => i === ii ? { ...item, [field]: val } : item) } : s));
+
+  const handleSaveDraft = () => {
+    createReport.mutate({
+      ...form,
+      l1_status: 'pending',
+      status: 'reported',
+      l1_affected_sections: affectedSections,
+      l1_affected_items: affectedSections.flatMap(s => s.items).filter(i => i.device_type),
+      l1_submitted: false,
+    });
+    toast.success('Draft saved');
+  };
 
   const handleSubmit = (l1Status) => {
     if (!form.client_id) { toast.error('Please select a client'); return; }
@@ -351,6 +363,9 @@ export default function NewReport() {
         {/* Status Actions */}
         <div className="bg-card border border-border rounded-xl p-6">
           <SectionHeader title="L1 Resolution" subtitle="Mark the outcome of this remote support session" />
+          <Button type="button" variant="outline" size="sm" onClick={handleSaveDraft} disabled={createReport.isPending} className="gap-2 mb-4">
+            <Save size={14} /> {createReport.isPending ? 'Saving...' : 'Save Draft'}
+          </Button>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               type="button"
