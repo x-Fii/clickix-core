@@ -804,7 +804,14 @@ export default function InstallationReportDetail() {
                       <Field label="Device Type" value={item.device_type} />
                       <Field label="Device Name" value={item.device_name} />
                       <Field label="Serial Number" value={item.serial_number} />
-                      {item.notes && <Field label="Notes" value={item.notes} />}
+                      <Field label="Model" value={item.model} />
+                      <Field label="SKU" value={item.sku} />
+                      <Field label="Anydesk" value={item.anydesk} />
+                      <Field label="Length" value={item.length} />
+                      <Field label="Quantity" value={item.quantity} />
+                      <Field label="Number of Ports" value={item.num_ports} />
+                      <Field label="Number of Gang" value={item.num_gang} />
+                      <Field label="Notes" value={item.notes} />
                     </div>
                     {item.photos && item.photos.length > 0 && (
                       <div className="flex flex-wrap gap-2">
