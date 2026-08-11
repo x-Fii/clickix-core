@@ -42,7 +42,7 @@ export default function InstallationReportForm() {
   const { toast } = useToast();
   const isEdit = !!id;
 
-  const [form, setForm] = useState({
+  const buildDefaultForm = () => ({
     report_number: generateReportNumber(),
     report_type: 'commissioning',
     status: 'pending',
@@ -67,6 +67,21 @@ export default function InstallationReportForm() {
     submitted: false, submitted_at: '', admin_email: '',
   });
 
+  // Load the existing report BEFORE initializing form state so the form can be
+  // populated synchronously from the cached record (no default-then-seed
+  // window during which user edits could be overwritten when the fetch lands).
+  const { data: existing, isLoading: isLoadingExisting, isError: isErrorExisting } = useQuery({
+    queryKey: ['installation-report', id],
+    queryFn: () => base44.entities.InstallationReport.filter({ id }),
+    enabled: isEdit,
+    select: data => data[0],
+  });
+
+  // Initialize the form from the cached report when available; otherwise start
+  // from defaults (a loading guard below prevents editing until seeded).
+  const [form, setForm] = useState(() => (isEdit && existing ? { ...buildDefaultForm(), ...existing } : buildDefaultForm()));
+  const [seeded, setSeeded] = useState(() => !isEdit || !!existing);
+
   const [uploading, setUploading] = useState(false);
   const [uploadingStamp, setUploadingStamp] = useState(false);
   // Tracks the report id we've already seeded the form for, so the form is
@@ -78,13 +93,6 @@ export default function InstallationReportForm() {
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
   const { data: staff = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
-
-  const { data: existing } = useQuery({
-    queryKey: ['installation-report', id],
-    queryFn: () => base44.entities.InstallationReport.filter({ id }),
-    enabled: isEdit,
-    select: data => data[0],
-  });
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
@@ -131,7 +139,8 @@ export default function InstallationReportForm() {
   useEffect(() => {
     if (!isEdit || !existing || seededRef.current === id) return;
     seededRef.current = id;
-    setForm(f => ({ ...f, ...existing }));
+    setForm(() => ({ ...buildDefaultForm(), ...existing }));
+    setSeeded(true);
   }, [existing, id, isEdit]);
 
   // Restore the Region/State filter dropdowns from the saved site once per
@@ -395,6 +404,22 @@ export default function InstallationReportForm() {
   const rowClass = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
   const jobLocked = form.status === 'scheduled' || form.status === 'completed' || form.status === 'cancelled';
   const isImage = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i.test(url || '');
+
+  if (isEdit && isLoadingExisting) return (
+    <div className="flex justify-center items-center h-64">
+      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  if (isEdit && (isErrorExisting || (!isLoadingExisting && !existing))) return (
+    <div className="p-6 text-center text-muted-foreground">Report not found.</div>
+  );
+
+  if (isEdit && !seeded) return (
+    <div className="flex justify-center items-center h-64">
+      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
