@@ -340,23 +340,101 @@ export default function NewReport() {
 
         {/* L1 Summary Statement */}
         <div className="bg-card border border-border rounded-xl p-6">
-          <SectionHeader title="L1 Session Summary" subtitle="Auto-generated summary based on information entered above" />
+          <SectionHeader
+            title="L1 Session Summary"
+            subtitle="Auto-generated summary based on information entered above"
+          />
+
           <div className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs space-y-1 text-foreground leading-relaxed">
-            <p>• <span className="text-muted-foreground">Response ID:</span> {form.whatsapp_response_id || <span className="italic text-muted-foreground">—</span>}</p>
-            <p>• <span className="text-muted-foreground">Site Name:</span> {form.site_name || <span className="italic text-muted-foreground">—</span>}</p>
+
+            <p>
+              • <span className="text-muted-foreground">Response ID:</span>{' '}
+              {form.whatsapp_response_id || (
+                <span className="italic text-muted-foreground">—</span>
+              )}
+            </p>
+
+            <p>
+              • <span className="text-muted-foreground">Site Name:</span>{' '}
+              {form.site_name || (
+                <span className="italic text-muted-foreground">—</span>
+              )}
+            </p>
+
             {affectedSections.map((sec, si) =>
-              sec.items.filter(i => i.device_type || i.issue_description).map((item, ii) => (
-                <p key={`${si}-${ii}`}>
-                  • <span className="text-muted-foreground">Section:</span> {sec.section_name || `Section ${si + 1}`}
-                  {item.device_type && <> — <span className="text-muted-foreground">Device:</span> {item.device_type}{item.device_name ? ` (${item.device_name})` : ''}</>}
-                  {item.issue_description && <> — <span className="text-muted-foreground">Issue:</span> {item.issue_description}</>}
-                </p>
-              ))
+              sec.items
+                .filter(i => i.device_type || i.issue_description)
+                .map((item, ii) => (
+                  <div key={`${si}-${ii}`} className="space-y-1">
+
+                    <p>
+                      • <span className="text-muted-foreground">Section:</span>{' '}
+                      {sec.section_name || `Section ${si + 1}`}
+                    </p>
+
+                    {item.device_type && (
+                      <p>
+                        • <span className="text-muted-foreground">Device:</span>{' '}
+                        {item.device_type}
+                        {item.device_name ? ` (${item.device_name})` : ''}
+                      </p>
+                    )}
+
+                    {item.issue_description && (
+                      <p>
+                        • <span className="text-muted-foreground">Issue:</span>{' '}
+                        {item.issue_description}
+                      </p>
+                    )}
+
+                  </div>
+                ))
             )}
-            <p>• <span className="text-muted-foreground">Issue Statement:</span> {form.l1_issue_statement || <span className="italic text-muted-foreground">—</span>}</p>
-            <p>• <span className="text-muted-foreground">Issue Pillar:</span> {(Array.isArray(form.l1_issue_pillar) ? form.l1_issue_pillar : []).join(', ') || <span className="italic text-muted-foreground">—</span>}</p>
-            <p>• <span className="text-muted-foreground">Rectification Done:</span> {form.l1_rectification_done || <span className="italic text-muted-foreground">—</span>}</p>
-            <p>• <span className="text-muted-foreground">Remarks:</span> {form.l1_remarks || <span className="italic text-muted-foreground">—</span>}</p>
+
+            <p>
+              • <span className="text-muted-foreground">Issue Statement:</span>{' '}
+              {form.l1_issue_statement || (
+                <span className="italic text-muted-foreground">—</span>
+              )}
+            </p>
+
+            <p>
+              • <span className="text-muted-foreground">Issue Pillar:</span>{' '}
+              {(Array.isArray(form.l1_issue_pillar)
+                ? form.l1_issue_pillar
+                : []
+              ).join(', ') || (
+                <span className="italic text-muted-foreground">—</span>
+              )}
+            </p>
+
+            <p>
+              • <span className="text-muted-foreground">Rectification Done:</span>{' '}
+              {form.l1_rectification_done || (
+                <span className="italic text-muted-foreground">—</span>
+              )}
+            </p>
+
+            <div>
+              <p>
+                • <span className="text-muted-foreground">Remarks:</span>
+              </p>
+
+              {form.l1_remarks ? (
+                <div className="pl-4 whitespace-pre-wrap">
+                  {form.l1_remarks
+                    .split(/\s+-\s+/)
+                    .map((part, index) => (
+                      <div key={index}>
+                        {index === 0 ? part : `- ${part}`}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="pl-4 italic text-muted-foreground">—</div>
+              )}
+            </div>
+
           </div>
         </div>
 
