@@ -771,6 +771,7 @@ export default function InstallationReportDetail() {
         <div className="bg-card border border-border rounded-xl p-5 space-y-3">
           <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">Schedule & Attendance</h2>
           <Field label="Scheduled Date" value={report.scheduled_date} />
+          <Field label="Scheduled End Date" value={report.scheduled_end_date} />
           <Field label="Installation Date" value={report.installation_date} />
           <Field label="Installation Finish Date" value={report.installation_finish_date} />
           <Field label="Attend Time" value={report.attend_time} />
@@ -860,21 +861,39 @@ export default function InstallationReportDetail() {
       )}
 
       {/* Pre-Job Site Assessment */}
-      {(report.pre_job_assessment || (report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0)) && (
-        <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-          <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">Pre-Job Site Assessment</h2>
-          {report.pre_job_assessment && <p className="text-sm whitespace-pre-wrap">{report.pre_job_assessment}</p>}
-          {report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {report.pre_job_assessment_photos.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noreferrer">
-                  <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {(() => {
+        const sections = report.pre_job_assessment_sections || {};
+        const hasSections = Object.values(sections).some(v => v && v.trim());
+        const hasPhotos = report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0;
+        const hasLegacy = report.pre_job_assessment;
+        if (!hasSections && !hasPhotos && !hasLegacy) return null;
+        const labels = { overall: '1. Overall', power: '2. Power', internet: '3. Internet', cables: '4. Cables', server_rack: '5. Server Rack / Shelves', others: '6. Others' };
+        return (
+          <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+            <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">Pre-Job Site Assessment</h2>
+            {hasLegacy && <p className="text-sm whitespace-pre-wrap">{report.pre_job_assessment}</p>}
+            {hasSections && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {Object.keys(labels).map(k => sections[k] ? (
+                  <div key={k} className="space-y-1">
+                    <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">{labels[k]}</p>
+                    <p className="text-sm whitespace-pre-wrap">{sections[k]}</p>
+                  </div>
+                ) : null)}
+              </div>
+            )}
+            {hasPhotos && (
+              <div className="flex flex-wrap gap-2">
+                {report.pre_job_assessment_photos.map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noreferrer">
+                    <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Post Job Technician Note */}
       {report.technician_notes && (
@@ -920,6 +939,22 @@ export default function InstallationReportDetail() {
             {report.supporting_photos.map((url, i) => (
               <a key={i} href={url} target="_blank" rel="noreferrer">
                 <img src={url} alt={`Photo ${i + 1}`} className="w-28 h-28 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Delivery Photos */}
+      {report.delivery_photos && report.delivery_photos.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+          <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+            <Package size={14} /> Delivery Photos
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            {report.delivery_photos.map((url, i) => (
+              <a key={i} href={url} target="_blank" rel="noreferrer">
+                <img src={url} alt={`Delivery ${i + 1}`} className="w-28 h-28 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
               </a>
             ))}
           </div>
@@ -978,7 +1013,7 @@ export default function InstallationReportDetail() {
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Schedule & Attendance</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-              {[['SCHEDULED DATE', report.scheduled_date], ['INSTALLATION DATE', report.installation_date], ['INSTALLATION FINISH DATE', report.installation_finish_date], ['ATTEND TIME', report.attend_time], ['STATUS', sc.label]].filter(([,v]) => v).map(([k, v]) => (
+              {[['SCHEDULED DATE', report.scheduled_date], ['SCHEDULED END DATE', report.scheduled_end_date], ['INSTALLATION DATE', report.installation_date], ['INSTALLATION FINISH DATE', report.installation_finish_date], ['ATTEND TIME', report.attend_time], ['STATUS', sc.label]].filter(([,v]) => v).map(([k, v]) => (
                 <div key={k}>
                   <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                   <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>
@@ -1125,30 +1160,48 @@ export default function InstallationReportDetail() {
           )}
 
           {/* Pre-Job Site Assessment */}
-          {(report.pre_job_assessment || (report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0)) && (
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Pre-Job Site Assessment</span>
-              </div>
-              {report.pre_job_assessment && <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '12px', marginBottom: '10px' }}>{report.pre_job_assessment}</div>}
-              {report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {report.pre_job_assessment_photos.map((url, i) => (
-                    <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                  width: '145px',
-                                                                                  height: 'auto',
-                                                                                  maxHeight: '180px',
-                                                                                  objectFit: 'contain',
-                                                                                  border: '1px solid #e5e7eb',
-                                                                                  borderRadius: '4px',
-                                                                                  background: '#ffffff',
-                                                                                  display: 'block'
-                                                                                }} />
-                  ))}
+          {(() => {
+            const sections = report.pre_job_assessment_sections || {};
+            const hasSections = Object.values(sections).some(v => v && String(v).trim());
+            const hasPhotos = report.pre_job_assessment_photos && report.pre_job_assessment_photos.length > 0;
+            const hasLegacy = report.pre_job_assessment;
+            if (!hasSections && !hasPhotos && !hasLegacy) return null;
+            const labels = { overall: '1. Overall', power: '2. Power', internet: '3. Internet', cables: '4. Cables', server_rack: '5. Server Rack / Shelves', others: '6. Others' };
+            return (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Pre-Job Site Assessment</span>
                 </div>
-              )}
-            </div>
-          )}
+                {hasLegacy && <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '12px', marginBottom: '10px' }}>{report.pre_job_assessment}</div>}
+                {hasSections && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px', marginBottom: hasPhotos ? '10px' : '0' }}>
+                    {Object.keys(labels).map(k => sections[k] ? (
+                      <div key={k} style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '8px 10px', background: '#f9fafb' }}>
+                        <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>{labels[k]}</div>
+                        <div style={{ fontSize: '11px', color: '#111827', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{sections[k]}</div>
+                      </div>
+                    ) : null)}
+                  </div>
+                )}
+                {hasPhotos && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {report.pre_job_assessment_photos.map((url, i) => (
+                      <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
+                                                                                    width: '145px',
+                                                                                    height: 'auto',
+                                                                                    maxHeight: '180px',
+                                                                                    objectFit: 'contain',
+                                                                                    border: '1px solid #e5e7eb',
+                                                                                    borderRadius: '4px',
+                                                                                    background: '#ffffff',
+                                                                                    display: 'block'
+                                                                                  }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Post Job Technician Note */}
           {report.technician_notes && (
@@ -1178,6 +1231,43 @@ export default function InstallationReportDetail() {
                                                                                 background: '#ffffff',
                                                                                 display: 'block'
                                                                               }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Delivery Photos */}
+          {report.delivery_photos && report.delivery_photos.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Delivery Photos</span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {report.delivery_photos.map((url, i) => (
+                  <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
+                                                                                width: '145px',
+                                                                                height: 'auto',
+                                                                                maxHeight: '180px',
+                                                                                objectFit: 'contain',
+                                                                                border: '1px solid #e5e7eb',
+                                                                                borderRadius: '4px',
+                                                                                background: '#ffffff',
+                                                                                display: 'block'
+                                                                              }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Supporting Documents */}
+          {report.supporting_documents && report.supporting_documents.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Supporting Documents</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {report.supporting_documents.map((url, i) => (
+                  <a key={i} href={url} style={{ fontSize: '11px', color: '#1d4ed8', textDecoration: 'underline', wordBreak: 'break-all' }}>Document {i + 1}</a>
                 ))}
               </div>
             </div>
