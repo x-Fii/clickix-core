@@ -1040,22 +1040,16 @@ export default function InstallationReportDetail() {
                           <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '5px', fontWeight: '600' }}>{item.device_name} Photos:</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {item.photos.map((url, pi) => (
-                              <img
-                                key={pi}
-                                src={url}
-                                alt=""
-                                crossOrigin="anonymous"
-                                style={{
-                                  width: '145px',
-                                  height: 'auto',
-                                  maxHeight: '180px',
-                                  objectFit: 'contain',
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: '4px',
-                                  background: '#ffffff',
-                                  display: 'block'
-                                }}
-                              />
+                              <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{
+                                                                                                width: '220px',
+                                                                                                height: 'auto',
+                                                                                                maxHeight: '260px',
+                                                                                                objectFit: 'contain',
+                                                                                                border: '1px solid #e5e7eb',
+                                                                                                borderRadius: '4px',
+                                                                                                background: '#ffffff',
+                                                                                                display: 'block'
+                                                                                            }} />
                             ))}
                           </div>
                         </div>
@@ -1110,9 +1104,9 @@ export default function InstallationReportDetail() {
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {item.photos.map((url, pi) => (
                               <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                                width: '145px',
+                                                                                                width: '220px',
                                                                                                 height: 'auto',
-                                                                                                maxHeight: '180px',
+                                                                                                maxHeight: '260px',
                                                                                                 objectFit: 'contain',
                                                                                                 border: '1px solid #e5e7eb',
                                                                                                 borderRadius: '4px',
