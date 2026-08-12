@@ -355,12 +355,6 @@ export default function InstallationReportDetail() {
         pageHasContent = true;
       };
 
-      /*
-      * Add a photo container row by row.
-      *
-      * Each PDF row contains up to two photos.
-      * Photos are not cut in the middle.
-      */
       const addPhotoContainerWithPagination =
         async (photoContainer) => {
           const imageElements = Array.from(
@@ -373,7 +367,7 @@ export default function InstallationReportDetail() {
             return;
           }
 
-          const imagesPerRow = 2;
+          const imagesPerRow = 3;
 
           for (
             let index = 0;
@@ -399,7 +393,7 @@ export default function InstallationReportDetail() {
                 width: `${containerWidth}px`,
                 display: 'grid',
                 gridTemplateColumns:
-                  'repeat(2, minmax(0, 1fr))',
+                  'repeat(3, minmax(0, 1fr))',
                 gap: '8px',
                 backgroundColor: '#ffffff'
               }
@@ -417,8 +411,8 @@ export default function InstallationReportDetail() {
 
               Object.assign(clone.style, {
                 width: '100%',
-                height: '260px',
-                maxHeight: '260px',
+                height: '180px',
+                maxHeight: '180px',
                 objectFit: 'contain',
                 border:
                   '1px solid #e5e7eb',
@@ -1047,9 +1041,9 @@ export default function InstallationReportDetail() {
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {item.photos.map((url, pi) => (
                               <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                                width: '220px',
+                                                                                                width: '145px',
                                                                                                 height: 'auto',
-                                                                                                maxHeight: '260px',
+                                                                                                maxHeight: '180px',
                                                                                                 objectFit: 'contain',
                                                                                                 border: '1px solid #e5e7eb',
                                                                                                 borderRadius: '4px',
@@ -1110,9 +1104,9 @@ export default function InstallationReportDetail() {
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {item.photos.map((url, pi) => (
                               <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                                width: '220px',
+                                                                                                width: '145px',
                                                                                                 height: 'auto',
-                                                                                                maxHeight: '260px',
+                                                                                                maxHeight: '180px',
                                                                                                 objectFit: 'contain',
                                                                                                 border: '1px solid #e5e7eb',
                                                                                                 borderRadius: '4px',
@@ -1141,9 +1135,9 @@ export default function InstallationReportDetail() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {report.pre_job_assessment_photos.map((url, i) => (
                     <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                  width: '220px',
+                                                                                  width: '145px',
                                                                                   height: 'auto',
-                                                                                  maxHeight: '260px',
+                                                                                  maxHeight: '180px',
                                                                                   objectFit: 'contain',
                                                                                   border: '1px solid #e5e7eb',
                                                                                   borderRadius: '4px',
@@ -1175,9 +1169,9 @@ export default function InstallationReportDetail() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {report.supporting_photos.map((url, i) => (
                   <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                width: '220px',
+                                                                                width: '145px',
                                                                                 height: 'auto',
-                                                                                maxHeight: '260px',
+                                                                                maxHeight: '180px',
                                                                                 objectFit: 'contain',
                                                                                 border: '1px solid #e5e7eb',
                                                                                 borderRadius: '4px',
