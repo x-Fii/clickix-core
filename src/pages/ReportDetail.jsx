@@ -745,16 +745,14 @@ export default function ReportDetail() {
         return;
       }
 
-      const imagesPerRow = 2;
+      const imagesPerRow = 3;
 
       for (
         let index = 0;
         index < imageElements.length;
         index += imagesPerRow
       ) {
-        /*
-        * Create one temporary row containing up to two photos.
-        */
+     
         const temporaryRow =
           document.createElement('div');
 
@@ -770,7 +768,7 @@ export default function ReportDetail() {
           width: `${gridWidth}px`,
           display: 'grid',
           gridTemplateColumns:
-            'repeat(2, minmax(0, 1fr))',
+            'repeat(3, minmax(0, 1fr))',
           gap: '8px',
           backgroundColor: '#ffffff'
         });
@@ -785,8 +783,8 @@ export default function ReportDetail() {
 
           Object.assign(clone.style, {
             width: '100%',
-            height: '260px',
-            maxHeight: '260px',
+            height: '180px',
+            maxHeight: '180px',
             objectFit: 'contain',
             border: '1px solid #e5e7eb',
             borderRadius: '4px',
@@ -826,9 +824,7 @@ export default function ReportDetail() {
 
         temporaryRow.remove();
 
-        /*
-        * Add this two-photo row as one PDF block.
-        */
+       
         addCanvasToPDF(rowCanvas);
       }
     };
@@ -1626,7 +1622,7 @@ export default function ReportDetail() {
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                         gap: '8px',
                         marginTop: '8px'
                       }}
@@ -1640,7 +1636,7 @@ export default function ReportDetail() {
                           style={{
                             width: '100%',
                             height: 'auto',
-                            maxHeight: '260px',
+                            maxHeight: '180px',
                             objectFit: 'contain',
                             border: '1px solid #e5e7eb',
                             borderRadius: '4px',
@@ -1697,7 +1693,7 @@ export default function ReportDetail() {
                   <div
                       style={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                           gap: '8px',
                           marginTop: '8px'
                       }}
@@ -1711,7 +1707,7 @@ export default function ReportDetail() {
                               style={{
                                   width: '100%',
                                   height: 'auto',
-                                  maxHeight: '260px',
+                                  maxHeight: '180px',
                                   objectFit: 'contain',
                                   border: '1px solid #e5e7eb',
                                   borderRadius: '4px',
@@ -1763,9 +1759,9 @@ export default function ReportDetail() {
                   {l2Items.map((item, i) => item.photos?.length > 0 &&
               <div key={i} style={{ marginBottom: '10px' }}>
                       <div style={{ fontSize: '10px', fontWeight: '600', color: '#6b7280', marginBottom: '6px' }}>#{i + 1} {item.device_name}</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
                         {item.photos.map((url, pi) =>
-                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
+                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '180px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
                   )}
                       </div>
                     </div>
@@ -1784,9 +1780,9 @@ export default function ReportDetail() {
                       <div style={{ fontSize: '12px', fontWeight: '600', color: '#111827' }}>{item.device_type} — {item.device_name}</div>
                       {item.issue_description && <div style={{ fontSize: '12px', color: '#374151' }}>{item.issue_description}</div>}
                       {item.photos?.length > 0 &&
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', marginTop: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px', marginTop: '6px' }}>
                           {item.photos.map((url, pi) =>
-                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
+                  <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '180px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
                   )}
                         </div>
                 }
@@ -1865,9 +1861,9 @@ export default function ReportDetail() {
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Supporting Photos</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
                 {supportingDocs.filter((u) => u.match(/\.(jpg|jpeg|png|gif|webp)$/i)).map((url, i) =>
-              <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '260px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
+              <img key={i} src={url} alt="" crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '180px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#ffffff', display: 'block' }} />
               )}
               </div>
             </div>
