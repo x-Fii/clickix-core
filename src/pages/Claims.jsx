@@ -139,6 +139,23 @@ export default function Claims() {
     queryFn: () => base44.entities.Claim.list('-created_date')
   });
 
+  const { data: installReports = [] } = useQuery({
+    queryKey: ['installation-reports', 'all'],
+    queryFn: () => base44.entities.InstallationReport.list()
+  });
+
+  const irTypeMap = installReports.reduce((acc, ir) => {
+    acc[ir.id] = ir.report_type;
+    return acc;
+  }, {});
+
+  const claimJobTypes = (c) => {
+    const ids = Array.isArray(c.ir_ids) && c.ir_ids.length ? c.ir_ids : (c.ir_id ? [c.ir_id] : []);
+    const types = ids.map((id) => irTypeMap[id]).filter(Boolean);
+    const unique = [...new Set(types)];
+    return unique;
+  };
+
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Claim.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['claims'] })
@@ -200,6 +217,11 @@ export default function Claims() {
               { header: 'SR / IR No.', accessor: (r) => r.sr_number || r.ir_number || '' },
               { header: 'Claimant', accessor: 'claimant_name' },
               { header: 'Site', accessor: (r) => (Array.isArray(r.site_names) ? r.site_names.join(', ') : r.site_name || '') },
+              { header: 'Job Type', accessor: (r) => {
+                  const ids = Array.isArray(r.ir_ids) && r.ir_ids.length ? r.ir_ids : (r.ir_id ? [r.ir_id] : []);
+                  const types = ids.map((id) => irTypeMap[id]).filter(Boolean);
+                  return [...new Set(types)].map((t) => t === 'decommissioning' ? 'Decommission' : 'Commission').join(', ');
+                } },
               { header: 'Type', accessor: 'claim_type' },
               { header: 'Date', accessor: 'claim_date' },
               { header: 'Total (MYR)', accessor: (r) => (r.grand_total != null ? r.grand_total.toFixed(2) : '') },
@@ -289,7 +311,7 @@ export default function Claims() {
             <table className="w-full text-sm min-w-[760px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  {['Claim No.', 'PR No.', 'SR / IR No.', 'Claimant', 'Site', 'Type', 'Date', 'Total (MYR)', 'Status', ''].map((h) =>
+                  {['Claim No.', 'PR No.', 'SR / IR No.', 'Claimant', 'Site', 'Job Type', 'Type', 'Date', 'Total (MYR)', 'Status', ''].map((h) =>
                   <th key={h} className={`px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider ${h === 'Total (MYR)' ? 'text-right' : h === '' ? '' : 'text-left'}`}>{h}</th>
               )}
                 </tr>
@@ -302,6 +324,21 @@ export default function Claims() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.sr_number || c.ir_number || '—'}</td>
                     <td className="px-4 py-3">{c.claimant_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground max-w-[180px] truncate">{Array.isArray(c.site_names) ? c.site_names.join(', ') : (c.site_name || '—')}</td>
+                    <td className="px-4 py-3 text-xs">
+                      {(() => {
+                        const types = claimJobTypes(c);
+                        if (types.length === 0) return <span className="text-muted-foreground">—</span>;
+                        return (
+                          <div className="flex flex-wrap gap-1">
+                            {types.map((t) => (
+                              <span key={t} className={`inline-flex px-2 py-0.5 text-[10px] font-mono border rounded-full ${t === 'decommissioning' ? 'bg-orange-500/15 text-orange-400 border-orange-500/25' : 'bg-purple-500/15 text-purple-400 border-purple-500/25'}`}>
+                                {t === 'decommissioning' ? 'Decommission' : 'Commission'}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_type || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_date ? format(parseISO(c.claim_date), 'dd MMM yyyy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{c.grand_total != null ? c.grand_total.toFixed(2) : '—'}</td>
