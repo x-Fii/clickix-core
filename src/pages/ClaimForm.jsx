@@ -158,7 +158,7 @@ export default function ClaimForm() {
         claimant_email: pr.requester_email || '',
         claimant_phone: pr.requester_phone || '',
         payment_term: pr.payment_term || '',
-        purpose: pr.purpose_of_purchase || '',
+        purpose: Array.isArray(pr.purpose_of_purchase) ? pr.purpose_of_purchase.join(', ') : (pr.purpose_of_purchase || ''),
         approved_by: pr.approved_by || ''
       }));
       if (pr.items?.length) {
@@ -214,7 +214,7 @@ export default function ClaimForm() {
         claimant_email: pr.requester_email || '',
         claimant_phone: pr.requester_phone || '',
         payment_term: pr.payment_term || '',
-        purpose: pr.purpose_of_purchase || '',
+        purpose: Array.isArray(pr.purpose_of_purchase) ? pr.purpose_of_purchase.join(', ') : (pr.purpose_of_purchase || ''),
         approved_by: pr.approved_by || ''
       }));
       if (pr.items?.length) {
