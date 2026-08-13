@@ -306,14 +306,13 @@ export default function ClaimForm() {
     const pw = pdf.internal.pageSize.getWidth();
     const ph = pdf.internal.pageSize.getHeight();
 
-    const wrapper = document.getElementById('claim-pdf-area');
-    wrapper.style.display = 'block';
-    await new Promise((r) => setTimeout(r, 100));
-
     const el = document.getElementById('claim-pdf-content');
+    // Wait for images to load before capturing
+    const imgs = Array.from(el.querySelectorAll('img'));
+    await Promise.all(imgs.map((img) => img.complete ? Promise.resolve() : new Promise((res) => { img.onload = res; img.onerror = res; })));
+    await new Promise((r) => setTimeout(r, 100));
     // Re-applied the explicit width threshold to maintain consistent text scaling across pages
     const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
-    wrapper.style.display = 'none';
 
     const imgData = canvas.toDataURL('image/png');
     const imgW = pw;
@@ -740,7 +739,7 @@ export default function ClaimForm() {
       </div>
 
       {/* Hidden PDF Template */}
-      <div id="claim-pdf-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#111827' }}>
+      <div id="claim-pdf-area" style={{ position: 'fixed', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#111827' }}>
         <div id="claim-pdf-content" style={{ width: '794px', background: 'white' }}>
           {/* Blue Header */}
           <div style={{ background: '#2563eb', padding: '20px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
