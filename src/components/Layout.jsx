@@ -3,6 +3,9 @@ import { LayoutDashboard, ClipboardList, Users, MapPin, UserCog, ChevronRight, C
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
+import { useAuth } from '@/lib/AuthContext';
+
+
 const navSegments = [
   [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -11,6 +14,10 @@ const navSegments = [
   [
     { path: '/reports', label: 'Service Reports', icon: ClipboardList },
     { path: '/installation', label: 'Installation Reports', icon: Wrench },
+
+    { path: '/installation-pdf-test', label: 'Installation PDF Testing', icon: FileText, testerOnly: true },
+
+
     { path: '/quotations', label: 'Quotations', icon: FileText },
     { path: '/pr', label: 'Purchase Requisitions', icon: ShoppingCart },
     { path: '/claims', label: 'Claims', icon: Receipt },
@@ -24,6 +31,11 @@ const navSegments = [
 
 export default function Layout() {
   const location = useLocation();
+  const { user } = useAuth();
+
+  const isPDFTester =
+    user?.email?.toLowerCase() === 'bianca@click-ix.com';
+
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -59,7 +71,9 @@ export default function Layout() {
       <nav className="flex-1 p-2 overflow-y-auto">
         {navSegments.map((segment, si) => (
           <div key={si} className={cn('space-y-0.5', si > 0 && 'mt-2 pt-2 border-t border-border')}>
-            {segment.map(({ path, label, icon: Icon }) => {
+            {segment
+              .filter(item => !item.testerOnly || isPDFTester)
+              .map(({ path, label, icon: Icon }) => {
               const active = path === '/'
                 ? location.pathname === '/'
                 : location.pathname.startsWith(path);

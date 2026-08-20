@@ -25,6 +25,12 @@ import ScheduleCalendar from './pages/ScheduleCalendar';
 import InstallationReports from './pages/InstallationReports';
 import InstallationReportForm from './pages/InstallationReportForm';
 import InstallationReportDetail from './pages/InstallationReportDetail';
+
+
+import InstallationPDFTest from './pages/test/InstallationPDFTest';
+import InstallationPDFTestDetail from './pages/test/InstallationPDFTestDetail';
+
+
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -84,6 +90,10 @@ const AuthenticatedApp = () => {
           <Route path="/installation/new" element={<InstallationReportForm />} />
           <Route path="/installation/:id/edit" element={<InstallationReportForm />} />
           <Route path="/installation/:id" element={<InstallationReportDetail />} />
+
+          <Route path="/installation/pdf/:id" element={<InstallationPDFTest />} />  
+          <Route path="/installation-pdf-test/:id" element={<InstallationPDFTestDetail />} />
+
           <Route path="/claims" element={<Claims />} />
           <Route path="/claims/new" element={<ClaimForm />} />
           <Route path="/claims/:id" element={<ClaimForm />} />
