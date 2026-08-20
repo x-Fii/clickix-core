@@ -91,7 +91,7 @@ const AuthenticatedApp = () => {
           <Route path="/installation/:id/edit" element={<InstallationReportForm />} />
           <Route path="/installation/:id" element={<InstallationReportDetail />} />
 
-          <Route path="/installation/pdf/:id" element={<InstallationPDFTest />} />  
+          <Route path="/installation-pdf-test" element={<InstallationPDFTest />} />
           <Route path="/installation-pdf-test/:id" element={<InstallationPDFTestDetail />} />
 
           <Route path="/claims" element={<Claims />} />
