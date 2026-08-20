@@ -1032,57 +1032,76 @@ export default function InstallationPDFTestDetail() {
 
 
             const headingType =
-              child.dataset
-                .pdfHeading;
-
+              child.dataset.pdfHeading;
 
             const isSectionHeading =
-              headingType ===
-              'section';
-
+              headingType === 'section';
 
             const isSubsectionHeading =
-              headingType ===
-              'subsection';
-
+              headingType === 'subsection';
 
             const hasNextContent =
-              index <
-              childElements.length -
-                1;
+              index < childElements.length - 1;
 
 
             /*
-             * Main section title:
-             *
-             * If space is too small,
-             * move heading + next content
-             * to next page.
-             */
+            * Keep heading with the beginning
+            * of its next content.
+            *
+            * The whole content does NOT need
+            * to stay together.
+            */
             if (
-              isSectionHeading &&
+              (isSectionHeading || isSubsectionHeading) &&
               hasNextContent &&
-              remainingHeight <
-                45 &&
               pageHasContent
             ) {
-              startNewPage();
-            }
+              const nextChild =
+                childElements[index + 1];
+
+              /*
+              * Measure the next content.
+              */
+              const nextCanvas =
+                await renderElement(nextChild);
+
+              const nextFullHeight =
+                (
+                  nextCanvas.height *
+                  contentWidth
+                ) /
+                nextCanvas.width;
 
 
-            /*
-             * Subsection title:
-             *
-             * Smaller safety area.
-             */
-            if (
-              isSubsectionHeading &&
-              hasNextContent &&
-              remainingHeight <
-                25 &&
-              pageHasContent
-            ) {
-              startNewPage();
+              /*
+              * We only require a SMALL PART
+              * of the next content to stay
+              * with the heading.
+              *
+              * Long content can still split
+              * across pages later.
+              */
+              const minimumContentAfterHeading =
+                isSectionHeading
+                  ? 18
+                  : 12;
+
+
+              const requiredHeight =
+                childHeight +
+                Math.min(
+                  nextFullHeight,
+                  minimumContentAfterHeading
+                ) +
+                blockGap;
+
+
+              if (
+                requiredHeight >
+                remainingHeight
+              ) {
+                startNewPage();
+              }
             }
 
 
