@@ -162,1026 +162,486 @@ export default function InstallationPDFTestDetail() {
   const report = reports[0];
 
 
-  /*
-   * TEST PDF EXPORT
-   *
-   * For now this intentionally keeps the
-   * production html2canvas + jsPDF method.
-   *
-   * This gives us a baseline.
-   *
-   * Later you can replace ONLY this function
-   * to test another PDF engine.
-   */
   const handleExportPdf = async () => {
-    if (
-      !pdfRef.current ||
-      !report
-    ) {
-      return;
-    }
+  if (!report) {
+    return;
+  }
 
-    setExportingPdf(true);
+  setExportingPdf(true);
 
-    const wrapper =
-      pdfRef.current;
+  try {
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
 
-    try {
-      /*
-       * Wait for all:
-       * - equipment photos
-       * - supporting photos
-       * - delivery photos
-       * - signature
-       * - company stamp
-       */
-      const pdfImages =
-        Array.from(
-          wrapper.querySelectorAll('img')
-        );
+    const pageWidth =
+      pdf.internal.pageSize.getWidth();
 
-      await Promise.all(
-        pdfImages.map(
-          (img) =>
-            new Promise(
-              (resolve) => {
-                if (img.complete) {
-                  resolve();
-                  return;
-                }
+    const pageHeight =
+      pdf.internal.pageSize.getHeight();
 
-                img.onload = resolve;
-                img.onerror = resolve;
-              }
-            )
-        )
+    const margin = 15;
+
+    let currentY = 20;
+
+
+    /*
+     * =====================================
+     * HEADER
+     * =====================================
+     */
+    pdf.setFillColor(
+      37,
+      99,
+      235
+    );
+
+    pdf.rect(
+      0,
+      0,
+      pageWidth,
+      28,
+      'F'
+    );
+
+
+    pdf.setTextColor(
+      255,
+      255,
+      255
+    );
+
+    pdf.setFont(
+      'helvetica',
+      'bold'
+    );
+
+    pdf.setFontSize(18);
+
+    pdf.text(
+      'CLICK IX SDN BHD',
+      margin,
+      12
+    );
+
+
+    pdf.setFont(
+      'helvetica',
+      'normal'
+    );
+
+    pdf.setFontSize(10);
+
+    pdf.text(
+      'INSTALLATION REPORT',
+      margin,
+      19
+    );
+
+
+    pdf.setFontSize(8);
+
+    pdf.text(
+      String(
+        report.report_number ||
+        ''
+      ),
+      margin,
+      24
+    );
+
+
+    currentY = 38;
+
+
+    /*
+     * =====================================
+     * HELPER: NEW PAGE
+     * =====================================
+     */
+    const addNewPage = () => {
+      pdf.addPage();
+
+      currentY = 20;
+    };
+
+
+    /*
+     * =====================================
+     * HELPER: CHECK SPACE
+     * =====================================
+     */
+    const ensureSpace = (
+      requiredHeight = 15
+    ) => {
+      if (
+        currentY +
+          requiredHeight >
+        pageHeight - 18
+      ) {
+        addNewPage();
+      }
+    };
+
+
+    /*
+     * =====================================
+     * HELPER: SECTION TITLE
+     * =====================================
+     */
+    const addSectionTitle = (
+      title
+    ) => {
+      ensureSpace(18);
+
+      pdf.setFillColor(
+        239,
+        246,
+        255
       );
 
-
-      /*
-       * Small safety wait after images load.
-       */
-      await new Promise(
-        (resolve) =>
-          setTimeout(resolve, 300)
-      );
-
-
-      const pdf =
-        new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4'
-        });
-
-
-      const pageWidth =
-        pdf.internal.pageSize.getWidth();
-
-      const pageHeight =
-        pdf.internal.pageSize.getHeight();
-
-
-      const sideMargin = 10;
-      const topMargin = 10;
-      const bottomMargin = 12;
-      const blockGap = 3;
-
-      const headerHeight = 22;
-      const footerHeight = 8;
-
-      const footerSafetyGap = 6;
-      const paginationSafetyGap = 8;
-
-
-      const contentWidth =
+      pdf.rect(
+        margin,
+        currentY,
         pageWidth -
-        sideMargin * 2;
+          margin * 2,
+        9,
+        'F'
+      );
 
 
-      const contentTop =
-        topMargin +
-        headerHeight +
+      pdf.setFillColor(
+        37,
+        99,
+        235
+      );
+
+      pdf.rect(
+        margin,
+        currentY,
+        2,
+        9,
+        'F'
+      );
+
+
+      pdf.setTextColor(
+        29,
+        78,
+        216
+      );
+
+      pdf.setFont(
+        'helvetica',
+        'bold'
+      );
+
+      pdf.setFontSize(11);
+
+      pdf.text(
+        title,
+        margin + 5,
+        currentY + 6
+      );
+
+
+      currentY += 14;
+    };
+
+
+    /*
+     * =====================================
+     * HELPER: FIELD
+     * =====================================
+     */
+    const addField = (
+      label,
+      value
+    ) => {
+      if (
+        value === null ||
+        value === undefined ||
+        value === ''
+      ) {
+        return;
+      }
+
+
+      const text =
+        String(value);
+
+
+      const lines =
+        pdf.splitTextToSize(
+          text,
+          pageWidth -
+            margin * 2
+        );
+
+
+      const requiredHeight =
+        8 +
+        lines.length * 5;
+
+
+      ensureSpace(
+        requiredHeight
+      );
+
+
+      pdf.setTextColor(
+        107,
+        114,
+        128
+      );
+
+      pdf.setFont(
+        'helvetica',
+        'bold'
+      );
+
+      pdf.setFontSize(7);
+
+      pdf.text(
+        label.toUpperCase(),
+        margin,
+        currentY
+      );
+
+
+      currentY += 4;
+
+
+      pdf.setTextColor(
+        17,
+        24,
+        39
+      );
+
+      pdf.setFont(
+        'helvetica',
+        'normal'
+      );
+
+      pdf.setFontSize(10);
+
+      pdf.text(
+        lines,
+        margin,
+        currentY
+      );
+
+
+      currentY +=
+        lines.length * 5 +
         4;
+    };
+
+
+    /*
+     * =====================================
+     * JOB INFORMATION
+     * =====================================
+     */
+    addSectionTitle(
+      'Job Information'
+    );
+
+
+    addField(
+      'Technician',
+      report.attended_staff_name
+    );
+
+    addField(
+      'Technician Email',
+      report.attended_staff_email
+    );
+
+    addField(
+      'Store',
+      report.site_name
+    );
+
+    addField(
+      'Location',
+      report.site_location
+    );
+
+    addField(
+      'DO Number',
+      report.do_number
+    );
+
+    addField(
+      'Work Order Number',
+      report.work_order_number
+    );
+
+    addField(
+      'Site PIC',
+      report.site_pic_name
+    );
+
+    addField(
+      'Reported By',
+      report.reported_by
+    );
+
+    addField(
+      'Client',
+      report.client_name
+    );
+
+    addField(
+      'Report Type',
+      tc.label
+    );
+
+
+    /*
+     * =====================================
+     * SCHEDULE & ATTENDANCE
+     * =====================================
+     */
+    addSectionTitle(
+      'Schedule & Attendance'
+    );
+
+
+    addField(
+      'Scheduled Date',
+      report.scheduled_date
+    );
+
+    addField(
+      'Scheduled End Date',
+      report.scheduled_end_date
+    );
+
+    addField(
+      'Installation Date',
+      report.installation_date
+    );
+
+    addField(
+      'Installation Finish Date',
+      report.installation_finish_date
+    );
+
+    addField(
+      'Attend Time',
+      report.attend_time
+    );
+
+    addField(
+      'Status',
+      sc.label
+    );
 
 
-      const contentBottom =
-        pageHeight -
-        bottomMargin -
-        footerHeight -
-        footerSafetyGap;
-
-
-      const availableContentHeight =
-        contentBottom -
-        contentTop;
-
-
-      /*
-       * Hidden template structure:
-       *
-       * child 0 = blue header
-       * child 1 = main content
-       * child 2 = old footer
-       */
-      const headerElement =
-        wrapper.children[0];
-
-      const mainContent =
-        wrapper.children[1];
-
-
-      if (
-        !headerElement ||
-        !mainContent
-      ) {
-        throw new Error(
-          'Installation Report PDF template is incomplete'
-        );
-      }
-
-
-      /*
-       * Capture header once.
-       *
-       * We reuse the header image
-       * on every PDF page.
-       */
-      const headerCanvas =
-        await html2canvas(
-          headerElement,
-          {
-            scale: 2,
-            useCORS: true,
-            allowTaint: false,
-            backgroundColor:
-              '#2563eb',
-            logging: false,
-            windowWidth: 794
-          }
-        );
-
-
-      const headerImageData =
-        headerCanvas.toDataURL(
-          'image/jpeg',
-          0.95
-        );
+    /*
+     * =====================================
+     * PAGE NUMBERS
+     * =====================================
+     */
+    const totalPages =
+      pdf.internal.getNumberOfPages();
 
-
-      let renderedHeaderHeight =
-        (
-          headerCanvas.height *
-          pageWidth
-        ) /
-        headerCanvas.width;
 
-
-      renderedHeaderHeight =
-        Math.min(
-          renderedHeaderHeight,
-          headerHeight
-        );
+    for (
+      let pageNumber = 1;
+      pageNumber <= totalPages;
+      pageNumber += 1
+    ) {
+      pdf.setPage(
+        pageNumber
+      );
 
 
-      /*
-       * Every direct child in main content
-       * becomes one top-level PDF block.
-       */
-      const contentBlocks =
-        Array.from(
-          mainContent.children
-        ).filter(
-          (child) =>
-            child.offsetHeight > 1
-        );
+      pdf.setTextColor(
+        156,
+        163,
+        175
+      );
 
+      pdf.setFont(
+        'helvetica',
+        'normal'
+      );
 
-      if (
-        contentBlocks.length === 0
-      ) {
-        throw new Error(
-          'No Installation Report content found'
-        );
-      }
+      pdf.setFontSize(8);
 
 
-      let currentY =
-        contentTop;
+      pdf.text(
+        `Page ${pageNumber} of ${totalPages} | Installation Report`,
+        margin,
+        pageHeight - 8
+      );
 
-      let pageHasContent =
-        false;
 
-
-      const drawHeader = () => {
-        pdf.addImage(
-          headerImageData,
-          'JPEG',
-          0,
-          0,
-          pageWidth,
-          renderedHeaderHeight
-        );
-      };
-
-
-      const startNewPage = () => {
-        pdf.addPage();
-
-        drawHeader();
-
-        currentY =
-          contentTop;
-
-        pageHasContent =
-          false;
-      };
-
-
-      const drawAllFooters = () => {
-        const totalPages =
-          pdf.internal.getNumberOfPages();
-
-
-        for (
-          let pageNumber = 1;
-          pageNumber <= totalPages;
-          pageNumber += 1
-        ) {
-          pdf.setPage(
-            pageNumber
-          );
-
-
-          const footerY =
-            pageHeight -
-            bottomMargin +
-            2;
-
-
-          pdf.setDrawColor(
-            229,
-            231,
-            235
-          );
-
-
-          pdf.line(
-            sideMargin,
-            footerY - 5,
-            pageWidth -
-              sideMargin,
-            footerY - 5
-          );
-
-
-          pdf.setFont(
-            'helvetica',
-            'normal'
-          );
-
-          pdf.setFontSize(8);
-
-          pdf.setTextColor(
-            156,
-            163,
-            175
-          );
-
-
-          pdf.text(
-            `Page ${pageNumber} of ${totalPages} | Installation Report`,
-            sideMargin,
-            footerY
-          );
-
-
-          pdf.text(
-            String(
-              report.report_number ||
-              ''
-            ),
-            pageWidth -
-              sideMargin,
-            footerY,
-            {
-              align: 'right'
-            }
-          );
-        }
-      };
-
-
-      /*
-       * Render one HTML element.
-       */
-      const renderElement =
-        async (element) => {
-          const originalPaddingBottom =
-            element.style
-              .paddingBottom;
-
-
-          const originalOverflow =
-            element.style
-              .overflow;
-
-
-          const currentPaddingBottom =
-            parseFloat(
-              window
-                .getComputedStyle(
-                  element
-                )
-                .paddingBottom
-            ) || 0;
-
-
-          /*
-           * Prevent final line
-           * from being cut.
-           */
-          element.style.paddingBottom =
-            `${
-              currentPaddingBottom +
-              6
-            }px`;
-
-
-          element.style.overflow =
-            'visible';
-
-
-          try {
-            return await html2canvas(
-              element,
-              {
-                scale: 2,
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor:
-                  '#ffffff',
-                logging: false,
-                windowWidth: 794
-              }
-            );
-          } finally {
-            element.style.paddingBottom =
-              originalPaddingBottom;
-
-            element.style.overflow =
-              originalOverflow;
-          }
-        };
-
-
-      /*
-       * Add one canvas block
-       * to current PDF page.
-       */
-      const addCanvasToPDF =
-        (canvas) => {
-          const imageData =
-            canvas.toDataURL(
-              'image/jpeg',
-              0.95
-            );
-
-
-          let renderWidth =
-            contentWidth;
-
-
-          let renderHeight =
-            (
-              canvas.height *
-              renderWidth
-            ) /
-            canvas.width;
-
-
-          const safePageHeight =
-            availableContentHeight -
-            paginationSafetyGap;
-
-
-          /*
-           * Last fallback.
-           *
-           * If a single indivisible block
-           * is taller than an entire page,
-           * scale it down.
-           */
-          if (
-            renderHeight >
-            safePageHeight
-          ) {
-            const scaleRatio =
-              safePageHeight /
-              renderHeight;
-
-            renderHeight *=
-              scaleRatio;
-
-            renderWidth *=
-              scaleRatio;
-          }
-
-
-          const remainingHeight =
-            contentBottom -
-            currentY -
-            paginationSafetyGap;
-
-
-          if (
-            renderHeight >
-              remainingHeight &&
-            pageHasContent
-          ) {
-            startNewPage();
-          }
-
-
-          const x =
-            sideMargin +
-            Math.max(
-              0,
-              (
-                contentWidth -
-                renderWidth
-              ) / 2
-            );
-
-
-          pdf.addImage(
-            imageData,
-            'JPEG',
-            x,
-            currentY,
-            renderWidth,
-            renderHeight
-          );
-
-
-          currentY +=
-            renderHeight +
-            blockGap;
-
-
-          pageHasContent =
-            true;
-        };
-
-
-      /*
-       * Special photo pagination.
-       *
-       * Photos are exported
-       * 3 per row.
-       */
-      const addPhotoContainerWithPagination =
-        async (
-          photoContainer
-        ) => {
-          const imageElements =
-            Array.from(
-              photoContainer.children
-            ).filter(
-              (child) =>
-                child.tagName ===
-                'IMG'
-            );
-
-
-          if (
-            imageElements.length === 0
-          ) {
-            return;
-          }
-
-
-          const imagesPerRow =
-            3;
-
-
-          for (
-            let index = 0;
-            index <
-            imageElements.length;
-            index +=
-              imagesPerRow
-          ) {
-            const temporaryRow =
-              document.createElement(
-                'div'
-              );
-
-
-            const containerWidth =
-              photoContainer
-                .getBoundingClientRect()
-                .width ||
-              photoContainer
-                .offsetWidth ||
-              730;
-
-
-            Object.assign(
-              temporaryRow.style,
-              {
-                position:
-                  'fixed',
-
-                left:
-                  '-10000px',
-
-                top:
-                  '0',
-
-                width:
-                  `${containerWidth}px`,
-
-                display:
-                  'grid',
-
-                gridTemplateColumns:
-                  'repeat(3, minmax(0, 1fr))',
-
-                gap:
-                  '8px',
-
-                backgroundColor:
-                  '#ffffff'
-              }
-            );
-
-
-            const rowImages =
-              imageElements.slice(
-                index,
-                index +
-                  imagesPerRow
-              );
-
-
-            rowImages.forEach(
-              (image) => {
-                const clone =
-                  image.cloneNode(
-                    true
-                  );
-
-
-                Object.assign(
-                  clone.style,
-                  {
-                    width:
-                      '100%',
-
-                    height:
-                      '180px',
-
-                    maxHeight:
-                      '180px',
-
-                    objectFit:
-                      'contain',
-
-                    border:
-                      '1px solid #e5e7eb',
-
-                    borderRadius:
-                      '4px',
-
-                    backgroundColor:
-                      '#ffffff',
-
-                    display:
-                      'block'
-                  }
-                );
-
-
-                temporaryRow
-                  .appendChild(
-                    clone
-                  );
-              }
-            );
-
-
-            wrapper.appendChild(
-              temporaryRow
-            );
-
-
-            const clonedImages =
-              Array.from(
-                temporaryRow
-                  .querySelectorAll(
-                    'img'
-                  )
-              );
-
-
-            await Promise.all(
-              clonedImages.map(
-                (img) =>
-                  new Promise(
-                    (resolve) => {
-                      if (
-                        img.complete
-                      ) {
-                        resolve();
-                        return;
-                      }
-
-                      img.onload =
-                        resolve;
-
-                      img.onerror =
-                        resolve;
-                    }
-                  )
-              )
-            );
-
-
-            const rowCanvas =
-              await renderElement(
-                temporaryRow
-              );
-
-
-            temporaryRow.remove();
-
-
-            addCanvasToPDF(
-              rowCanvas
-            );
-          }
-        };
-
-
-      /*
-       * Recursive pagination.
-       */
-      const addElementWithPagination =
-        async (
-          element,
-          depth = 0
-        ) => {
-          if (
-            !element ||
-            element.offsetHeight <
-              2
-          ) {
-            return;
-          }
-
-
-          const directChildren =
-            Array.from(
-              element.children
-            );
-
-
-          const computedStyle =
-            window.getComputedStyle(
-              element
-            );
-
-
-          const directImages =
-            directChildren.filter(
-              (child) =>
-                child.tagName ===
-                'IMG'
-            );
-
-
-          /*
-           * Detect a pure photo container.
-           */
-          const isPhotoContainer =
-            directChildren.length >
-              0 &&
-            directImages.length ===
-              directChildren.length &&
-            (
-              computedStyle.display ===
-                'flex' ||
-              computedStyle.display ===
-                'grid'
-            );
-
-
-          if (
-            isPhotoContainer
-          ) {
-            await addPhotoContainerWithPagination(
-              element
-            );
-
-            return;
-          }
-
-
-          /*
-           * Detect whether this section
-           * contains a direct photo container.
-           */
-          const containsPhotoContainer =
-            directChildren.some(
-              (child) => {
-                const childStyle =
-                  window.getComputedStyle(
-                    child
-                  );
-
-
-                const grandchildren =
-                  Array.from(
-                    child.children
-                  );
-
-
-                return (
-                  grandchildren.length >
-                    0 &&
-                  grandchildren.every(
-                    (
-                      grandchild
-                    ) =>
-                      grandchild.tagName ===
-                      'IMG'
-                  ) &&
-                  (
-                    childStyle.display ===
-                      'flex' ||
-                    childStyle.display ===
-                      'grid'
-                  )
-                );
-              }
-            );
-
-
-          const canvas =
-            await renderElement(
-              element
-            );
-
-
-          const estimatedHeight =
-            (
-              canvas.height *
-              contentWidth
-            ) /
-            canvas.width;
-
-
-          const remainingHeight =
-            contentBottom -
-            currentY -
-            paginationSafetyGap;
-
-
-          /*
-           * Fits current remaining page?
-           * Add it directly.
-           */
-          if (
-            !containsPhotoContainer &&
-            estimatedHeight <=
-              remainingHeight
-          ) {
-            addCanvasToPDF(
-              canvas
-            );
-
-            return;
-          }
-
-
-          const childElements =
-            directChildren.filter(
-              (child) =>
-                child.offsetHeight >
-                1
-            );
-
-
-          const keepTogether =
-            element.dataset
-              .pdfKeepTogether ===
-            'true';
-
-
-          const cannotSplitFurther =
-            keepTogether ||
-            childElements.length ===
-              0 ||
-            depth >= 7 ||
-            element.tagName ===
-              'TABLE' ||
-            element.tagName ===
-              'IMG';
-
-
-          if (
-            cannotSplitFurther
-          ) {
-            addCanvasToPDF(
-              canvas
-            );
-
-            return;
-          }
-
-
-          for (
-            let index = 0;
-            index <
-            childElements.length;
-            index += 1
-          ) {
-            const child =
-              childElements[index];
-
-
-            const childCanvas =
-              await renderElement(
-                child
-              );
-
-
-            const childHeight =
-              (
-                childCanvas.height *
-                contentWidth
-              ) /
-              childCanvas.width;
-
-
-            const remainingHeight =
-              contentBottom -
-              currentY -
-              paginationSafetyGap;
-
-
-            const headingType =
-              child.dataset.pdfHeading;
-
-            const isSectionHeading =
-              headingType === 'section';
-
-            const isSubsectionHeading =
-              headingType === 'subsection';
-
-            const hasNextContent =
-              index < childElements.length - 1;
-
-
-            /*
-            * Keep heading with the beginning
-            * of its next content.
-            *
-            * The whole content does NOT need
-            * to stay together.
-            */
-            if (
-              (isSectionHeading || isSubsectionHeading) &&
-              hasNextContent &&
-              pageHasContent
-            ) {
-              const nextChild =
-                childElements[index + 1];
-
-              /*
-              * Measure the next content.
-              */
-              const nextCanvas =
-                await renderElement(nextChild);
-
-              const nextFullHeight =
-                (
-                  nextCanvas.height *
-                  contentWidth
-                ) /
-                nextCanvas.width;
-
-
-              /*
-              * We only require a SMALL PART
-              * of the next content to stay
-              * with the heading.
-              *
-              * Long content can still split
-              * across pages later.
-              */
-              const minimumContentAfterHeading =
-                isSectionHeading
-                  ? 18
-                  : 12;
-
-
-              const requiredHeight =
-                childHeight +
-                Math.min(
-                  nextFullHeight,
-                  minimumContentAfterHeading
-                ) +
-                blockGap;
-
-
-              if (
-                requiredHeight >
-                remainingHeight
-              ) {
-                startNewPage();
-              }
-            }
-
-
-            await addElementWithPagination(
-              child,
-              depth + 1
-            );
-          }
-        };
-
-
-      /*
-       * First page header.
-       */
-      drawHeader();
-
-
-      /*
-       * Add all content
-       * in original order.
-       */
-      for (
-        const block of
-        contentBlocks
-      ) {
-        await addElementWithPagination(
-          block
-        );
-      }
-
-
-      /*
-       * Draw correct page numbers.
-       */
-      drawAllFooters();
-
-
-      /*
-       * TEST filename.
-       *
-       * This makes it obvious
-       * that it came from testing.
-       */
-      pdf.save(
-        `${
+      pdf.text(
+        String(
           report.report_number ||
-          'installation-report'
-        }-TEST.pdf`
-      );
-
-
-      toast({
-        title:
-          'Test PDF exported'
-      });
-    } catch (error) {
-      console.error(
-        'Installation Test PDF export failed:',
-        error
-      );
-
-
-      toast({
-        title:
-          'Failed to export Test PDF',
-
-        description:
-          error?.message ||
-          'Please try again.',
-
-        variant:
-          'destructive'
-      });
-    } finally {
-      setExportingPdf(
-        false
+          ''
+        ),
+        pageWidth - margin,
+        pageHeight - 8,
+        {
+          align: 'right'
+        }
       );
     }
-  };
 
+
+    /*
+     * =====================================
+     * SAVE
+     * =====================================
+     */
+    pdf.save(
+      `${
+        report.report_number ||
+        'installation-report'
+      }-FAST-TEST.pdf`
+    );
+
+
+    toast({
+      title:
+        'Fast Test PDF exported'
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Fast Test PDF export failed:',
+      error
+    );
+
+
+    toast({
+      title:
+        'Failed to export Fast Test PDF',
+
+      description:
+        error?.message ||
+        'Please try again.',
+
+      variant:
+        'destructive'
+    });
+
+  } finally {
+
+    setExportingPdf(
+      false
+    );
+
+  }
+};
 
   /*
    * Auth loading.
