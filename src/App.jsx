@@ -27,8 +27,8 @@ import InstallationReportForm from './pages/InstallationReportForm';
 import InstallationReportDetail from './pages/InstallationReportDetail';
 
 
-import InstallationPDFTest from './pages/test/InstallationPDFTest';
-import InstallationPDFTestDetail from './pages/test/InstallationPDFTestDetail';
+import InstallationPDFTest from './pages/InstallationPDFTest';
+import InstallationPDFTestDetail from './pages/InstallationPDFTestDetail';
 
 
 import Login from './pages/Login';
