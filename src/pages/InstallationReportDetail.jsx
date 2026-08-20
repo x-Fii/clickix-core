@@ -547,18 +547,14 @@ export default function InstallationReportDetail() {
             (canvas.height * contentWidth) /
             canvas.width;
 
-          /*
-          * A normal section that fits on one page
-          * can be added as one complete block.
-          *
-          * Sections containing photos continue
-          * downward so they can be separated.
-          */
+          const remainingHeight =
+            contentBottom -
+            currentY -
+            paginationSafetyGap;
+
           if (
             !containsPhotoContainer &&
-            estimatedHeight <=
-              availableContentHeight -
-                paginationSafetyGap
+            estimatedHeight <= remainingHeight
           ) {
             addCanvasToPDF(canvas);
             return;
@@ -608,18 +604,31 @@ export default function InstallationReportDetail() {
               currentY -
               paginationSafetyGap;
 
-            /*
-            * Prevent a short blue heading from being
-            * left alone at the bottom of a page.
-            */
-            const isShortHeading =
-              childHeight < 18 &&
-              index <
-                childElements.length - 1;
+            const headingType =
+              child.dataset.pdfHeading;
+
+            const isSectionHeading =
+              headingType === 'section';
+
+            const isSubsectionHeading =
+              headingType === 'subsection';
+
+            const hasNextContent =
+              index < childElements.length - 1;
 
             if (
-              isShortHeading &&
+              isSectionHeading &&
+              hasNextContent &&
               remainingHeight < 45 &&
+              pageHasContent
+            ) {
+              startNewPage();
+            }
+
+            if (
+              isSubsectionHeading &&
+              hasNextContent &&
+              remainingHeight < 25 &&
               pageHasContent
             ) {
               startNewPage();
@@ -1022,15 +1031,16 @@ export default function InstallationReportDetail() {
             </div>
           </div>
 
+/**/ 
           {/* Equipment Installed — sectioned (commissioning) */}
           {equipmentSections.length > 0 && (
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
+              <div data-pdf-heading="section" style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Equipment Installed</span>
               </div>
               {equipmentSections.map((sec, si) => (
                 <div key={si} style={{ marginBottom: '16px' }}>
-                  <div style={{ background: '#f0f9ff', borderLeft: '3px solid #60a5fa', padding: '5px 10px', marginBottom: '8px', fontWeight: '700', fontSize: '11px', color: '#1d4ed8' }}>
+                  <div data-pdf-heading="subsection" style={{ background: '#f0f9ff', borderLeft: '3px solid #60a5fa', padding: '5px 10px', marginBottom: '8px', fontWeight: '700', fontSize: '11px', color: '#1d4ed8' }}>
                     {sec.section_name || `Section ${si + 1}`}
                   </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
