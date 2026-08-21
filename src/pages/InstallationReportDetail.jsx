@@ -1202,7 +1202,7 @@ export default function InstallationReportDetail() {
             if (!hasSections && !hasPhotos && !hasLegacy) return null;
             const labels = { overall: '1. Overall', power: '2. Power', internet: '3. Internet', cables: '4. Cables', server_rack: '5. Server Rack / Shelves', others: '6. Others' };
             return (
-              <div style={{ marginBottom: '20px' }}>
+              <div data-pdf-keep-together="true" style={{ marginBottom: '20px' }}>
                 <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
                   <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Pre-Job Site Assessment</span>
                 </div>
