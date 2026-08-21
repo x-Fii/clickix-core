@@ -297,8 +297,13 @@ export default function InstallationReportDetail() {
             0.95
           );
 
+        const mainContentStyle =
+          window.getComputedStyle(mainContent);
+
         const mainContentWidth =
-          mainContent.getBoundingClientRect().width;
+          mainContent.clientWidth -
+          parseFloat(mainContentStyle.paddingLeft) -
+          parseFloat(mainContentStyle.paddingRight);
 
         const sourceWidth =
           sourceElement
@@ -561,8 +566,13 @@ export default function InstallationReportDetail() {
           const elementWidth =
             element.getBoundingClientRect().width;
 
+          const mainContentStyle =
+            window.getComputedStyle(mainContent);
+
           const mainContentWidth =
-            mainContent.getBoundingClientRect().width;
+            mainContent.clientWidth -
+            parseFloat(mainContentStyle.paddingLeft) -
+            parseFloat(mainContentStyle.paddingRight);
 
           const estimatedWidth =
             contentWidth *
