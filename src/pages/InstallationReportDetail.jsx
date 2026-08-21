@@ -286,20 +286,33 @@ export default function InstallationReportDetail() {
         }
       };
 
-      /*
-      * Add one complete canvas block to the PDF.
-      *
-      * If it does not fit, move the complete block
-      * to the next page instead of cutting it.
-      */
-      const addCanvasToPDF = (canvas) => {
+      const addCanvasToPDF = (
+        canvas,
+        sourceElement = null
+      ) => {
+
         const imageData =
           canvas.toDataURL(
             'image/jpeg',
             0.95
           );
 
-        let renderWidth = contentWidth;
+        const mainContentWidth =
+          mainContent.getBoundingClientRect().width;
+
+        const sourceWidth =
+          sourceElement
+            ? sourceElement.getBoundingClientRect().width
+            : mainContentWidth;
+
+        const widthRatio =
+          Math.min(
+            1,
+            sourceWidth / mainContentWidth
+          );
+
+        let renderWidth =
+          contentWidth * widthRatio;
 
         let renderHeight =
           (canvas.height * renderWidth) /
@@ -465,12 +478,14 @@ export default function InstallationReportDetail() {
       */
       const addElementWithPagination =
         async (element, depth = 0) => {
+
           if (
             !element ||
             element.offsetHeight < 2
           ) {
             return;
           }
+          
 
           const directChildren =
             Array.from(element.children);
@@ -543,8 +558,21 @@ export default function InstallationReportDetail() {
           const canvas =
             await renderElement(element);
 
+          const elementWidth =
+            element.getBoundingClientRect().width;
+
+          const mainContentWidth =
+            mainContent.getBoundingClientRect().width;
+
+          const estimatedWidth =
+            contentWidth *
+            Math.min(
+              1,
+              elementWidth / mainContentWidth
+            );
+
           const estimatedHeight =
-            (canvas.height * contentWidth) /
+            (canvas.height * estimatedWidth) /
             canvas.width;
 
           const remainingHeight =
@@ -556,7 +584,7 @@ export default function InstallationReportDetail() {
             !containsPhotoContainer &&
             estimatedHeight <= remainingHeight
           ) {
-            addCanvasToPDF(canvas);
+            addCanvasToPDF(canvas, element);
             return;
           }
 
@@ -578,7 +606,10 @@ export default function InstallationReportDetail() {
             element.tagName === 'IMG';
 
           if (cannotSplitFurther) {
-            addCanvasToPDF(canvas);
+            addCanvasToPDF(
+              canvas,
+              element
+            );
             return;
           }
 
@@ -590,14 +621,7 @@ export default function InstallationReportDetail() {
             const child =
               childElements[index];
 
-            const childCanvas =
-              await renderElement(child);
-
-            const childHeight =
-              (
-                childCanvas.height *
-                contentWidth
-              ) / childCanvas.width;
+            
 
             const remainingHeight =
               contentBottom -
