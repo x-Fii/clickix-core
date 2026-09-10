@@ -730,8 +730,8 @@ export default function InstallationReportForm() {
                         </div>
                       )}
                       <div className="space-y-1">
-                        <Label className="text-xs">Remarks</Label>
-                        <Input className="h-8 text-xs" value={item.notes} onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)} placeholder="Remarks" />
+                        <Label className="text-xs">Others - To Fill In</Label>
+                        <Input className="h-8 text-xs" value={item.notes} onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)} placeholder="Others - To Fill In" />
                       </div>
                     </div>
                   ))}
