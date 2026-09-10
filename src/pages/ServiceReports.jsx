@@ -19,6 +19,7 @@ const PERIODS = [
   { key: '30d', label: 'Last 30 days' },
   { key: 'this_week', label: 'This Week' },
   { key: 'this_month', label: 'This Month' },
+  { key: 'last_month', label: 'Last Month' },
   { key: 'this_year', label: 'This Year' },
 ];
 
@@ -31,6 +32,7 @@ function periodRange(period) {
     case '30d': return { start: startOfDay(subDays(now, 30)), end: endOfDay(now) };
     case 'this_week': return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
     case 'this_month': return { start: startOfMonth(now), end: endOfMonth(now) };
+    case 'last_month': return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) };
     case 'this_year': return { start: startOfYear(now), end: endOfYear(now) };
     default: return null;
   }
