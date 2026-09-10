@@ -1083,7 +1083,6 @@ export default function InstallationReportDetail() {
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>#</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Type</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Name</th>
-                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Serial Number</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Specifications</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Notes</th>
                       </tr>
@@ -1104,7 +1103,6 @@ export default function InstallationReportDetail() {
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{ii + 1}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.device_type}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.device_name}</td>
-                          <td style={{ padding: '7px', border: '1px solid #e5e7eb', fontFamily: 'monospace' }}>{item.serial_number}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb', whiteSpace: 'pre-line', fontSize: '10px', color: '#374151' }}>{specs || '—'}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.notes}</td>
                         </tr>
