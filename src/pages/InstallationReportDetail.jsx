@@ -1325,19 +1325,26 @@ export default function InstallationReportDetail() {
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '16px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Client Signature</span>
               </div>
-              {report.ack_signature
-                ? <img src={report.ack_signature} alt="sig" crossOrigin="anonymous" style={{ maxHeight: '100px', maxWidth: '220px', display: 'block', marginBottom: '12px' }} />
-                : <div style={{ border: '1px solid #e5e7eb', height: '70px', width: '220px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '10px', marginBottom: '12px' }}>No signature captured</div>
-              }
-              <div style={{ fontSize: '13px', marginBottom: '4px' }}><strong>Name:</strong> {report.ack_name}</div>
-              <div style={{ fontSize: '13px', marginBottom: '4px' }}><strong>Phone:</strong> {report.ack_phone}</div>
-              {report.ack_timestamp && <div style={{ fontSize: '12px', color: '#6b7280' }}>Signed on: {new Date(report.ack_timestamp).toLocaleString()}</div>}
-              {report.ack_company_stamp && (
-                <div style={{ marginTop: '16px' }}>
-                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>COMPANY STAMP</div>
-                  <img src={report.ack_company_stamp} alt="stamp" crossOrigin="anonymous" style={{ maxWidth: '200px', maxHeight: '120px', objectFit: 'contain' }} />
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                <div style={{ border: '1px solid #d1d5db', borderRadius: '6px', padding: '8px', background: '#fff', minWidth: '240px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Signature</div>
+                  {report.ack_signature
+                    ? <img src={report.ack_signature} alt="sig" crossOrigin="anonymous" style={{ maxHeight: '100px', maxWidth: '220px', display: 'block' }} />
+                    : <div style={{ height: '90px', width: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '10px' }}>No signature captured</div>
+                  }
                 </div>
-              )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', marginBottom: '4px' }}><strong>Name:</strong> {report.ack_name}</div>
+                  <div style={{ fontSize: '13px', marginBottom: '4px' }}><strong>Phone:</strong> {report.ack_phone}</div>
+                  {report.ack_timestamp && <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>Signed on: {new Date(report.ack_timestamp).toLocaleString()}</div>}
+                  {report.ack_company_stamp && (
+                    <div>
+                      <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Company Stamp</div>
+                      <img src={report.ack_company_stamp} alt="stamp" crossOrigin="anonymous" style={{ maxWidth: '200px', maxHeight: '120px', objectFit: 'contain' }} />
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
