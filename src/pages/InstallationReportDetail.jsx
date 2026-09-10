@@ -1031,6 +1031,7 @@ export default function InstallationReportDetail() {
           </div>
           <div style={{ textAlign: 'right', color: '#bfdbfe', fontSize: '10px' }}>
             Generated: {new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' })}, {new Date().toLocaleTimeString()}
+            <div style={{ marginTop: '4px' }}>Status: {sc.label}</div>
           </div>
         </div>
 
@@ -1040,8 +1041,8 @@ export default function InstallationReportDetail() {
             <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Job Information</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-              {[['TECHNICIAN', report.attended_staff_name], ['TECHNICIAN EMAIL', report.attended_staff_email], ['STORE', report.site_name], ['LOCATION', report.site_location], ['DO NUMBER', report.do_number], ['WORK ORDER NUMBER', report.work_order_number], ['SITE PIC', report.site_pic_name], ['REPORTED BY', report.reported_by], ['CLIENT', report.client_name], ['REPORT TYPE', tc.label]].filter(([,v]) => v).map(([k, v]) => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px 24px' }}>
+              {[['CLIENT', report.client_name], ['STORE', report.site_name], ['LOCATION', report.site_location], ['REPORT TYPE', tc.label], ['WORK ORDER NUMBER', report.work_order_number], ['DO NUMBER', report.do_number], ['TECHNICIAN', report.attended_staff_name], ['TECHNICIAN EMAIL', report.attended_staff_email]].filter(([,v]) => v).map(([k, v]) => (
                 <div key={k}>
                   <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                   <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>
@@ -1055,8 +1056,8 @@ export default function InstallationReportDetail() {
             <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Schedule & Attendance</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-              {[['SCHEDULED DATE', report.scheduled_date], ['SCHEDULED END DATE', report.scheduled_end_date], ['INSTALLATION DATE', report.installation_date], ['INSTALLATION FINISH DATE', report.installation_finish_date], ['ATTEND TIME', report.attend_time], ['STATUS', sc.label]].filter(([,v]) => v).map(([k, v]) => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px 24px' }}>
+              {[['SCHEDULED DATE', report.scheduled_date], ['SCHEDULED END DATE', report.scheduled_end_date], ['INSTALLATION DATE', report.installation_date], ['INSTALLATION FINISH DATE', report.installation_finish_date], ['ATTEND TIME', report.attend_time]].filter(([,v]) => v).map(([k, v]) => (
                 <div key={k}>
                   <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                   <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>
