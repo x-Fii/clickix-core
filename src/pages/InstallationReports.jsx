@@ -213,7 +213,7 @@ export default function InstallationReports() {
                   <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.do_number || '—'}</td>
                   <td className="px-4 py-3 font-medium text-xs">{r.client_name || '—'}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{r.site_name || '—'}</td>
-                  <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.installation_date || r.scheduled_date || '—'}</td>
+                  <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{(() => { const d = r.installation_date || r.scheduled_date; try { return d ? new Date(d).toLocaleDateString('en-GB') : '—'; } catch { return '—'; } })()}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{r.attended_staff_name || '—'}</td>
                   <td className="px-4 py-3">
                     <Badge variant="outline" className={`text-[10px] w-20 flex justify-center ${sc.className}`}>{sc.label}</Badge>
