@@ -58,7 +58,7 @@ const STAT_CARDS = [
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
   return (
-    <span className={`inline-flex items-center justify-center w-24 text-[11px] font-mono border rounded-full ${cfg.cls}`}>
+    <span className={`inline-flex items-center justify-center w-24 text-[11px] font-mono border rounded-md ${cfg.cls}`}>
       {cfg.label}
     </span>);
 
