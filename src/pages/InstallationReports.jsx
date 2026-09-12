@@ -188,16 +188,16 @@ export default function InstallationReports() {
         <table className="w-full text-sm min-w-[760px]">
           <thead className="border-b border-border bg-muted/30">
             <tr>
-              {['Report No.', 'Type', 'Quotation No.', 'DO No.', 'Client', 'Site', 'Date', 'Technician', 'Status', ''].map((h) =>
+              {['Report No.', 'Type', 'Quotation No.', 'DO No.', 'Client', 'Site', 'Date', 'Technician', 'Status'].map((h) =>
               <th key={h} className="text-left px-4 py-3 text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
               )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ?
-            <tr><td colSpan={10} className="py-12 text-center text-muted-foreground text-sm">Loading…</td></tr> :
+            <tr><td colSpan={9} className="py-12 text-center text-muted-foreground text-sm">Loading…</td></tr> :
             filtered.length === 0 ?
-            <tr><td colSpan={10} className="py-12 text-center text-muted-foreground text-sm">No installation reports found.</td></tr> :
+            <tr><td colSpan={9} className="py-12 text-center text-muted-foreground text-sm">No installation reports found.</td></tr> :
             filtered.map((r) => {
               const sc = STATUS_CONFIG[r.status] || STATUS_CONFIG.pending;
               const tc = TYPE_CONFIG[r.report_type] || TYPE_CONFIG.commissioning;
@@ -218,9 +218,6 @@ export default function InstallationReports() {
                   <td className="px-4 py-3">
                     <Badge variant="outline" className={`text-[10px] w-20 flex justify-center ${sc.className}`}>{sc.label}</Badge>
                   </td>
-                  
-
-
 
 
 
