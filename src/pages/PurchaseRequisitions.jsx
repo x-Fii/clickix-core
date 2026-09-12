@@ -345,7 +345,7 @@ export default function PurchaseRequisitions() {
                     <td className="px-4 py-3">{pr.requester_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{pr.site_name || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs truncate" title={(Array.isArray(pr.purpose_of_purchase) ? pr.purpose_of_purchase : []).join(', ')}>{(Array.isArray(pr.purpose_of_purchase) ? pr.purpose_of_purchase : []).join(', ') || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{pr.pr_date ? format(parseISO(pr.pr_date), 'dd MMM yyyy') : '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{pr.pr_date ? format(parseISO(pr.pr_date), 'dd/MM/yy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{pr.grand_total != null ? pr.grand_total.toFixed(2) : '—'}</td>
                     <td className="text-right font-mono text-sm text-emerald-400 pt-3 pr-3 pb-3 pl-3">{pr.approved_amount != null ? pr.approved_amount.toFixed(2) : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm text-violet-400">{pr.disburse_amount != null ? pr.disburse_amount.toFixed(2) : '—'}</td>

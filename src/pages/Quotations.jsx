@@ -184,7 +184,7 @@ export default function Quotations() {
                   </td>
                   <td className="px-4 py-3">{q.client_name || '—'}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{q.site_name || '—'}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{q.quotation_date ? format(new Date(q.quotation_date), 'dd MMM yyyy') : '—'}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{q.quotation_date ? format(new Date(q.quotation_date), 'dd/MM/yy') : '—'}</td>
                   <td className="px-4 py-3 text-right font-mono text-sm">{q.grand_total != null ? q.grand_total.toFixed(2) : '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex justify-center w-20 py-0.5 text-[11px] font-mono border rounded-md ${statusColors[q.status] || statusColors.draft}`}>

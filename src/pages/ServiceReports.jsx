@@ -223,7 +223,7 @@ export default function ServiceReports() {
                 <td className="px-4 py-3 text-xs text-muted-foreground">{r.reported_by || '—'}</td>
                 <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                 <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
-                  {r.created_date ? format(new Date(r.created_date), 'dd MMM yyyy') : '—'}
+                  {r.created_date ? format(new Date(r.created_date), 'dd/MM/yy') : '—'}
                 </td>
                 </tr>
             )}

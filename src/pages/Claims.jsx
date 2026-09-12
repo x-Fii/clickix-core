@@ -340,7 +340,7 @@ export default function Claims() {
                       })()}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_type || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_date ? format(parseISO(c.claim_date), 'dd MMM yyyy') : '—'}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_date ? format(parseISO(c.claim_date), 'dd/MM/yy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{c.grand_total != null ? c.grand_total.toFixed(2) : '—'}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
