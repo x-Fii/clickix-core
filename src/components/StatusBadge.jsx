@@ -16,7 +16,7 @@ export default function StatusBadge({ status, size = 'sm' }) {
   const cfg = statusConfig[status] || { label: status, cls: 'bg-muted text-muted-foreground border-border' };
   return (
     <span className={cn(
-      'inline-flex items-center justify-center font-mono border rounded-full w-20 flex-shrink-0',
+      'inline-flex items-center justify-center font-mono border rounded-md w-20 flex-shrink-0',
       size === 'sm' ? "text-[11px] px-2 py-0.5" : 'px-3 py-1 text-xs',
       cfg.cls
     )}>
