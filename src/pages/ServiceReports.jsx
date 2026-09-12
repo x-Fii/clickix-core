@@ -21,10 +21,18 @@ const PERIODS = [
   { key: 'this_month', label: 'This Month' },
   { key: 'last_month', label: 'Last Month' },
   { key: 'this_year', label: 'This Year' },
+  { key: 'custom', label: 'Custom Range' },
 ];
 
-function periodRange(period) {
+function periodRange(period, customStart, customEnd) {
   if (period === 'all') return null;
+  if (period === 'custom') {
+    if (!customStart || !customEnd) return null;
+    return {
+      start: startOfDay(parseISO(customStart)),
+      end: endOfDay(parseISO(customEnd)),
+    };
+  }
   const now = new Date();
   switch (period) {
     case 'today': return { start: startOfDay(now), end: endOfDay(now) };
@@ -45,6 +53,8 @@ export default function ServiceReports() {
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
   const [clientFilter, setClientFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['service-reports'],
@@ -56,7 +66,7 @@ export default function ServiceReports() {
     queryFn: () => base44.entities.Client.list()
   });
 
-  const range = periodRange(periodFilter);
+  const range = periodRange(periodFilter, customStart, customEnd);
   const inPeriod = (r) => {
     if (!range) return true;
     const d = r.created_date ? parseISO(r.created_date) : null;
@@ -192,6 +202,25 @@ export default function ServiceReports() {
             {PERIODS.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        {periodFilter === 'custom' && (
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="bg-card w-36"
+              aria-label="Start date"
+            />
+            <span className="text-muted-foreground text-xs">to</span>
+            <Input
+              type="date"
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              className="bg-card w-36"
+              aria-label="End date"
+            />
+          </div>
+        )}
       </div>
 
       {/* Table */}
