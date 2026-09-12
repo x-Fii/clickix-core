@@ -821,7 +821,7 @@ export default function InstallationReportDetail() {
           {report.ack_timestamp && <Field label="Completed At" value={new Date(report.ack_timestamp).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })} />}
           <Field label="Technician" value={report.attended_staff_name} />
           <Field label="DO Number" value={report.do_number} />
-          <Field label="Work Order No." value={report.work_order_number} />
+          <Field label="Quotation No." value={report.quotation_number || report.work_order_number} />
           <Field label="Reported By" value={report.reported_by} />
         </div>
       </div>
@@ -1042,7 +1042,7 @@ export default function InstallationReportDetail() {
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Job Information</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-              {[['CLIENT', report.client_name], ['STORE', report.site_name], ['LOCATION', report.site_location], ['REPORT TYPE', tc.label], ['WORK ORDER NUMBER', report.work_order_number], ['DO NUMBER', report.do_number], ['TECHNICIAN', report.attended_staff_name], ['TECHNICIAN EMAIL', report.attended_staff_email]].filter(([,v]) => v).map(([k, v]) => (
+              {[['CLIENT', report.client_name], ['STORE', report.site_name], ['LOCATION', report.site_location], ['REPORT TYPE', tc.label], ['QUOTATION NUMBER', report.quotation_number || report.work_order_number], ['DO NUMBER', report.do_number], ['TECHNICIAN', report.attended_staff_name], ['TECHNICIAN EMAIL', report.attended_staff_email]].filter(([,v]) => v).map(([k, v]) => (
                 <div key={k}>
                   <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                   <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>

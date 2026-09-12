@@ -52,7 +52,7 @@ export default function InstallationReportForm() {
     do_number: '',
     scheduled_date: '', scheduled_end_date: '', installation_date: '', installation_finish_date: '', attend_time: '',
     attended_staff_name: '', attended_staff_id: '', attended_staff_email: '',
-    work_order_number: '', site_pic_name: '',
+    work_order_number: '', quotation_number: '', site_pic_name: '',
     equipment_sections: [blankSection()],
     decommission_sections: [blankDecommSection()],
     equipment_installed: [],
@@ -470,7 +470,7 @@ export default function InstallationReportForm() {
               </div>
               <div className="space-y-1">
                 <Label>Quotation Number</Label>
-                <Input value={form.work_order_number} onChange={e => set('work_order_number', e.target.value)} placeholder="WO-XXXX" />
+                <Input value={form.quotation_number} onChange={e => set('quotation_number', e.target.value)} placeholder="QTN-XXXX" />
               </div>
               <div className="space-y-1">
                 <Label>Schedule Start Date</Label>

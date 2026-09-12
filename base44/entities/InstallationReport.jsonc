@@ -44,6 +44,9 @@
     "do_number": {
       "type": "string"
     },
+    "quotation_number": {
+      "type": "string"
+    },
     "scheduled_date": {
       "type": "string"
     },
