@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -15,11 +15,25 @@ const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', '
 const emptyItem = () => ({ device_type: '', device_name: '', issue_description: '' });
 const emptySection = () => ({ section_name: '', items: [emptyItem()] });
 
-const generateRunningNumber = () => {
-  const now = new Date();
-  const y = String(now.getFullYear()).slice(-2);
-  const seq = String(Math.floor(Math.random() * 9000) + 1000);
-  return `SR${y}-${seq}`;
+// Assigns the lowest skipped sequence number within the current year's range,
+// keeping the existing max as the ceiling; once gaps are filled it continues past the max.
+const fetchNextRunningNumber = async () => {
+  const yy = String(new Date().getFullYear()).slice(-2);
+  const prefix = `SR${yy}-`;
+  const all = await base44.entities.ServiceReport.list('-created_date', 1000);
+  const used = new Set();
+  for (const r of all) {
+    const rn = String(r.running_number || '');
+    if (rn.startsWith(prefix)) {
+      const n = parseInt(rn.slice(prefix.length), 10);
+      if (!Number.isNaN(n)) used.add(n);
+    }
+  }
+  if (used.size === 0) return `${prefix}0001`;
+  const min = Math.min(...used);
+  let next = min;
+  while (used.has(next)) next++;
+  return `${prefix}${String(next).padStart(4, '0')}`;
 };
 
 const SectionHeader = ({ title, subtitle }) => (
@@ -43,7 +57,7 @@ export default function NewReport() {
   const queryClient = useQueryClient();
 
   const [form, setForm] = useState({
-    running_number: generateRunningNumber(),
+    running_number: '',
     l1_date: new Date().toISOString().split('T')[0],
     reported_by: '',
     client_id: '', client_name: '',
@@ -74,6 +88,10 @@ export default function NewReport() {
     (!siteStateFilter || s.state === siteStateFilter)
   );
   const l1Staff = staffList.filter(s => s.role === 'L1' || s.role === 'Admin');
+
+  useEffect(() => {
+    fetchNextRunningNumber().then(num => setForm(f => ({ ...f, running_number: num })));
+  }, []);
 
   const createReport = useMutation({
     mutationFn: (data) => base44.entities.ServiceReport.create(data),
@@ -152,7 +170,7 @@ export default function NewReport() {
         </Button>
         <div>
           <h1 className="text-xl font-semibold">New Service Report — L1</h1>
-          <p className="text-xs font-mono text-primary mt-0.5">{form.running_number}</p>
+          <p className="text-xs font-mono text-primary mt-0.5">{form.running_number || 'Generating…'}</p>
         </div>
       </div>
 
@@ -208,7 +226,7 @@ export default function NewReport() {
           <SectionHeader title="L1 Remote Support" subtitle="Remote support attendance details" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <Field label="L1 Report Number">
-              <Input value={form.running_number} readOnly className="bg-muted font-mono text-xs" />
+              <Input value={form.running_number} readOnly placeholder="Generating…" className="bg-muted font-mono text-xs" />
             </Field>
             <Field label="Whatsapp Response ID">
               <Input value={form.whatsapp_response_id} onChange={e => setF('whatsapp_response_id', e.target.value)} className="bg-background font-mono" placeholder="Whatsapp Response ID" />
