@@ -58,7 +58,7 @@ export default function ServiceReports() {
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['service-reports'],
-    queryFn: () => base44.entities.ServiceReport.list('-created_date', 2000)
+    queryFn: () => base44.entities.ServiceReport.list('-l1_submitted_at', 2000)
   });
 
   const { data: clients = [] } = useQuery({
@@ -69,7 +69,7 @@ export default function ServiceReports() {
   const range = periodRange(periodFilter, customStart, customEnd);
   const inPeriod = (r) => {
     if (!range) return true;
-    const d = r.created_date ? parseISO(r.created_date) : null;
+    const d = r.l1_submitted_at ? parseISO(r.l1_submitted_at) : null;
     return d && isWithinInterval(d, range);
   };
 
@@ -131,7 +131,7 @@ export default function ServiceReports() {
               { header: 'Site', accessor: 'site_name' },
               { header: 'Reported By', accessor: 'reported_by' },
               { header: 'Status', accessor: 'status' },
-              { header: 'Date', accessor: (r) => (r.created_date ? r.created_date.slice(0, 10) : '') },
+              { header: 'Date', accessor: (r) => (r.l1_submitted_at ? r.l1_submitted_at.slice(0, 10) : '') },
             ]}
           />
           <Link to="/reports/new">
@@ -252,7 +252,7 @@ export default function ServiceReports() {
                 <td className="px-4 py-3 text-xs text-muted-foreground">{r.reported_by || '—'}</td>
                 <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                 <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
-                  {r.created_date ? format(new Date(r.created_date), 'dd/MM/yy') : '—'}
+                  {r.l1_submitted_at ? format(new Date(r.l1_submitted_at), 'dd/MM/yy') : '—'}
                 </td>
                 </tr>
             )}
