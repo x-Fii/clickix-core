@@ -91,3 +91,7 @@
     @apply bg-background text-foreground font-body;
   }
 }
+
+input[type="date"].date-picker::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}

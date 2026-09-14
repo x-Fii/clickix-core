@@ -208,7 +208,7 @@ export default function ServiceReports() {
               type="date"
               value={customStart}
               onChange={(e) => setCustomStart(e.target.value)}
-              className="bg-card w-36"
+              className="bg-card w-36 date-picker"
               aria-label="Start date"
             />
             <span className="text-muted-foreground text-xs">to</span>
@@ -216,7 +216,7 @@ export default function ServiceReports() {
               type="date"
               value={customEnd}
               onChange={(e) => setCustomEnd(e.target.value)}
-              className="bg-card w-36"
+              className="bg-card w-36 date-picker"
               aria-label="End date"
             />
           </div>
