@@ -58,7 +58,7 @@ export default function ServiceReports() {
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['service-reports'],
-    queryFn: () => base44.entities.ServiceReport.list('-created_date', 500)
+    queryFn: () => base44.entities.ServiceReport.list('-created_date', 2000)
   });
 
   const { data: clients = [] } = useQuery({
