@@ -19,6 +19,12 @@
         "cancelled"
       ]
     },
+    "reported_by": {
+      "type": "string"
+    },
+    "do_number": {
+      "type": "string"
+    },
     "client_id": {
       "type": "string"
     },
@@ -34,13 +40,10 @@
     "site_location": {
       "type": "string"
     },
-    "reported_by": {
-      "type": "string"
-    },
-    "do_number": {
-      "type": "string"
-    },
     "l1_date": {
+      "type": "string"
+    },
+    "whatsapp_response_id": {
       "type": "string"
     },
     "l1_attended_staff_name": {
@@ -50,9 +53,6 @@
       "type": "string"
     },
     "l1_attended_staff_email": {
-      "type": "string"
-    },
-    "whatsapp_response_id": {
       "type": "string"
     },
     "l1_affected_sections": {
@@ -138,27 +138,6 @@
     "scheduled_date": {
       "type": "string"
     },
-    "l2_job_description": {
-      "type": "string"
-    },
-    "l2_job_description_photos": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "l2_work_detail": {
-      "type": "string"
-    },
-    "l2_remarks": {
-      "type": "string"
-    },
-    "l2_remarks_photos": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
     "l2_attended_staff_name": {
       "type": "string"
     },
@@ -188,6 +167,27 @@
     },
     "l2_site_pic_id": {
       "type": "string"
+    },
+    "l2_job_description": {
+      "type": "string"
+    },
+    "l2_job_description_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "l2_work_detail": {
+      "type": "string"
+    },
+    "l2_remarks": {
+      "type": "string"
+    },
+    "l2_remarks_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "l2_items": {
       "type": "array",
