@@ -25,6 +25,7 @@ import ScheduleCalendar from './pages/ScheduleCalendar';
 import InstallationReports from './pages/InstallationReports';
 import InstallationReportForm from './pages/InstallationReportForm';
 import InstallationReportDetail from './pages/InstallationReportDetail';
+import Inventory from './pages/Inventory';
 
 
 import InstallationPDFTest from './pages/InstallationPDFTest';
@@ -97,6 +98,7 @@ const AuthenticatedApp = () => {
           <Route path="/claims" element={<Claims />} />
           <Route path="/claims/new" element={<ClaimForm />} />
           <Route path="/claims/:id" element={<ClaimForm />} />
+          <Route path="/inventory" element={<Inventory />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
