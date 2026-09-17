@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { fetchNextRunningNumber } from '@/lib/runningNumber';
 
 const CATEGORIES = ['Hardware', 'Software', 'Consumables', 'Services', 'Mileage', 'Accommodation', 'Others'];
 const PAYMENT_TERMS = ['30 Days', '60 Days', '90 Days', 'COD', 'Advance Payment', 'Upon Delivery'];
@@ -23,8 +24,6 @@ const Field = ({ label, children }) => (
   </div>
 );
 
-const genPRNumber = () => `PR${format(new Date(), 'yy')}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
-
 
 export default function PRForm() {
   const { id } = useParams();
@@ -33,7 +32,7 @@ export default function PRForm() {
   const isEdit = !!id;
 
   const [form, setForm] = useState({
-    pr_number: genPRNumber(),
+    pr_number: '',
     pr_date: format(new Date(), 'yyyy-MM-dd'),
     status: 'draft',
     requester_name: '',
@@ -68,6 +67,17 @@ export default function PRForm() {
   const [importModal, setImportModal] = useState(false);
   const [importTypeFilter, setImportTypeFilter] = useState([]);
   const loadedRef = useRef(false);
+
+  // Assign the next gap-filled PR number for new requisitions.
+  useEffect(() => {
+    if (isEdit) return;
+    let active = true;
+    const yy = String(new Date().getFullYear()).slice(-2);
+    fetchNextRunningNumber('PurchaseRequisition', 'pr_number', `PR${yy}-`).then(num => {
+      if (active) setForm(f => ({ ...f, pr_number: num }));
+    });
+    return () => { active = false; };
+  }, [isEdit]);
 
   useQuery({
     queryKey: ['pr', id],

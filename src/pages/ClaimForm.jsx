@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus, X, Save, Download, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { fetchNextRunningNumber } from '@/lib/runningNumber';
 
 const CATEGORIES = ['Hardware', 'Software', 'Networking', 'Cabling', 'Consumables', 'Services', 'Other'];
 const PAYMENT_TERMS = ['30 Days', '60 Days', '90 Days', 'COD', 'Advance Payment', 'Upon Delivery'];
@@ -22,7 +23,6 @@ const Field = ({ label, children }) =>
   </div>;
 
 
-const genClaimNumber = () => `CF${format(new Date(), 'yy')}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
 
 const STATUS_COLORS = {
   approved: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
@@ -40,7 +40,7 @@ export default function ClaimForm() {
   const isEdit = !!id;
 
   const [form, setForm] = useState({
-    claim_number: genClaimNumber(),
+    claim_number: '',
     claim_date: format(new Date(), 'yyyy-MM-dd'),
     status: 'draft',
     pr_id: '',
@@ -79,6 +79,17 @@ export default function ClaimForm() {
   );
   const loadedRef = useRef(false);
   const prPrefillRef = useRef(false);
+
+  // Assign the next gap-filled claim number for new claims.
+  useEffect(() => {
+    if (isEdit) return;
+    let active = true;
+    const yy = String(new Date().getFullYear()).slice(-2);
+    fetchNextRunningNumber('Claim', 'claim_number', `CF${yy}-`).then(num => {
+      if (active) setForm(f => ({ ...f, claim_number: num }));
+    });
+    return () => { active = false; };
+  }, [isEdit]);
 
 
   // Load existing claim

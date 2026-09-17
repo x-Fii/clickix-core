@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ArrowLeft, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import SignaturePad from '@/components/SignaturePad';
+import { fetchNextRunningNumber } from '@/lib/runningNumber';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const RELATED_DEVICES = [
@@ -22,13 +23,6 @@ const RELATED_DEVICES = [
   { name: 'Power Extension', type: 'Other' },
   { name: 'Other', type: 'Other', fillIn: true },
 ];
-
-function generateReportNumber() {
-  const now = new Date();
-  const y = String(now.getFullYear()).slice(-2);
-  const seq = String(Math.floor(Math.random() * 9000) + 1000);
-  return `IR${y}-${seq}`;
-}
 
 const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '', photos: [] });
 const blankSection = () => ({ section_name: '', items: [] });
@@ -43,7 +37,7 @@ export default function InstallationReportForm() {
   const isEdit = !!id;
 
   const buildDefaultForm = () => ({
-    report_number: generateReportNumber(),
+    report_number: '',
     report_type: 'commissioning',
     status: 'pending',
     client_id: '', client_name: '',
@@ -155,6 +149,18 @@ export default function InstallationReportForm() {
       filtersSeededRef.current = id;
     }
   }, [existing, sites, id, isEdit]);
+
+  // Assign the next gap-filled IR number for new reports (matches the
+  // Service Report running-number sequence behavior).
+  useEffect(() => {
+    if (isEdit) return;
+    let active = true;
+    const yy = String(new Date().getFullYear()).slice(-2);
+    fetchNextRunningNumber('InstallationReport', 'report_number', `IR${yy}-`).then(num => {
+      if (active) setForm(f => ({ ...f, report_number: num }));
+    });
+    return () => { active = false; };
+  }, [isEdit]);
 
   const regionOptions = [...new Set(sites.map(s => s.region).filter(Boolean))].sort();
   const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
