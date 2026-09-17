@@ -1,0 +1,28 @@
+{
+  "name": "Inventory",
+  "type": "object",
+  "properties": {
+    "outlet": {
+      "type": "string"
+    },
+    "license_name": {
+      "type": "string"
+    },
+    "license_number": {
+      "type": "string"
+    },
+    "pc_sku": {
+      "type": "string"
+    },
+    "processor": {
+      "type": "string"
+    },
+    "anydesk": {
+      "type": "string"
+    },
+    "tv_sku": {
+      "type": "string"
+    }
+  },
+  "required": []
+}
