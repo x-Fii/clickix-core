@@ -55,6 +55,7 @@ export default function ServiceReports() {
   const [periodFilter, setPeriodFilter] = useState('all');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [responseIdFilter, setResponseIdFilter] = useState('');
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['service-reports'],
@@ -84,7 +85,8 @@ export default function ServiceReports() {
     const q = search.toLowerCase();
     const matchSearch = !q || [r.running_number, r.client_name, r.site_name, r.reported_by, r.do_number].
     some((f) => f?.toLowerCase().includes(q));
-    return matchStatus && matchClient && matchPeriod && matchSearch;
+    const matchResponseId = !responseIdFilter || (r.whatsapp_response_id || '').toLowerCase().includes(responseIdFilter.toLowerCase());
+    return matchStatus && matchClient && matchPeriod && matchSearch && matchResponseId;
   });
 
   // Base set for counts: respect client & period filters (status counts stay relative to that set)
@@ -173,7 +175,15 @@ export default function ServiceReports() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-card" />
-          
+
+        </div>
+        <div className="relative flex-1 min-w-[180px] max-w-[220px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Filter by Response ID"
+            value={responseIdFilter}
+            onChange={(e) => setResponseIdFilter(e.target.value)}
+            className="pl-9 bg-card" />
         </div>
         <Select value={clientFilter} onValueChange={setClientFilter}>
           <SelectTrigger className="w-44 bg-card">
