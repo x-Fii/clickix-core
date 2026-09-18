@@ -996,7 +996,6 @@ export default function ReportDetail() {
   const statusIdx = L2_FLOW.indexOf(report.status);
   const isReadOnly = (report.status === 'complete' || report.status === 'billed' || report.status === 'cancelled') && !editing;
   const approvalLocked = ['approved', 'schedule', 'complete', 'billed'].includes(report.status);
-  const canCancel = !['complete', 'billed', 'cancelled'].includes(report.status) && report.l1_submitted !== false;
   const linkedQuotation = quotations.find((q) => q.sr_id === report.id || (q.sr_ids || []).includes(report.id) || q.sr_number === report.running_number);
   const unlinkedQuotations = quotations.filter((q) => !q.sr_id && (!q.sr_ids || q.sr_ids.length === 0) && !q.sr_number);
 
@@ -1037,11 +1036,6 @@ export default function ReportDetail() {
           <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
             <Download size={14} /> PDF
           </Button>
-          {canCancel &&
-          <Button variant="destructive" size="sm" onClick={() => advanceStatus('cancelled')} disabled={updateReport.isPending} className="gap-2">
-            <X size={14} /> Cancel Report
-          </Button>
-          }
           {report.l1_submitted !== false &&
           <Button size="sm" onClick={handleSubmitToAdmin} className="gap-2">
             <Send size={14} /> Submit to Admin
