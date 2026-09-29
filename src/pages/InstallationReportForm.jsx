@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import SignaturePad from '@/components/SignaturePad';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
+import PhotoPairUploader from '@/components/installation/PhotoPairUploader';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const RELATED_DEVICES = [
@@ -24,9 +25,9 @@ const RELATED_DEVICES = [
   { name: 'Other', type: 'Other', fillIn: true },
 ];
 
-const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '', photos: [] });
+const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '' });
 const blankSection = () => ({ section_name: '', items: [] });
-const blankDecommItem = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '', photos: [] });
+const blankDecommItem = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '' });
 const blankDecommSection = () => ({ section_name: '', items: [blankDecommItem()] });
 
 export default function InstallationReportForm() {
@@ -55,7 +56,6 @@ export default function InstallationReportForm() {
     pre_job_assessment_photos: [],
     technician_notes: '',
     supporting_photos: [],
-    delivery_photos: [],
     supporting_documents: [],
     ack_signature: '', ack_name: '', ack_phone: '', ack_company_stamp: '', ack_timestamp: '',
     submitted: false, submitted_at: '', admin_email: '',
@@ -229,40 +229,13 @@ export default function InstallationReportForm() {
         if (existingIdx >= 0) {
           items.splice(existingIdx, 1);
         } else {
-          items.push({ device_type: device.type, device_name: device.fillIn ? '' : device.name, serial_number: '', model: '', sku: '', anydesk: '', length: '', quantity: '', num_ports: '', num_gang: '', notes: '', photos: [] });
+          items.push({ device_type: device.type, device_name: device.fillIn ? '' : device.name, serial_number: '', model: '', sku: '', anydesk: '', length: '', quantity: '', num_ports: '', num_gang: '', notes: '' });
         }
         return { ...sec, items };
       });
       return { ...f, equipment_sections: arr };
     });
   };
-  const handleSectionItemPhotoUpload = async (e, si, ii) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(f => {
-      const arr = f.equipment_sections.map((sec, s) => {
-        if (s !== si) return sec;
-        const items = sec.items.map((item, i) => i === ii ? { ...item, photos: [...(item.photos || []), file_url] } : item);
-        return { ...sec, items };
-      });
-      return { ...f, equipment_sections: arr };
-    });
-    setUploading(false);
-    e.target.value = '';
-  };
-  const removeSectionItemPhoto = (si, ii, pi) => {
-    setForm(f => {
-      const arr = f.equipment_sections.map((sec, s) => {
-        if (s !== si) return sec;
-        const items = sec.items.map((item, i) => i === ii ? { ...item, photos: item.photos.filter((_, p) => p !== pi) } : item);
-        return { ...sec, items };
-      });
-      return { ...f, equipment_sections: arr };
-    });
-  };
-
   // Decommission sections helpers
   const addDecommSection = () => set('decommission_sections', [...(form.decommission_sections || []), blankDecommSection()]);
   const removeDecommSection = (si) => set('decommission_sections', (form.decommission_sections || []).filter((_, idx) => idx !== si));
@@ -291,33 +264,6 @@ export default function InstallationReportForm() {
       return { ...f, decommission_sections: arr };
     });
   };
-  const handleDecommSectionItemPhotoUpload = async (e, si, ii) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm(f => {
-      const arr = (f.decommission_sections || []).map((sec, s) => {
-        if (s !== si) return sec;
-        const items = sec.items.map((item, i) => i === ii ? { ...item, photos: [...(item.photos || []), file_url] } : item);
-        return { ...sec, items };
-      });
-      return { ...f, decommission_sections: arr };
-    });
-    setUploading(false);
-    e.target.value = '';
-  };
-  const removeDecommSectionItemPhoto = (si, ii, pi) => {
-    setForm(f => {
-      const arr = (f.decommission_sections || []).map((sec, s) => {
-        if (s !== si) return sec;
-        const items = sec.items.map((item, i) => i === ii ? { ...item, photos: item.photos.filter((_, p) => p !== pi) } : item);
-        return { ...sec, items };
-      });
-      return { ...f, decommission_sections: arr };
-    });
-  };
-
   const handleMultiPhotoUpload = async (e, field) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -340,21 +286,6 @@ export default function InstallationReportForm() {
     setUploading(true);
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     setForm(f => ({ ...f, supporting_documents: [...(f.supporting_documents || []), file_url] }));
-    setUploading(false);
-    e.target.value = '';
-  };
-
-  const handlePhotoUpload = async (e, section, idx) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    const key = section === 'installed' ? 'equipment_installed' : 'equipment_decommissioned';
-    setForm(f => {
-      const arr = [...f[key]];
-      arr[idx] = { ...arr[idx], photos: [...(arr[idx].photos || []), file_url] };
-      return { ...f, [key]: arr };
-    });
     setUploading(false);
     e.target.value = '';
   };
@@ -799,24 +730,6 @@ export default function InstallationReportForm() {
                         <Label className="text-xs">Reason for Decommission</Label>
                         <Input className="h-8 text-xs" value={item.reason_for_decommission} onChange={e => updateDecommSectionItem(si, ii, 'reason_for_decommission', e.target.value)} placeholder="Reason" />
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Photos</Label>
-                        <div className="flex flex-wrap gap-2 items-center">
-                          {(item.photos || []).map((url, pi) => (
-                            <div key={pi} className="relative group">
-                              <img src={url} alt="" className="w-14 h-14 object-cover rounded border border-border" />
-                              <button type="button" onClick={() => removeDecommSectionItemPhoto(si, ii, pi)}
-                                className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:block">
-                                <X size={10} />
-                              </button>
-                            </div>
-                          ))}
-                          <label className="w-14 h-14 border border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                            <Upload size={13} className="text-muted-foreground" />
-                            <input type="file" accept="image/*" className="hidden" onChange={e => handleDecommSectionItemPhotoUpload(e, si, ii)} />
-                          </label>
-                        </div>
-                      </div>
                     </div>
                   ))}
                   <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => addDecommItemToSection(si)}>
@@ -854,47 +767,16 @@ export default function InstallationReportForm() {
           <Textarea value={form.technician_notes} onChange={e => set('technician_notes', e.target.value)} placeholder="Describe the work carried out, observations, or any issues encountered…" rows={4} />
         </div>
 
-        {/* Supporting Photos */}
-        {/* Pre-Job Photos */}
+        {/* Pre-Install Photos */}
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Pre-Job Photos</h2>
-          <div className="flex flex-wrap gap-3 items-start">
-            {(form.supporting_photos || []).map((url, i) => (
-              <div key={i} className="relative group">
-                <img src={url} alt="" className="w-24 h-24 object-cover rounded border border-border" />
-                <button type="button" onClick={() => set('supporting_photos', form.supporting_photos.filter((_, j) => j !== i))}
-                  className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:flex items-center justify-center">
-                  <X size={10} />
-                </button>
-              </div>
-            ))}
-            <label className="w-24 h-24 border border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors gap-1">
-              <Upload size={16} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">{uploading ? 'Uploading…' : 'Add Photos'}</span>
-              <input type="file" accept="image/*" multiple className="hidden" disabled={uploading} onChange={e => handleMultiPhotoUpload(e, 'supporting_photos')} />
-            </label>
-          </div>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Pre-Install Photos</h2>
+          <PhotoPairUploader label="Pre-Install" value={form.pre_job_assessment_photos} onChange={(v) => set('pre_job_assessment_photos', v)} max={2} />
         </div>
 
-        {/* Delivery Photos */}
+        {/* Post-Install Photos */}
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Delivery Photos</h2>
-          <div className="flex flex-wrap gap-3 items-start">
-            {(form.delivery_photos || []).map((url, i) => (
-              <div key={i} className="relative group">
-                <img src={url} alt="" className="w-24 h-24 object-cover rounded border border-border" />
-                <button type="button" onClick={() => set('delivery_photos', form.delivery_photos.filter((_, j) => j !== i))}
-                  className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:flex items-center justify-center">
-                  <X size={10} />
-                </button>
-              </div>
-            ))}
-            <label className="w-24 h-24 border border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors gap-1">
-              <Upload size={16} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">{uploading ? 'Uploading…' : 'Add Photos'}</span>
-              <input type="file" accept="image/*" multiple className="hidden" disabled={uploading} onChange={e => handleMultiPhotoUpload(e, 'delivery_photos')} />
-            </label>
-          </div>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Post-Install Photos</h2>
+          <PhotoPairUploader label="Post-Install" value={form.supporting_photos} onChange={(v) => set('supporting_photos', v)} max={2} />
         </div>
 
         {/* Supporting Documents */}

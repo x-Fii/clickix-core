@@ -851,15 +851,6 @@ export default function InstallationReportDetail() {
                       <Field label="Number of Gang" value={item.num_gang} />
                       <Field label="Notes" value={item.notes} />
                     </div>
-                    {item.photos && item.photos.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {item.photos.map((url, pi) => (
-                          <a key={pi} href={url} target="_blank" rel="noreferrer">
-                            <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
-                          </a>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -886,15 +877,6 @@ export default function InstallationReportDetail() {
                       <Field label="Serial Number" value={item.serial_number} />
                       {item.reason_for_decommission && <Field label="Reason" value={item.reason_for_decommission} />}
                     </div>
-                    {item.photos && item.photos.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {item.photos.map((url, pi) => (
-                          <a key={pi} href={url} target="_blank" rel="noreferrer">
-                            <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
-                          </a>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -972,11 +954,11 @@ export default function InstallationReportDetail() {
         </div>
       )}
 
-      {/* Supporting Photos */}
+      {/* Post-Install Photos */}
       {report.supporting_photos && report.supporting_photos.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-3">
           <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <Package size={14} /> Supporting Photos
+            <Package size={14} /> Post-Install Photos
           </h2>
           <div className="flex flex-wrap gap-3">
             {report.supporting_photos.map((url, i) => (
@@ -988,21 +970,7 @@ export default function InstallationReportDetail() {
         </div>
       )}
 
-      {/* Delivery Photos */}
-      {report.delivery_photos && report.delivery_photos.length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-          <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <Package size={14} /> Delivery Photos
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            {report.delivery_photos.map((url, i) => (
-              <a key={i} href={url} target="_blank" rel="noreferrer">
-                <img src={url} alt={`Delivery ${i + 1}`} className="w-28 h-28 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
+
 
       {/* Supporting Documents */}
       {report.supporting_documents && report.supporting_documents.length > 0 && (
@@ -1111,29 +1079,7 @@ export default function InstallationReportDetail() {
                       })}
                     </tbody>
                   </table>
-                  {(sec.items || []).some(item => item.photos && item.photos.length > 0) && (
-                    <div style={{ marginTop: '10px' }}>
-                      {sec.items.map((item, ii) => item.photos && item.photos.length > 0 && (
-                        <div key={ii} style={{ marginBottom: '8px' }}>
-                          <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '5px', fontWeight: '600' }}>{item.device_name} Photos:</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {item.photos.map((url, pi) => (
-                              <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                                width: '220px',
-                                                                                                height: 'auto',
-                                                                                                maxHeight: '260px',
-                                                                                                objectFit: 'contain',
-                                                                                                border: '1px solid #e5e7eb',
-                                                                                                borderRadius: '4px',
-                                                                                                background: '#ffffff',
-                                                                                                display: 'block'
-                                                                                            }} />
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+
                 </div>
               ))}
             </div>
@@ -1174,29 +1120,7 @@ export default function InstallationReportDetail() {
                       ))}
                     </tbody>
                   </table>
-                  {(sec.items || []).some(item => item.photos && item.photos.length > 0) && (
-                    <div style={{ marginTop: '10px' }}>
-                      {sec.items.map((item, ii) => item.photos && item.photos.length > 0 && (
-                        <div key={ii} style={{ marginBottom: '8px' }}>
-                          <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '5px', fontWeight: '600' }}>{item.device_name} Photos:</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {item.photos.map((url, pi) => (
-                              <img key={pi} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                                width: '220px',
-                                                                                                height: 'auto',
-                                                                                                maxHeight: '260px',
-                                                                                                objectFit: 'contain',
-                                                                                                border: '1px solid #e5e7eb',
-                                                                                                borderRadius: '4px',
-                                                                                                background: '#ffffff',
-                                                                                                display: 'block'
-                                                                                            }} />
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+
                 </div>
               ))}
             </div>
@@ -1256,11 +1180,11 @@ export default function InstallationReportDetail() {
             </div>
           )}
 
-          {/* Supporting Photos */}
+          {/* Post-Install Photos */}
           {report.supporting_photos && report.supporting_photos.length > 0 && (
             <div style={{ marginBottom: '20px' }}>
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Photo Evidence</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Post-Install Photos</span>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {report.supporting_photos.map((url, i) => (
@@ -1279,28 +1203,7 @@ export default function InstallationReportDetail() {
             </div>
           )}
 
-          {/* Delivery Photos */}
-          {report.delivery_photos && report.delivery_photos.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Delivery Photos</span>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {report.delivery_photos.map((url, i) => (
-                  <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                width: '145px',
-                                                                                height: 'auto',
-                                                                                maxHeight: '180px',
-                                                                                objectFit: 'contain',
-                                                                                border: '1px solid #e5e7eb',
-                                                                                borderRadius: '4px',
-                                                                                background: '#ffffff',
-                                                                                display: 'block'
-                                                                              }} />
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* Supporting Documents */}
           {report.supporting_documents && report.supporting_documents.length > 0 && (

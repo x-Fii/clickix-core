@@ -1,0 +1,52 @@
+import { useState } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Upload, X } from 'lucide-react';
+
+export default function PhotoPairUploader({ label, value = [], onChange, max = 2 }) {
+  const [uploading, setUploading] = useState(false);
+  const photos = value || [];
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (photos.length >= max) return;
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      onChange([...photos, file_url]);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const remove = (i) => onChange(photos.filter((_, j) => j !== i));
+  const full = photos.length >= max;
+
+  return (
+    <div>
+      <p className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider mb-2">{label}</p>
+      <div className="flex flex-wrap gap-3 items-start">
+        {photos.map((url, i) => (
+          <div key={i} className="relative group">
+            <img src={url} alt="" className="w-24 h-24 object-cover rounded border border-border" />
+            <button type="button" onClick={() => remove(i)}
+              className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:flex items-center justify-center">
+              <X size={10} />
+            </button>
+          </div>
+        ))}
+        {!full && (
+          <label className="w-24 h-24 border border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors gap-1">
+            {uploading
+              ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              : <Upload size={16} className="text-muted-foreground" />}
+            <span className="text-[10px] text-muted-foreground">{uploading ? 'Uploading…' : 'Add Photo'}</span>
+            <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleUpload} />
+          </label>
+        )}
+        <p className="text-[10px] text-muted-foreground self-end">{photos.length}/{max} photos</p>
+      </div>
+    </div>
+  );
+}

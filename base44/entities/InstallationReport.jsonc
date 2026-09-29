@@ -154,12 +154,6 @@
                 },
                 "notes": {
                   "type": "string"
-                },
-                "photos": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
                 }
               }
             }
@@ -191,12 +185,6 @@
                 },
                 "reason_for_decommission": {
                   "type": "string"
-                },
-                "photos": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
                 }
               }
             }
@@ -241,12 +229,6 @@
           },
           "notes": {
             "type": "string"
-          },
-          "photos": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           }
         }
       }
@@ -267,18 +249,9 @@
           },
           "reason_for_decommission": {
             "type": "string"
-          },
-          "photos": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           }
         }
       }
-    },
-    "technician_notes": {
-      "type": "string"
     },
     "supporting_photos": {
       "type": "array",
@@ -291,6 +264,9 @@
       "items": {
         "type": "string"
       }
+    },
+    "technician_notes": {
+      "type": "string"
     },
     "supporting_documents": {
       "type": "array",
