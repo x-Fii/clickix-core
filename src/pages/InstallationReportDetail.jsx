@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Pencil, CheckCircle, FileText, Package, PackageMinus, Download } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import EquipmentSummary from '@/components/installation/EquipmentSummary';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -832,6 +833,7 @@ export default function InstallationReportDetail() {
           <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
             <Package size={14} /> Equipment Installed
           </h2>
+          <EquipmentSummary sections={equipmentSections} />
           {equipmentSections.map((sec, si) => (
             <div key={si} className="border border-primary/20 rounded-lg p-4 space-y-3 bg-muted/10">
               <p className="text-sm font-semibold text-primary">{sec.section_name || `Section ${si + 1}`}</p>
