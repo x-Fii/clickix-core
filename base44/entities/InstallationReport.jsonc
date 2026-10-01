@@ -117,6 +117,9 @@
           "section_name": {
             "type": "string"
           },
+          "license_key": {
+            "type": "string"
+          },
           "items": {
             "type": "array",
             "items": {

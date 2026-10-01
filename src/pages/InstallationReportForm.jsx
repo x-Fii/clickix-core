@@ -26,7 +26,7 @@ const RELATED_DEVICES = [
 ];
 
 const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '' });
-const blankSection = () => ({ section_name: '', items: [] });
+const blankSection = () => ({ section_name: '', license_key: '', items: [] });
 const blankDecommItem = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '' });
 const blankDecommSection = () => ({ section_name: '', items: [blankDecommItem()] });
 
@@ -196,6 +196,11 @@ export default function InstallationReportForm() {
   const updateSectionName = (si, val) => {
     const arr = [...form.equipment_sections];
     arr[si] = { ...arr[si], section_name: val };
+    set('equipment_sections', arr);
+  };
+  const updateSectionLicenseKey = (si, val) => {
+    const arr = [...form.equipment_sections];
+    arr[si] = { ...arr[si], license_key: val };
     set('equipment_sections', arr);
   };
   const addItemToSection = (si) => {
@@ -590,6 +595,15 @@ export default function InstallationReportForm() {
                   <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                     <Trash2 size={14} />
                   </button>
+                </div>
+                <div className="flex items-center gap-2 pl-2">
+                  <Label className="text-xs whitespace-nowrap">License Key</Label>
+                  <Input
+                    className="h-8 text-xs font-mono flex-1"
+                    value={sec.license_key || ''}
+                    onChange={e => updateSectionLicenseKey(si, e.target.value)}
+                    placeholder="Enter license key for this section"
+                  />
                 </div>
                 {/* Items within section */}
                 <div className="space-y-3 pl-2 border-l-2 border-border">

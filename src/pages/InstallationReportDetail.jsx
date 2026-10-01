@@ -836,7 +836,15 @@ export default function InstallationReportDetail() {
           <EquipmentSummary sections={equipmentSections} />
           {equipmentSections.map((sec, si) => (
             <div key={si} className="border border-primary/20 rounded-lg p-4 space-y-3 bg-muted/10">
-              <p className="text-sm font-semibold text-primary">{sec.section_name || `Section ${si + 1}`}</p>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-sm font-semibold text-primary">{sec.section_name || `Section ${si + 1}`}</p>
+                {sec.license_key && (
+                  <div className="text-xs">
+                    <span className="font-mono font-semibold text-muted-foreground uppercase tracking-wider mr-1">License Key:</span>
+                    <span className="font-mono text-foreground">{sec.license_key}</span>
+                  </div>
+                )}
+              </div>
               <div className="space-y-3 pl-2 border-l-2 border-border">
                 {(sec.items || []).map((item, ii) => (
                   <div key={ii} className="border border-border rounded-lg p-3 bg-card space-y-2">
@@ -1045,8 +1053,9 @@ export default function InstallationReportDetail() {
               </div>
               {equipmentSections.map((sec, si) => (
                 <div key={si} style={{ marginBottom: '16px' }}>
-                  <div data-pdf-heading="subsection" style={{ background: '#f0f9ff', borderLeft: '3px solid #60a5fa', padding: '5px 10px', marginBottom: '8px', fontWeight: '700', fontSize: '11px', color: '#1d4ed8' }}>
-                    {sec.section_name || `Section ${si + 1}`}
+                  <div data-pdf-heading="subsection" style={{ background: '#f0f9ff', borderLeft: '3px solid #60a5fa', padding: '5px 10px', marginBottom: '8px', fontWeight: '700', fontSize: '11px', color: '#1d4ed8', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                    <span>{sec.section_name || `Section ${si + 1}`}</span>
+                    {sec.license_key && <span style={{ fontWeight: '400', fontSize: '10px', color: '#374151', fontFamily: 'monospace' }}>License Key: {sec.license_key}</span>}
                   </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                     <thead>
