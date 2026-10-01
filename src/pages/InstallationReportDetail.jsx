@@ -949,7 +949,6 @@ export default function InstallationReportDetail() {
       {(report.technician_notes || report.technician_deliverables || report.technician_handover) && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-2">
           <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">Post Job Technician Note</h2>
-          {report.technician_notes && <p className="text-sm whitespace-pre-wrap">{report.technician_notes}</p>}
           {(report.technician_deliverables || report.technician_handover) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               {report.technician_deliverables && (
