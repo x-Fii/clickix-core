@@ -916,16 +916,21 @@ export default function InstallationReportDetail() {
             {hasSections && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {Object.keys(labels).map(k => {
-                  if (!sections[k]) return null;
+                  if (k === 'internet') {
+                    if (!sections.internet_ssid && !sections.internet_password) return null;
+                  } else if (!sections[k]) return null;
                   return (
                     <div key={k} className="space-y-1">
                       <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">{labels[k]}</p>
-                      <p className="text-sm whitespace-pre-wrap">{sections[k]}</p>
-                      {k === 'internet' && (sections.internet_ssid || sections.internet_password) && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                          {sections.internet_ssid && <p className="text-xs"><span className="text-muted-foreground">SSID:</span> {sections.internet_ssid}</p>}
-                          {sections.internet_password && <p className="text-xs"><span className="text-muted-foreground">Password:</span> {sections.internet_password}</p>}
-                        </div>
+                      {k === 'internet' ? (
+                        (sections.internet_ssid || sections.internet_password) && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {sections.internet_ssid && <p className="text-xs"><span className="text-muted-foreground">SSID:</span> {sections.internet_ssid}</p>}
+                            {sections.internet_password && <p className="text-xs"><span className="text-muted-foreground">Password:</span> {sections.internet_password}</p>}
+                          </div>
+                        )
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap">{sections[k]}</p>
                       )}
                     </div>
                   );
