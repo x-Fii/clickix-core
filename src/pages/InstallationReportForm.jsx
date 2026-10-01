@@ -720,10 +720,12 @@ export default function InstallationReportForm() {
                           </div>
                         </div>
                       )}
-                      <div className="space-y-1">
-                        <Label className="text-xs">Others - To Fill In</Label>
-                        <Input className="h-8 text-xs" value={item.notes} onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)} placeholder="Others - To Fill In" />
-                      </div>
+                      {item.device_name !== 'HDMI Extender' && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">Others - To Fill In</Label>
+                          <Input className="h-8 text-xs" value={item.notes} onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)} placeholder="Others - To Fill In" />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
