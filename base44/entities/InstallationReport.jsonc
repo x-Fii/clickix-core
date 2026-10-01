@@ -157,6 +157,18 @@
                 },
                 "notes": {
                   "type": "string"
+                },
+                "hdmi_rx": {
+                  "type": "boolean"
+                },
+                "hdmi_rx_length": {
+                  "type": "string"
+                },
+                "hdmi_tx": {
+                  "type": "boolean"
+                },
+                "hdmi_tx_length": {
+                  "type": "string"
                 }
               }
             }
@@ -231,6 +243,18 @@
             "type": "number"
           },
           "notes": {
+            "type": "string"
+          },
+          "hdmi_rx": {
+            "type": "boolean"
+          },
+          "hdmi_rx_length": {
+            "type": "string"
+          },
+          "hdmi_tx": {
+            "type": "boolean"
+          },
+          "hdmi_tx_length": {
             "type": "string"
           }
         }

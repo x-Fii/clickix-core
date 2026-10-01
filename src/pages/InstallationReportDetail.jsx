@@ -861,6 +861,12 @@ export default function InstallationReportDetail() {
                       <Field label="Number of Gang" value={item.num_gang} />
                       <Field label="Notes" value={item.notes} />
                     </div>
+                    {item.device_name === 'HDMI Extender' && (item.hdmi_rx || item.hdmi_tx) && (
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 pt-1 border-t border-border text-xs">
+                        {item.hdmi_rx && <span><span className="font-semibold text-muted-foreground">RX HDMI:</span> {item.hdmi_rx_length || '—'}</span>}
+                        {item.hdmi_tx && <span><span className="font-semibold text-muted-foreground">TX HDMI:</span> {item.hdmi_tx_length || '—'}</span>}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1077,6 +1083,8 @@ export default function InstallationReportDetail() {
                           (item.quantity != null && item.quantity !== '') && `Qty: ${item.quantity}`,
                           (item.num_ports != null && item.num_ports !== '') && `Ports: ${item.num_ports}`,
                           (item.num_gang != null && item.num_gang !== '') && `Gang: ${item.num_gang}`,
+                          item.hdmi_rx && `RX HDMI: ${item.hdmi_rx_length || '—'}`,
+                          item.hdmi_tx && `TX HDMI: ${item.hdmi_tx_length || '—'}`,
                         ].filter(Boolean).join('\n');
                         return (
                         <tr key={ii} style={{ background: ii % 2 === 0 ? '#fff' : '#f9fafb' }}>

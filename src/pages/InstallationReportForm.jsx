@@ -645,16 +645,44 @@ export default function InstallationReportForm() {
                         </div>
                       )}
                       {item.device_name === 'HDMI Extender' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs">SKU</Label>
-                            <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU / Serial Number" />
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">SKU</Label>
+                              <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU / Serial Number" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Model</Label>
+                              <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
+                            </div>
                           </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Model</Label>
-                            <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-border">
+                            <div className="space-y-1.5">
+                              <label className="flex items-center gap-1.5 text-xs cursor-pointer hover:text-primary transition-colors">
+                                <input type="checkbox" checked={!!item.hdmi_rx} onChange={e => updateSectionItem(si, ii, 'hdmi_rx', e.target.checked)} className="accent-primary" />
+                                <span className="font-medium">RX HDMI</span>
+                              </label>
+                              {item.hdmi_rx && (
+                                <div className="pl-5">
+                                  <Label className="text-xs">Length</Label>
+                                  <Input className="h-8 text-xs" value={item.hdmi_rx_length || ''} onChange={e => updateSectionItem(si, ii, 'hdmi_rx_length', e.target.value)} placeholder="Length" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="flex items-center gap-1.5 text-xs cursor-pointer hover:text-primary transition-colors">
+                                <input type="checkbox" checked={!!item.hdmi_tx} onChange={e => updateSectionItem(si, ii, 'hdmi_tx', e.target.checked)} className="accent-primary" />
+                                <span className="font-medium">TX HDMI</span>
+                              </label>
+                              {item.hdmi_tx && (
+                                <div className="pl-5">
+                                  <Label className="text-xs">Length</Label>
+                                  <Input className="h-8 text-xs" value={item.hdmi_tx_length || ''} onChange={e => updateSectionItem(si, ii, 'hdmi_tx_length', e.target.value)} placeholder="Length" />
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        </>
                       )}
                       {(item.device_name === 'HDMI' || item.device_name === 'LAN') && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
