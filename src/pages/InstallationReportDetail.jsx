@@ -915,12 +915,21 @@ export default function InstallationReportDetail() {
             {hasLegacy && <p className="text-sm whitespace-pre-wrap">{report.pre_job_assessment}</p>}
             {hasSections && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {Object.keys(labels).map(k => sections[k] ? (
-                  <div key={k} className="space-y-1">
-                    <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">{labels[k]}</p>
-                    <p className="text-sm whitespace-pre-wrap">{sections[k]}</p>
-                  </div>
-                ) : null)}
+                {Object.keys(labels).map(k => {
+                  if (!sections[k]) return null;
+                  return (
+                    <div key={k} className="space-y-1">
+                      <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">{labels[k]}</p>
+                      <p className="text-sm whitespace-pre-wrap">{sections[k]}</p>
+                      {k === 'internet' && (sections.internet_ssid || sections.internet_password) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                          {sections.internet_ssid && <p className="text-xs"><span className="text-muted-foreground">SSID:</span> {sections.internet_ssid}</p>}
+                          {sections.internet_password && <p className="text-xs"><span className="text-muted-foreground">Password:</span> {sections.internet_password}</p>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
             {hasPhotos && (
@@ -1161,12 +1170,21 @@ export default function InstallationReportDetail() {
                 {hasLegacy && <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '12px', marginBottom: '10px' }}>{report.pre_job_assessment}</div>}
                 {hasSections && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px', marginBottom: hasPhotos ? '10px' : '0' }}>
-                    {Object.keys(labels).map(k => sections[k] ? (
-                      <div key={k} style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '8px 10px', background: '#f9fafb' }}>
-                        <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>{labels[k]}</div>
-                        <div style={{ fontSize: '11px', color: '#111827', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{sections[k]}</div>
-                      </div>
-                    ) : null)}
+                    {Object.keys(labels).map(k => {
+                      if (!sections[k]) return null;
+                      return (
+                        <div key={k} style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '8px 10px', background: '#f9fafb' }}>
+                          <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>{labels[k]}</div>
+                          <div style={{ fontSize: '11px', color: '#111827', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{sections[k]}</div>
+                          {k === 'internet' && (sections.internet_ssid || sections.internet_password) && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', marginTop: '4px', fontSize: '10px', color: '#374151' }}>
+                              {sections.internet_ssid && <div><span style={{ color: '#6b7280' }}>SSID:</span> {sections.internet_ssid}</div>}
+                              {sections.internet_password && <div><span style={{ color: '#6b7280' }}>Password:</span> {sections.internet_password}</div>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {hasPhotos && (

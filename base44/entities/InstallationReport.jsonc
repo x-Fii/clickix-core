@@ -92,6 +92,12 @@
         "internet": {
           "type": "string"
         },
+        "internet_ssid": {
+          "type": "string"
+        },
+        "internet_password": {
+          "type": "string"
+        },
         "cables": {
           "type": "string"
         },
