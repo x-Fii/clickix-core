@@ -770,13 +770,13 @@ export default function InstallationReportForm() {
         {/* Pre-Install Photos */}
         <div className={sectionClass}>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Pre-Install Photos</h2>
-          <PhotoPairUploader label="Pre-Install" value={form.pre_job_assessment_photos} onChange={(v) => set('pre_job_assessment_photos', v)} max={2} />
+          <PhotoPairUploader label="Pre-Install" value={form.pre_job_assessment_photos} onChange={(v) => set('pre_job_assessment_photos', v)} max={12} />
         </div>
 
         {/* Post-Install Photos */}
         <div className={sectionClass}>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Post-Install Photos</h2>
-          <PhotoPairUploader label="Post-Install" value={form.supporting_photos} onChange={(v) => set('supporting_photos', v)} max={2} />
+          <PhotoPairUploader label="Post-Install" value={form.supporting_photos} onChange={(v) => set('supporting_photos', v)} max={12} />
         </div>
 
         {/* Supporting Documents */}
