@@ -31,31 +31,18 @@ export default function EquipmentSummary({ sections = [] }) {
     const totalItems = flat.length;
 
     const lines = [];
-    lines.push(`EQUIPMENT INSTALLED SUMMARY`);
-    lines.push(`Total items: ${totalItems} | Total quantity: ${totalQty}`);
+    lines.push(`LICENSE & PC SUMMARY`);
     lines.push('');
-    if (byTypeArr.length) {
-      lines.push('By device type:');
-      byTypeArr.forEach((t) => lines.push(`  - ${t.type}: ${t.count} item(s), qty ${t.qty}`));
-      lines.push('');
-    }
     sections.forEach((sec) => {
-      const items = sec.items || [];
-      if (!items.length) return;
+      const items = (sec.items || []).filter((it) => it.device_name === 'PC');
+      if (!sec.license_key && !items.length) return;
       lines.push(`[${sec.section_name || 'Section'}]`);
+      if (sec.license_key) lines.push(`  License Key: ${sec.license_key}`);
       items.forEach((item, i) => {
         const parts = [
-          item.device_type,
-          item.device_name,
-          item.model && `Model: ${item.model}`,
+          'PC',
           item.sku && `SKU: ${item.sku}`,
-          item.serial_number && `S/N: ${item.serial_number}`,
           item.anydesk && `Anydesk: ${item.anydesk}`,
-          item.length && `Length: ${item.length}`,
-          (item.quantity !== undefined && item.quantity !== '') && `Qty: ${item.quantity}`,
-          (item.num_ports !== undefined && item.num_ports !== '') && `Ports: ${item.num_ports}`,
-          (item.num_gang !== undefined && item.num_gang !== '') && `Gang: ${item.num_gang}`,
-          item.notes && `Notes: ${item.notes}`,
         ].filter(Boolean);
         lines.push(`  ${i + 1}. ${parts.join(' | ')}`);
       });
