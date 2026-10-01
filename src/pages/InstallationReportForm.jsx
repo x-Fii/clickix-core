@@ -811,9 +811,8 @@ export default function InstallationReportForm() {
             ].map(s => (
               <div key={s.key} className="space-y-1">
                 <Label className="text-xs font-semibold">{s.label}</Label>
-                <Textarea value={(form.pre_job_assessment_sections || {})[s.key] || ''} onChange={e => setForm(f => ({ ...f, pre_job_assessment_sections: { ...(f.pre_job_assessment_sections || {}), [s.key]: e.target.value } }))} placeholder={`Describe ${s.label.replace(/^\d+\.\s*/, '')}…`} rows={3} className="text-sm" />
-                {s.key === 'internet' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {s.key === 'internet' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <Label className="text-xs">1. SSID</Label>
                       <Input className="h-8 text-xs" value={(form.pre_job_assessment_sections || {}).internet_ssid || ''} onChange={e => setForm(f => ({ ...f, pre_job_assessment_sections: { ...(f.pre_job_assessment_sections || {}), internet_ssid: e.target.value } }))} placeholder="SSID" />
@@ -823,6 +822,8 @@ export default function InstallationReportForm() {
                       <Input className="h-8 text-xs" value={(form.pre_job_assessment_sections || {}).internet_password || ''} onChange={e => setForm(f => ({ ...f, pre_job_assessment_sections: { ...(f.pre_job_assessment_sections || {}), internet_password: e.target.value } }))} placeholder="Password" />
                     </div>
                   </div>
+                ) : (
+                  <Textarea value={(form.pre_job_assessment_sections || {})[s.key] || ''} onChange={e => setForm(f => ({ ...f, pre_job_assessment_sections: { ...(f.pre_job_assessment_sections || {}), [s.key]: e.target.value } }))} placeholder={`Describe ${s.label.replace(/^\d+\.\s*/, '')}…`} rows={3} className="text-sm" />
                 )}
               </div>
             ))}
