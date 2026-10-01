@@ -7,13 +7,17 @@ export default function PhotoPairUploader({ label, value = [], onChange, max = 2
   const photos = value || [];
 
   const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (photos.length >= max) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const remaining = Math.max(0, max - photos.length);
+    const toUpload = files.slice(0, remaining);
+    if (!toUpload.length) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      onChange([...photos, file_url]);
+      const urls = await Promise.all(
+        toUpload.map((file) => base44.integrations.Core.UploadFile({ file }).then((r) => r.file_url))
+      );
+      onChange([...photos, ...urls.filter(Boolean)]);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -42,7 +46,7 @@ export default function PhotoPairUploader({ label, value = [], onChange, max = 2
               ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               : <Upload size={16} className="text-muted-foreground" />}
             <span className="text-[10px] text-muted-foreground">{uploading ? 'Uploading…' : 'Add Photo'}</span>
-            <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={handleUpload} />
+            <input type="file" accept="image/*" multiple className="hidden" disabled={uploading} onChange={handleUpload} />
           </label>
         )}
         <p className="text-[10px] text-muted-foreground self-end">{photos.length}/{max} photos</p>
