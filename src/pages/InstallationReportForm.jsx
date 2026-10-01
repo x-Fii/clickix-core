@@ -834,6 +834,16 @@ export default function InstallationReportForm() {
         <div className={sectionClass}>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono">Post Job Technician Note</h2>
           <Textarea value={form.technician_notes} onChange={e => set('technician_notes', e.target.value)} placeholder="Describe the work carried out, observations, or any issues encountered…" rows={4} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">1. Deliverables</Label>
+              <Textarea value={form.technician_deliverables || ''} onChange={e => set('technician_deliverables', e.target.value)} placeholder="Deliverables" rows={3} className="text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">2. Handover</Label>
+              <Textarea value={form.technician_handover || ''} onChange={e => set('technician_handover', e.target.value)} placeholder="Handover" rows={3} className="text-sm" />
+            </div>
+          </div>
         </div>
 
         {/* Pre-Install Photos */}

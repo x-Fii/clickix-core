@@ -301,6 +301,12 @@
     "technician_notes": {
       "type": "string"
     },
+    "technician_deliverables": {
+      "type": "string"
+    },
+    "technician_handover": {
+      "type": "string"
+    },
     "supporting_documents": {
       "type": "array",
       "items": {

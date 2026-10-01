@@ -946,10 +946,26 @@ export default function InstallationReportDetail() {
       })()}
 
       {/* Post Job Technician Note */}
-      {report.technician_notes && (
+      {(report.technician_notes || report.technician_deliverables || report.technician_handover) && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-2">
           <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider">Post Job Technician Note</h2>
-          <p className="text-sm whitespace-pre-wrap">{report.technician_notes}</p>
+          {report.technician_notes && <p className="text-sm whitespace-pre-wrap">{report.technician_notes}</p>}
+          {(report.technician_deliverables || report.technician_handover) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {report.technician_deliverables && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">1. Deliverables</p>
+                  <p className="text-sm whitespace-pre-wrap">{report.technician_deliverables}</p>
+                </div>
+              )}
+              {report.technician_handover && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider">2. Handover</p>
+                  <p className="text-sm whitespace-pre-wrap">{report.technician_handover}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1208,12 +1224,28 @@ export default function InstallationReportDetail() {
           })()}
 
           {/* Post Job Technician Note */}
-          {report.technician_notes && (
+          {(report.technician_notes || report.technician_deliverables || report.technician_handover) && (
             <div style={{ marginBottom: '20px' }}>
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '10px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Post Job Technician Note</span>
               </div>
-              <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '12px' }}>{report.technician_notes}</div>
+              {report.technician_notes && <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '12px', background: '#f9fafb', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '12px', marginBottom: '10px' }}>{report.technician_notes}</div>}
+              {(report.technician_deliverables || report.technician_handover) && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
+                  {report.technician_deliverables && (
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '8px 10px', background: '#f9fafb' }}>
+                      <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>1. Deliverables</div>
+                      <div style={{ fontSize: '11px', color: '#111827', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{report.technician_deliverables}</div>
+                    </div>
+                  )}
+                  {report.technician_handover && (
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '4px', padding: '8px 10px', background: '#f9fafb' }}>
+                      <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>2. Handover</div>
+                      <div style={{ fontSize: '11px', color: '#111827', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{report.technician_handover}</div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
