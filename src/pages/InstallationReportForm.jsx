@@ -614,7 +614,7 @@ export default function InstallationReportForm() {
                         className="absolute top-2 right-2 text-muted-foreground hover:text-destructive">
                         <Trash2 size={12} />
                       </button>
-                      {(item.device_name === 'PC' || item.device_name === 'HDMI Extender') && (
+                      {item.device_name === 'PC' && (
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div className="space-y-1">
                             <Label className="text-xs">SKU</Label>
@@ -627,6 +627,18 @@ export default function InstallationReportForm() {
                           <div className="space-y-1">
                             <Label className="text-xs">Anydesk</Label>
                             <Input className="h-8 text-xs" value={item.anydesk || ''} onChange={e => updateSectionItem(si, ii, 'anydesk', e.target.value)} placeholder="Anydesk ID" />
+                          </div>
+                        </div>
+                      )}
+                      {item.device_name === 'HDMI Extender' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">SKU</Label>
+                            <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU / Serial Number" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Model</Label>
+                            <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
                           </div>
                         </div>
                       )}
