@@ -336,6 +336,12 @@ export default function NewReport() {
                             setLicenseOpen(prev => ({ ...prev, [si]: true }));
                             updateSectionName(si, '');
                           }}
+                          onBlur={() => {
+                            setTimeout(() => {
+                              setLicenseSearch(prev => ({ ...prev, [si]: undefined }));
+                              setLicenseOpen(prev => ({ ...prev, [si]: false }));
+                            }, 150);
+                          }}
                           placeholder="Select license"
                           className="bg-background text-xs h-8 font-semibold pr-9"
                         />
