@@ -12,7 +12,7 @@ import ExportButtons from '@/components/ExportButtons';
 
 const empty = { client: '', outlet: '', license_name: '', license_number: '', pc_sku: '', processor: '', anydesk: '', tv_sku: '' };
 const FIELDS = [
-  ['client', 'Client']
+  ['client', 'Client'],
   ['outlet', 'Outlet'],
   ['license_name', 'License Name'],
   ['license_number', 'License Number'],
