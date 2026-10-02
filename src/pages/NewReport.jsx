@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock, Save } from 'lucide-react';
+import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock, Save, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 
@@ -58,6 +58,7 @@ export default function NewReport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [licenseSearch, setLicenseSearch] = useState({});
+  const [licenseOpen, setLicenseOpen] = useState({});
 
   const [form, setForm] = useState({
     running_number: '',
@@ -323,18 +324,29 @@ export default function NewReport() {
                   <div className="flex items-center gap-2">
                     
                     <div className="relative flex-1">
-                      <Input
-                        value={licenseSearch[si] ?? sec.section_name ?? ''}
-                        onFocus={() => setLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }))}
-                        onChange={e => {
-                          setLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
-                          updateSectionName(si, '');
-                        }}
-                        placeholder="Search license name..."
-                        className="bg-background text-xs h-8 font-semibold"
-                      />
+                      <div className="relative">
+                        <Input
+                          value={licenseSearch[si] ?? sec.section_name ?? ''}
+                          onClick={() => {
+                            setLicenseOpen(prev => ({ ...prev, [si]: !prev[si] }));
+                            setLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }));
+                          }}
+                          onChange={e => {
+                            setLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
+                            setLicenseOpen(prev => ({ ...prev, [si]: true }));
+                            updateSectionName(si, '');
+                          }}
+                          placeholder="Select license"
+                          className="bg-background text-xs h-8 font-semibold pr-9"
+                        />
 
-                      {licenseSearch[si] !== undefined && (
+                        <ChevronDown
+                          size={16}
+                          className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${licenseOpen[si] ? 'rotate-180' : ''}`}
+                        />
+                      </div>
+
+                      {licenseOpen[si] && (
                         <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
                           {licenseNameOptions.filter(name =>
                             name.toLowerCase().includes((licenseSearch[si] || '').toLowerCase())
@@ -348,6 +360,7 @@ export default function NewReport() {
                                   onClick={() => {
                                     updateSectionName(si, name);
                                     setLicenseSearch(prev => ({ ...prev, [si]: undefined }));
+                                    setLicenseOpen(prev => ({ ...prev, [si]: false }));
                                   }}
                                   className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
                                 >
