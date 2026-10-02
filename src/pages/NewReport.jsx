@@ -75,6 +75,10 @@ export default function NewReport() {
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
   const { data: staffList = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
+  const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
+
+  const licenseNameOptions = [...new Set(inventoryItems.map(item => String(item.license_name || '').trim()).filter(Boolean))].sort();
+
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
@@ -315,12 +319,14 @@ export default function NewReport() {
                 <div key={si} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-muted/10">
                   {/* Section header */}
                   <div className="flex items-center gap-2">
-                    <Input
-                      value={sec.section_name}
-                      onChange={e => updateSectionName(si, e.target.value)}
-                      placeholder="Section name (e.g. Level 1, Lobby)"
-                      className="bg-background text-xs h-8 font-semibold flex-1"
-                    />
+                    <Select value={sec.section_name || undefined} onValueChange={v => updateSectionName(si, v)}>
+                      <SelectTrigger className="bg-background text-xs h-8 font-semibold flex-1">
+                        <SelectValue placeholder="Select license name" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {licenseNameOptions.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                     {affectedSections.length > 1 && (
                       <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                         <X size={14} />
