@@ -232,6 +232,9 @@ export default function L1DraftEditor({ report }) {
             <div key={si} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-muted/10">
               <div className="flex items-center gap-2">
                 
+                <p className="text-xs text-red-500">License options: {licenseNameOptions.length}</p>
+
+
                 <Select value={sec.section_name || undefined} onValueChange={(v) => updateSectionName(si, v)}>
                   <SelectTrigger className="bg-background text-xs h-8 font-semibold flex-1">
                     <SelectValue placeholder="Select license name" />
