@@ -232,7 +232,7 @@ export default function L1DraftEditor({ report }) {
             <div key={si} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-muted/10">
               <div className="flex items-center gap-2">
                 
-                <p className="text-xs text-red-500">License options: {licenseNameOptions.length}</p>
+        
 
 
                 <Select value={sec.section_name || undefined} onValueChange={(v) => updateSectionName(si, v)}>
@@ -243,7 +243,6 @@ export default function L1DraftEditor({ report }) {
 
 
                   <SelectContent>
-                    <SelectItem value="TEST">TEST DROPDOWN</SelectItem>
                     {licenseNameOptions.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}
                   </SelectContent>
 
