@@ -45,14 +45,7 @@ export default function L1DraftEditor({ report }) {
 
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list()});
 
-  const licenseNameOptions = [
-   ...new Set(
-     inventoryItems
-       .map((item) => item.license_name)
-       .filter(Boolean)
-       .map((name) => String(name).trim())
-   )
-  ].sort();
+  const licenseNameOptions = [...new Set(inventoryItems.map((item) => String(item.license_name || '').trim()).filter(Boolean))].sort();
 
   const [form, setForm] = useState({
     reported_by: report.reported_by || '',
@@ -252,7 +245,7 @@ export default function L1DraftEditor({ report }) {
                   </SelectContent>
 
 
-                  
+
                 </Select>
 
                 {sections.length > 1 && (
