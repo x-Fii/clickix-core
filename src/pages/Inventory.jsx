@@ -10,8 +10,9 @@ import { Plus, Pencil, Trash2, Boxes, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import ExportButtons from '@/components/ExportButtons';
 
-const empty = { outlet: '', license_name: '', license_number: '', pc_sku: '', processor: '', anydesk: '', tv_sku: '' };
+const empty = { client: '', outlet: '', license_name: '', license_number: '', pc_sku: '', processor: '', anydesk: '', tv_sku: '' };
 const FIELDS = [
+  ['client', 'Client']
   ['outlet', 'Outlet'],
   ['license_name', 'License Name'],
   ['license_number', 'License Number'],
