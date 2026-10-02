@@ -101,6 +101,7 @@ export default function InstallationReportForm() {
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
 
   const licenseNameOptions = [...new Set(inventoryItems.map(item => String(item.license_name || '').trim()).filter(Boolean))].sort();
+  const getInventoryByLicense = (licenseName) => inventoryItems.find(item => String(item.license_name || '').trim() === String(licenseName || '').trim());
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
