@@ -325,6 +325,7 @@ export default function NewReport() {
                     <div className="relative flex-1">
                       <Input
                         value={licenseSearch[si] ?? sec.section_name ?? ''}
+                        onFocus={() => setLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }))}
                         onChange={e => {
                           setLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
                           updateSectionName(si, '');
