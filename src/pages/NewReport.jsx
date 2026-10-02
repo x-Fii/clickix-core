@@ -11,6 +11,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
+
+
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const emptyItem = () => ({ device_type: '', device_name: '', issue_description: '' });
 const emptySection = () => ({ section_name: '', items: [emptyItem()] });
@@ -55,6 +57,7 @@ const Field = ({ label, required, children }) => (
 export default function NewReport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [licenseSearch, setLicenseSearch] = useState({});
 
   const [form, setForm] = useState({
     running_number: '',
@@ -78,7 +81,6 @@ export default function NewReport() {
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
 
   const licenseNameOptions = [...new Set(inventoryItems.map(item => String(item.license_name || '').trim()).filter(Boolean))].sort();
-
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
@@ -319,14 +321,47 @@ export default function NewReport() {
                 <div key={si} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-muted/10">
                   {/* Section header */}
                   <div className="flex items-center gap-2">
-                    <Select value={sec.section_name || undefined} onValueChange={v => updateSectionName(si, v)}>
-                      <SelectTrigger className="bg-background text-xs h-8 font-semibold flex-1">
-                        <SelectValue placeholder="Select license name" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {licenseNameOptions.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    
+                    <div className="relative flex-1">
+                      <Input
+                        value={licenseSearch[si] ?? sec.section_name ?? ''}
+                        onChange={e => {
+                          setLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
+                          updateSectionName(si, '');
+                        }}
+                        placeholder="Search license name..."
+                        className="bg-background text-xs h-8 font-semibold"
+                      />
+
+                      {licenseSearch[si] !== undefined && (
+                        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                          {licenseNameOptions.filter(name =>
+                            name.toLowerCase().includes((licenseSearch[si] || '').toLowerCase())
+                          ).length > 0 ? (
+                            licenseNameOptions
+                              .filter(name => name.toLowerCase().includes((licenseSearch[si] || '').toLowerCase()))
+                              .map(name => (
+                                <button
+                                  key={name}
+                                  type="button"
+                                  onClick={() => {
+                                    updateSectionName(si, name);
+                                    setLicenseSearch(prev => ({ ...prev, [si]: undefined }));
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
+                                >
+                                  {name}
+                                </button>
+                              ))
+                          ) : (
+                            <div className="px-3 py-2 text-xs text-muted-foreground">
+                              No license found
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {affectedSections.length > 1 && (
                       <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                         <X size={14} />
