@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ArrowLeft, Plus, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Upload, X, ChevronDown } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import SignaturePad from '@/components/SignaturePad';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
@@ -29,6 +29,11 @@ const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', 
 const blankSection = () => ({ section_name: '', license_key: '', items: [] });
 const blankDecommItem = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '' });
 const blankDecommSection = () => ({ section_name: '', items: [blankDecommItem()] });
+
+const parseInventoryValues = (value) => {
+  if (!value) return [];
+  return String(value).split(/[,，]/).map(v => v.trim()).filter(Boolean);
+};
 
 export default function InstallationReportForm() {
   const { id } = useParams();
@@ -78,6 +83,12 @@ export default function InstallationReportForm() {
 
   const [uploading, setUploading] = useState(false);
   const [uploadingStamp, setUploadingStamp] = useState(false);
+
+  const [commissionLicenseSearch, setCommissionLicenseSearch] = useState({});
+  const [commissionLicenseOpen, setCommissionLicenseOpen] = useState({});
+
+
+
   // Tracks the report id we've already seeded the form for, so the form is
   // populated exactly once per report (whether the data came from a fresh
   // fetch or from React Query cache) and never re-seeded while editing.
@@ -87,6 +98,9 @@ export default function InstallationReportForm() {
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
   const { data: staff = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
+  const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
+
+  const licenseNameOptions = [...new Set(inventoryItems.map(item => String(item.license_name || '').trim()).filter(Boolean))].sort();
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
@@ -586,12 +600,48 @@ export default function InstallationReportForm() {
               <div key={si} className="border border-primary/30 rounded-lg p-4 space-y-3 bg-muted/10">
                 {/* Section header */}
                 <div className="flex items-center gap-2">
-                  <Input
-                    className="h-8 text-sm font-semibold flex-1"
-                    value={sec.section_name}
-                    onChange={e => updateSectionName(si, e.target.value)}
-                    placeholder={`Section name (e.g. Level 1, Server Room)`}
-                  />
+                  <div className="relative flex-1">
+                    <div className="relative">
+                      <Input
+                        className="h-8 text-sm font-semibold pr-9"
+                        value={commissionLicenseSearch[si] ?? sec.section_name ?? ''}
+                        onClick={() => {
+                          setCommissionLicenseOpen(prev => ({ ...prev, [si]: !prev[si] }));
+                          setCommissionLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }));
+                        }}
+                        onChange={e => {
+                          setCommissionLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
+                          setCommissionLicenseOpen(prev => ({ ...prev, [si]: true }));
+                          updateSectionName(si, '');
+                        }}
+                        placeholder="Select license"
+                      />
+                      <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${commissionLicenseOpen[si] ? 'rotate-180' : ''}`} />
+                    </div>
+
+                    {commissionLicenseOpen[si] && (
+                      <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                        {licenseNameOptions.filter(name => name.toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase())).map(name => (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => {
+                              const selectedInventory = inventoryItems.find(item => String(item.license_name || '').trim() === name);
+
+                              updateSectionName(si, name);
+                              updateSectionLicenseKey(si, selectedInventory?.license_number || '');
+
+                              setCommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
+                              setCommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
+                            }}
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                     <Trash2 size={14} />
                   </button>
@@ -599,10 +649,10 @@ export default function InstallationReportForm() {
                 <div className="flex items-center gap-2 pl-2">
                   <Label className="text-xs whitespace-nowrap">License Key</Label>
                   <Input
-                    className="h-8 text-xs font-mono flex-1"
+                    className="h-8 text-xs font-mono flex-1 bg-muted/40 cursor-not-allowed"
                     value={sec.license_key || ''}
-                    onChange={e => updateSectionLicenseKey(si, e.target.value)}
-                    placeholder="Enter license key for this section"
+                    readOnly
+                    placeholder="Autofilled from selected license"
                   />
                 </div>
                 {/* Items within section */}
