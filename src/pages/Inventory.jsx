@@ -22,6 +22,37 @@ const FIELDS = [
   ['tv_sku', 'TV SKU'],
 ];
 
+const MULTI_VALUE_FIELDS = ['pc_sku', 'processor', 'anydesk', 'tv_sku'];
+
+const parseMultiValue = (value) => {
+  if (!value) return [];
+
+  return String(value)
+    .split(/[,，]/)
+    .map(v => v.trim())
+    .filter(Boolean);
+};
+
+const renderFieldValue = (key, value) => {
+  if (!value) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  if (!MULTI_VALUE_FIELDS.includes(key)) {
+    return value;
+  }
+
+  const values = parseMultiValue(value);
+
+  return (
+    <div className="space-y-1">
+      {values.map((item, index) => (
+        <div key={index}>{item}</div>
+      ))}
+    </div>
+  );
+};
+
 export default function Inventory() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -107,7 +138,8 @@ export default function Inventory() {
               {sorted.map(c => (
                 <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors group">
                   {FIELDS.map(([key]) => (
-                    <td key={key} className="px-4 py-3 text-xs">{c[key] || <span className="text-muted-foreground">—</span>}</td>
+                    <td key={key} className="px-4 py-3 text-xs align-top">
+                  {renderFieldValue(key, c[key])}</td>
                   ))}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
