@@ -243,9 +243,16 @@ export default function L1DraftEditor({ report }) {
                   <SelectTrigger className="bg-background text-xs h-8 font-semibold flex-1">
                     <SelectValue placeholder="Select license name" />
                   </SelectTrigger>
+                 
+
+
                   <SelectContent>
+                    <SelectItem value="TEST">TEST DROPDOWN</SelectItem>
                     {licenseNameOptions.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}
                   </SelectContent>
+
+
+                  
                 </Select>
 
                 {sections.length > 1 && (
