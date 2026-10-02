@@ -2,6 +2,9 @@
   "name": "Inventory",
   "type": "object",
   "properties": {
+    "client": {
+      "type": "string"
+    },
     "outlet": {
       "type": "string"
     },
