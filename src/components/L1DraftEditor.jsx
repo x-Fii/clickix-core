@@ -240,12 +240,33 @@ export default function L1DraftEditor({ report }) {
           {sections.map((sec, si) => (
             <div key={si} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-muted/10">
               <div className="flex items-center gap-2">
-                <Input
-                  value={sec.section_name}
-                  onChange={(e) => updateSectionName(si, e.target.value)}
-                  placeholder="Section name (e.g. Level 1, Lobby)"
-                  className="bg-background text-xs h-8 font-semibold flex-1"
-                />
+                
+                <Popover open={sectionDropdownOpen === si} onOpenChange={(open) => setSectionDropdownOpen(open ? si : null)}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" role="combobox" className="bg-background text-xs h-8 font-semibold flex-1 justify-between">
+                      {sec.section_name || 'Select license name'}
+                      <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+
+                  <PopoverContent className="p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                    <Command>
+                      <CommandInput placeholder="Search license name..." />
+                      <CommandList>
+                        <CommandEmpty>No license name found.</CommandEmpty>
+                        <CommandGroup>
+                          {licenseNameOptions.map((name) => (
+                            <CommandItem key={name} value={name} onSelect={() => { updateSectionName(si, name); setSectionDropdownOpen(null); }}>
+                              <Check className={`mr-2 h-4 w-4 ${sec.section_name === name ? 'opacity-100' : 'opacity-0'}`} />
+                              {name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
                 {sections.length > 1 && (
                   <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                     <X size={14} />
