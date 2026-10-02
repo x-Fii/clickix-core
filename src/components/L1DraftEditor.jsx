@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, X, Save, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { Plus, X, Save, CheckCircle, AlertTriangle, Clock, ChevronsUpDown, Check} from 'lucide-react';
 import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList} from '@/components/ui/command';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const PILLARS = ['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'];
@@ -39,6 +42,19 @@ const ReadField = ({ label, value }) => (
 
 export default function L1DraftEditor({ report }) {
   const queryClient = useQueryClient();
+
+  const [sectionDropdownOpen, setSectionDropdownOpen] = useState(null);
+
+  const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list()});
+
+  const licenseNameOptions = [
+   ...new Set(
+     inventoryItems
+       .map((item) => item.license_name)
+       .filter(Boolean)
+       .map((name) => String(name).trim())
+   )
+  ].sort();
 
   const [form, setForm] = useState({
     reported_by: report.reported_by || '',
