@@ -87,7 +87,14 @@ export default function InstallationReportForm() {
   const [commissionLicenseSearch, setCommissionLicenseSearch] = useState({});
   const [commissionLicenseOpen, setCommissionLicenseOpen] = useState({});
 
+  const [decommissionLicenseSearch, setDecommissionLicenseSearch] = useState({});
+  const [decommissionLicenseOpen, setDecommissionLicenseOpen] = useState({});
 
+  const [skuSearch, setSkuSearch] = useState({});
+  const [skuOpen, setSkuOpen] = useState({});
+
+  const [modelSearch, setModelSearch] = useState({});
+  const [modelOpen, setModelOpen] = useState({});
 
   // Tracks the report id we've already seeded the form for, so the form is
   // populated exactly once per report (whether the data came from a fresh
@@ -101,7 +108,17 @@ export default function InstallationReportForm() {
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
 
   const licenseNameOptions = [...new Set(inventoryItems.map(item => String(item.license_name || '').trim()).filter(Boolean))].sort();
+
   const getInventoryByLicense = (licenseName) => inventoryItems.find(item => String(item.license_name || '').trim() === String(licenseName || '').trim());
+
+  const getSkuOptions = (licenseName) => {
+    const inventory = getInventoryByLicense(licenseName);
+    return [...new Set([...parseInventoryValues(inventory?.pc_sku), ...parseInventoryValues(inventory?.tv_sku)])];
+  };
+
+  const getProcessorOptions = (licenseName) => parseInventoryValues(getInventoryByLicense(licenseName)?.processor);
+
+  const getAnydeskValue = (licenseName) => getInventoryByLicense(licenseName)?.anydesk || '';
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
@@ -218,6 +235,29 @@ export default function InstallationReportForm() {
     arr[si] = { ...arr[si], license_key: val };
     set('equipment_sections', arr);
   };
+
+  const selectCommissionLicense = (si, name) => {
+    const selectedInventory = getInventoryByLicense(name);
+
+    setForm(f => ({
+      ...f,
+      equipment_sections: (f.equipment_sections || []).map((sec, index) =>
+        index === si
+          ? {
+              ...sec,
+              section_name: name,
+              license_key: selectedInventory?.license_number || '',
+              items: (sec.items || []).map(item =>
+                item.device_name === 'PC'
+                  ? { ...item, anydesk: selectedInventory?.anydesk || '' }
+                  : item
+              ),
+            }
+          : sec
+      ),
+    }));
+  };
+
   const addItemToSection = (si) => {
     const arr = [...form.equipment_sections];
     arr[si] = { ...arr[si], items: [...(arr[si].items || []), blankItem()] };
@@ -249,7 +289,19 @@ export default function InstallationReportForm() {
         if (existingIdx >= 0) {
           items.splice(existingIdx, 1);
         } else {
-          items.push({ device_type: device.type, device_name: device.fillIn ? '' : device.name, serial_number: '', model: '', sku: '', anydesk: '', length: '', quantity: '', num_ports: '', num_gang: '', notes: '' });
+          items.push({
+            device_type: device.type,
+            device_name: device.fillIn ? '' : device.name,
+            serial_number: '',
+            model: '',
+            sku: '',
+            anydesk: device.name === 'PC' ? getAnydeskValue(sec.section_name) : '',
+            length: '',
+            quantity: '',
+            num_ports: '',
+            num_gang: '',
+            notes: ''
+          });
         }
         return { ...sec, items };
       });
@@ -601,48 +653,63 @@ export default function InstallationReportForm() {
               <div key={si} className="border border-primary/30 rounded-lg p-4 space-y-3 bg-muted/10">
                 {/* Section header */}
                 <div className="flex items-center gap-2">
+                  
                   <div className="relative flex-1">
-                    <div className="relative">
-                      <Input
-                        className="h-8 text-sm font-semibold pr-9"
-                        value={commissionLicenseSearch[si] ?? sec.section_name ?? ''}
-                        onClick={() => {
-                          setCommissionLicenseOpen(prev => ({ ...prev, [si]: !prev[si] }));
-                          setCommissionLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }));
-                        }}
-                        onChange={e => {
-                          setCommissionLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
-                          setCommissionLicenseOpen(prev => ({ ...prev, [si]: true }));
-                          updateSectionName(si, '');
-                        }}
-                        placeholder="Select license"
-                      />
-                      <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${commissionLicenseOpen[si] ? 'rotate-180' : ''}`} />
-                    </div>
+                  <div className="relative">
+                    <Input
+                      className="h-8 text-sm font-semibold pr-9"
+                      value={commissionLicenseSearch[si] ?? sec.section_name ?? ''}
+                      onClick={() => {
+                        setCommissionLicenseOpen(prev => ({ ...prev, [si]: !prev[si] }));
+                        setCommissionLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }));
+                      }}
+                      onChange={e => {
+                        setCommissionLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
+                        setCommissionLicenseOpen(prev => ({ ...prev, [si]: true }));
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => {
+                          setCommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
+                          setCommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
+                        }, 150);
+                      }}
+                      placeholder="Select license"
+                    />
 
-                    {commissionLicenseOpen[si] && (
-                      <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                        {licenseNameOptions.filter(name => name.toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase())).map(name => (
-                          <button
-                            key={name}
-                            type="button"
-                            onClick={() => {
-                              const selectedInventory = inventoryItems.find(item => String(item.license_name || '').trim() === name);
-
-                              updateSectionName(si, name);
-                              updateSectionLicenseKey(si, selectedInventory?.license_number || '');
-
-                              setCommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
-                              setCommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
-                            }}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
-                          >
-                            {name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${commissionLicenseOpen[si] ? 'rotate-180' : ''}`} />
                   </div>
+
+                  {commissionLicenseOpen[si] && (
+                    <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                      {licenseNameOptions.filter(name =>
+                        name.toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase())
+                      ).length > 0 ? (
+                        licenseNameOptions
+                          .filter(name => name.toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase()))
+                          .map(name => (
+                            <button
+                              key={name}
+                              type="button"
+                              onClick={() => {
+                                selectCommissionLicense(si, name);
+                                setCommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
+                                setCommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
+                              }}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
+                            >
+                              {name}
+                            </button>
+                          ))
+                      ) : (
+                        <div className="px-3 py-2 text-xs text-muted-foreground">
+                          No license found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+
                   <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                     <Trash2 size={14} />
                   </button>
@@ -681,27 +748,183 @@ export default function InstallationReportForm() {
                       </button>
                       {item.device_name === 'PC' && (
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs">SKU</Label>
-                            <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU / Serial Number" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Model</Label>
-                            <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
-                          </div>
-                          <div className="space-y-1">
+                          <div className="space-y-1 relative">
+                  <Label className="text-xs">SKU</Label>
+
+                  <div className="relative">
+                    <Input
+                      className="h-8 text-xs pr-9"
+                      value={skuSearch[`${si}-${ii}`] ?? item.sku ?? ''}
+                      onClick={() => {
+                        const key = `${si}-${ii}`;
+                        setSkuOpen(prev => ({ ...prev, [key]: !prev[key] }));
+                        setSkuSearch(prev => ({ ...prev, [key]: prev[key] ?? '' }));
+                      }}
+                      onChange={e => {
+                        const key = `${si}-${ii}`;
+                        setSkuSearch(prev => ({ ...prev, [key]: e.target.value }));
+                        setSkuOpen(prev => ({ ...prev, [key]: true }));
+                        updateSectionItem(si, ii, 'sku', '');
+                      }}
+                      placeholder="Select SKU"
+
+                      onBlur={() => {
+                        const key = `${si}-${ii}`;
+                        setTimeout(() => {
+                          setSkuSearch(prev => ({ ...prev, [key]: undefined }));
+                          setSkuOpen(prev => ({ ...prev, [key]: false }));
+                        }, 150);
+                      }}
+                    />
+
+                    <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${skuOpen[`${si}-${ii}`] ? 'rotate-180' : ''}`} />
+                  </div>
+
+                  {skuOpen[`${si}-${ii}`] && (
+                    <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                      {getSkuOptions(sec.section_name)
+                        .filter(sku => sku.toLowerCase().includes((skuSearch[`${si}-${ii}`] || '').toLowerCase()))
+                        .map(sku => (
+                          <button
+                            key={sku}
+                            type="button"
+                            onClick={() => {
+                              const key = `${si}-${ii}`;
+                              updateSectionItem(si, ii, 'sku', sku);
+                              setSkuSearch(prev => ({ ...prev, [key]: undefined }));
+                              setSkuOpen(prev => ({ ...prev, [key]: false }));
+                            }}
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
+                          >
+                            {sku}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                          <div className="space-y-1 relative">
+          <Label className="text-xs">Model</Label>
+
+          <div className="relative">
+            <Input
+              className="h-8 text-xs pr-9"
+              value={modelSearch[`${si}-${ii}`] ?? item.model ?? ''}
+              onClick={() => {
+                const key = `${si}-${ii}`;
+                setModelOpen(prev => ({ ...prev, [key]: !prev[key] }));
+                setModelSearch(prev => ({ ...prev, [key]: prev[key] ?? item.model ?? '' }));
+              }}
+              onChange={e => {
+                const key = `${si}-${ii}`;
+                setModelSearch(prev => ({ ...prev, [key]: e.target.value }));
+                setModelOpen(prev => ({ ...prev, [key]: true }));
+                updateSectionItem(si, ii, 'model', e.target.value);
+              }}
+              onBlur={() => {
+                const key = `${si}-${ii}`;
+                setTimeout(() => {
+                  setModelSearch(prev => ({ ...prev, [key]: undefined }));
+                  setModelOpen(prev => ({ ...prev, [key]: false }));
+                }, 150);
+              }}
+              placeholder="Select or enter model"
+            />
+
+            <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${modelOpen[`${si}-${ii}`] ? 'rotate-180' : ''}`} />
+          </div>
+
+          {modelOpen[`${si}-${ii}`] && (
+            <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+              {getProcessorOptions(sec.section_name)
+                .filter(model => model.toLowerCase().includes((modelSearch[`${si}-${ii}`] || '').toLowerCase()))
+                .map(model => (
+                  <button
+                    key={model}
+                    type="button"
+                    onClick={() => {
+                      const key = `${si}-${ii}`;
+                      updateSectionItem(si, ii, 'model', model);
+                      setModelSearch(prev => ({ ...prev, [key]: undefined }));
+                      setModelOpen(prev => ({ ...prev, [key]: false }));
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
+                  >
+                    {model}
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+                         <div className="space-y-1">
                             <Label className="text-xs">Anydesk</Label>
-                            <Input className="h-8 text-xs" value={item.anydesk || ''} onChange={e => updateSectionItem(si, ii, 'anydesk', e.target.value)} placeholder="Anydesk ID" />
+                            <Input
+                              className="h-8 text-xs bg-muted/40 cursor-not-allowed"
+                              value={item.anydesk || getAnydeskValue(sec.section_name)}
+                              readOnly
+                              placeholder="Autofilled from selected license"
+                            />
                           </div>
+
                         </div>
                       )}
+
                       {item.device_name === 'HDMI Extender' && (
                         <>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-xs">SKU</Label>
-                              <Input className="h-8 text-xs" value={item.sku || ''} onChange={e => updateSectionItem(si, ii, 'sku', e.target.value)} placeholder="SKU / Serial Number" />
+                            <div className="space-y-1 relative">
+                            <Label className="text-xs">SKU</Label>
+
+                            <div className="relative">
+                              <Input
+                                className="h-8 text-xs pr-9"
+                                value={skuSearch[`${si}-${ii}`] ?? item.sku ?? ''}
+                                onClick={() => {
+                                  const key = `${si}-${ii}`;
+                                  setSkuOpen(prev => ({ ...prev, [key]: !prev[key] }));
+                                  setSkuSearch(prev => ({ ...prev, [key]: prev[key] ?? '' }));
+                                }}
+                                onChange={e => {
+                                  const key = `${si}-${ii}`;
+                                  setSkuSearch(prev => ({ ...prev, [key]: e.target.value }));
+                                  setSkuOpen(prev => ({ ...prev, [key]: true }));
+                                  updateSectionItem(si, ii, 'sku', '');
+                                }}
+                                placeholder="Select SKU"
+
+                                onBlur={() => {
+                                  const key = `${si}-${ii}`;
+                                  setTimeout(() => {
+                                    setSkuSearch(prev => ({ ...prev, [key]: undefined }));
+                                    setSkuOpen(prev => ({ ...prev, [key]: false }));
+                                  }, 150);
+                                }}
+                              />
+
+                              <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${skuOpen[`${si}-${ii}`] ? 'rotate-180' : ''}`} />
                             </div>
+
+                            {skuOpen[`${si}-${ii}`] && (
+                              <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                                {getSkuOptions(sec.section_name)
+                                  .filter(sku => sku.toLowerCase().includes((skuSearch[`${si}-${ii}`] || '').toLowerCase()))
+                                  .map(sku => (
+                                    <button
+                                      key={sku}
+                                      type="button"
+                                      onClick={() => {
+                                        const key = `${si}-${ii}`;
+                                        updateSectionItem(si, ii, 'sku', sku);
+                                        setSkuSearch(prev => ({ ...prev, [key]: undefined }));
+                                        setSkuOpen(prev => ({ ...prev, [key]: false }));
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
+                                    >
+                                      {sku}
+                                    </button>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Model</Label>
                               <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
@@ -798,12 +1021,54 @@ export default function InstallationReportForm() {
               <div key={si} className="border border-primary/30 rounded-lg p-4 space-y-3 bg-muted/10">
                 {/* Section header */}
                 <div className="flex items-center gap-2">
-                  <Input
-                    className="h-8 text-sm font-semibold flex-1"
-                    value={sec.section_name}
-                    onChange={e => updateDecommSectionName(si, e.target.value)}
-                    placeholder={`Section name (e.g. Level 1, Server Room)`}
-                  />
+                  
+                  <div className="relative flex-1">
+                    <div className="relative">
+                      <Input
+                        className="h-8 text-sm font-semibold pr-9"
+                        value={decommissionLicenseSearch[si] ?? sec.section_name ?? ''}
+                        onClick={() => {
+                          setDecommissionLicenseOpen(prev => ({ ...prev, [si]: !prev[si] }));
+                          setDecommissionLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }));
+                        }}
+                        onChange={e => {
+                          setDecommissionLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
+                          setDecommissionLicenseOpen(prev => ({ ...prev, [si]: true }));
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            setDecommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
+                            setDecommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
+                          }, 150);
+                        }}
+                        placeholder="Select license"
+                      />
+
+                      <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${decommissionLicenseOpen[si] ? 'rotate-180' : ''}`} />
+                    </div>
+
+                    {decommissionLicenseOpen[si] && (
+                      <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                        {licenseNameOptions
+                          .filter(name => name.toLowerCase().includes((decommissionLicenseSearch[si] || '').toLowerCase()))
+                          .map(name => (
+                            <button
+                              key={name}
+                              type="button"
+                              onClick={() => {
+                                updateDecommSectionName(si, name);
+                                setDecommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
+                                setDecommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
+                              }}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
+                            >
+                              {name}
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
                   <button type="button" onClick={() => removeDecommSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                     <Trash2 size={14} />
                   </button>
