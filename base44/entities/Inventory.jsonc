@@ -5,6 +5,9 @@
     "client": {
       "type": "string"
     },
+    "site_name": {
+      "type": "string"
+    },
     "outlet": {
       "type": "string"
     },
