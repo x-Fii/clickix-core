@@ -336,6 +336,221 @@
     },
     "admin_email": {
       "type": "string"
+    },
+    "staged_clients": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "temp_id": {
+            "type": "string"
+          },
+          "company_name": {
+            "type": "string"
+          },
+          "contact_person": {
+            "type": "string"
+          },
+          "pic_designation": {
+            "type": "string"
+          },
+          "contact_email": {
+            "type": "string"
+          },
+          "contact_phone": {
+            "type": "string"
+          },
+          "company_website": {
+            "type": "string"
+          },
+          "sla": {
+            "type": "string"
+          },
+          "cms_subscriptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "hardware": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "address": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "staged_sites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "temp_id": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string"
+          },
+          "staged_client_temp_id": {
+            "type": "string"
+          },
+          "site_name": {
+            "type": "string"
+          },
+          "site_location": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "pic_name": {
+            "type": "string"
+          },
+          "pic_phone": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "status": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "staged_licenses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "temp_id": {
+            "type": "string"
+          },
+          "license_name": {
+            "type": "string"
+          },
+          "license_number": {
+            "type": "string"
+          },
+          "pc_sku": {
+            "type": "string"
+          },
+          "tv_sku": {
+            "type": "string"
+          },
+          "processor": {
+            "type": "string"
+          },
+          "anydesk": {
+            "type": "string"
+          },
+          "outlet": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string"
+          },
+          "staged_client_temp_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "site_name": {
+            "type": "string"
+          },
+          "staged_site_temp_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sync_status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "in_progress",
+        "succeeded",
+        "partially_failed",
+        "failed",
+        "pending_approval"
+      ],
+      "default": "not_started"
+    },
+    "sync_attempt_number": {
+      "type": "number"
+    },
+    "sync_last_attempt_at": {
+      "type": "string"
+    },
+    "sync_succeeded_at": {
+      "type": "string"
+    },
+    "sync_last_error": {
+      "type": "string"
+    },
+    "sync_stage_results": {
+      "type": "object",
+      "properties": {
+        "resolve_client": {
+          "type": "string"
+        },
+        "resolve_site": {
+          "type": "string"
+        },
+        "resolve_inventory": {
+          "type": "string"
+        },
+        "create_equipment": {
+          "type": "string"
+        },
+        "append_inventory": {
+          "type": "string"
+        },
+        "finalize": {
+          "type": "string"
+        }
+      }
+    },
+    "temp_id_mapping": {
+      "type": "object"
+    },
+    "last_synced_snapshot": {
+      "type": "object"
+    },
+    "last_synced_version": {
+      "type": "string"
+    },
+    "pending_changes_summary": {
+      "type": "string"
+    },
+    "approval_required": {
+      "type": "boolean"
+    },
+    "approved_by": {
+      "type": "string"
+    },
+    "approved_at": {
+      "type": "string"
     }
   },
   "required": []
