@@ -114,6 +114,25 @@ export default function InstallationReportForm() {
   const { data: staff = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
 
+  const [siteRegionFilter, setSiteRegionFilter] = useState('');
+  const [siteStateFilter, setSiteStateFilter] = useState('');
+  const [showAddSite, setShowAddSite] = useState(false);
+
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Phase 2 staging: new Client / Site / License records are staged on the
+  // report draft with stable temp IDs and only persisted as master records on
+  // official completion (handled by the backend synchronizer on Main).
+  // These state declarations MUST come before the derived license/site
+  // computations below, which reference stagedLicenses/stagedSites/stagedClients.
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [showAddLicense, setShowAddLicense] = useState(false);
+  const [addLicenseForSection, setAddLicenseForSection] = useState(null);
+  const [stagedClients, setStagedClients] = useState([]);
+  const [stagedSites, setStagedSites] = useState([]);
+  const [stagedLicenses, setStagedLicenses] = useState([]);
+
   // Build the eligible license list for the currently selected site.
   // site_id-linked Inventory is matched directly; legacy records without
   // site_id are eligible only via a unique normalized Client + Site Name
@@ -171,23 +190,6 @@ export default function InstallationReportForm() {
   const getProcessorOptions = (sec) => parseInventoryValues(getSectionInventory(sec)?.processor);
 
   const getAnydeskValue = (sec) => getSectionInventory(sec)?.anydesk || '';
-
-  const [siteRegionFilter, setSiteRegionFilter] = useState('');
-  const [siteStateFilter, setSiteStateFilter] = useState('');
-  const [showAddSite, setShowAddSite] = useState(false);
-
-  const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin';
-
-  // Phase 2 staging: new Client / Site / License records are staged on the
-  // report draft with stable temp IDs and only persisted as master records on
-  // official completion (handled by the backend synchronizer on Main).
-  const [showAddClient, setShowAddClient] = useState(false);
-  const [showAddLicense, setShowAddLicense] = useState(false);
-  const [addLicenseForSection, setAddLicenseForSection] = useState(null);
-  const [stagedClients, setStagedClients] = useState([]);
-  const [stagedSites, setStagedSites] = useState([]);
-  const [stagedLicenses, setStagedLicenses] = useState([]);
 
   // Phase 2 staging handlers — stage on the report draft, never create master records here.
   const stageNewClient = (fields) => {
