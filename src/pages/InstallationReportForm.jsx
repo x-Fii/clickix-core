@@ -26,14 +26,16 @@ const RELATED_DEVICES = [
 ];
 
 const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '' });
-const blankSection = () => ({ section_name: '', license_key: '', items: [] });
+const blankSection = () => ({ section_name: '', license_key: '', inventory_id: '', items: [] });
 const blankDecommItem = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '' });
-const blankDecommSection = () => ({ section_name: '', items: [blankDecommItem()] });
+const blankDecommSection = () => ({ section_name: '', inventory_id: '', items: [blankDecommItem()] });
 
 const parseInventoryValues = (value) => {
   if (!value) return [];
   return String(value).split(/[,，]/).map(v => v.trim()).filter(Boolean);
 };
+
+const norm = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
 export default function InstallationReportForm() {
   const { id } = useParams();
@@ -107,18 +109,54 @@ export default function InstallationReportForm() {
   const { data: staff = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
 
-  const licenseNameOptions = [...new Set(inventoryItems.map(item => String(item.license_name || '').trim()).filter(Boolean))].sort();
+  // Build the eligible license list for the currently selected site.
+  // site_id-linked Inventory is matched directly; legacy records without
+  // site_id are eligible only via a unique normalized Client + Site Name
+  // match to a Site under the selected client — never via Inventory.outlet.
+  // Ambiguous legacy matches (more than one Site) are excluded entirely.
+  const siteLicenses = (() => {
+    if (!form.site_id) return [];
+    const site = sites.find(s => s.id === form.site_id);
+    const siteClientName = clients.find(c => c.id === form.client_id)?.company_name || '';
+    const matched = [];
+    for (const inv of inventoryItems) {
+      if (inv.site_id) {
+        if (inv.site_id === form.site_id) matched.push(inv);
+        continue;
+      }
+      // Legacy fallback: unique normalized Client + Site Name -> Site.site_name
+      if (!siteClientName || norm(inv.client) !== norm(siteClientName)) continue;
+      if (!inv.site_name || norm(inv.site_name) !== norm(site?.site_name)) continue;
+      const sameNameSites = sites.filter(s => s.client_id === form.client_id && norm(s.site_name) === norm(inv.site_name));
+      if (sameNameSites.length === 1) matched.push(inv);
+    }
+    // De-duplicate by inventory id so duplicate license names each stay selectable
+    const seen = new Set();
+    return matched.filter(inv => { if (seen.has(inv.id)) return false; seen.add(inv.id); return true; });
+  })();
 
-  const getInventoryByLicense = (licenseName) => inventoryItems.find(item => String(item.license_name || '').trim() === String(licenseName || '').trim());
+  const licenseOptions = siteLicenses; // keyed by inv.id
 
-  const getSkuOptions = (licenseName) => {
-    const inventory = getInventoryByLicense(licenseName);
+  const getInventoryById = (invId) => inventoryItems.find(item => item.id === invId);
+
+  // Resolve the inventory record backing a section: prefer the stored
+  // inventory_id; fall back to a unique license-name match within the
+  // current site's eligible licenses (for legacy sections without an id).
+  const getSectionInventory = (sec) => {
+    if (sec.inventory_id) return getInventoryById(sec.inventory_id);
+    if (!sec.section_name) return undefined;
+    const matches = siteLicenses.filter(inv => norm(inv.license_name) === norm(sec.section_name));
+    return matches.length === 1 ? matches[0] : undefined;
+  };
+
+  const getSkuOptions = (sec) => {
+    const inventory = getSectionInventory(sec);
     return [...new Set([...parseInventoryValues(inventory?.pc_sku), ...parseInventoryValues(inventory?.tv_sku)])];
   };
 
-  const getProcessorOptions = (licenseName) => parseInventoryValues(getInventoryByLicense(licenseName)?.processor);
+  const getProcessorOptions = (sec) => parseInventoryValues(getSectionInventory(sec)?.processor);
 
-  const getAnydeskValue = (licenseName) => getInventoryByLicense(licenseName)?.anydesk || '';
+  const getAnydeskValue = (sec) => getSectionInventory(sec)?.anydesk || '';
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
@@ -236,8 +274,9 @@ export default function InstallationReportForm() {
     set('equipment_sections', arr);
   };
 
-  const selectCommissionLicense = (si, name) => {
-    const selectedInventory = getInventoryByLicense(name);
+  const selectCommissionLicense = (si, invId) => {
+    const selectedInventory = getInventoryById(invId);
+    if (!selectedInventory) return;
 
     setForm(f => ({
       ...f,
@@ -245,11 +284,12 @@ export default function InstallationReportForm() {
         index === si
           ? {
               ...sec,
-              section_name: name,
-              license_key: selectedInventory?.license_number || '',
+              section_name: selectedInventory.license_name || '',
+              license_key: selectedInventory.license_number || '',
+              inventory_id: selectedInventory.id,
               items: (sec.items || []).map(item =>
                 item.device_name === 'PC'
-                  ? { ...item, anydesk: selectedInventory?.anydesk || '' }
+                  ? { ...item, anydesk: selectedInventory.anydesk || '' }
                   : item
               ),
             }
@@ -295,7 +335,7 @@ export default function InstallationReportForm() {
             serial_number: '',
             model: '',
             sku: '',
-            anydesk: device.name === 'PC' ? getAnydeskValue(sec.section_name) : '',
+            anydesk: device.name === 'PC' ? getAnydeskValue(sec) : '',
             length: '',
             quantity: '',
             num_ports: '',
@@ -314,6 +354,13 @@ export default function InstallationReportForm() {
   const updateDecommSectionName = (si, val) => {
     const arr = [...(form.decommission_sections || [])];
     arr[si] = { ...arr[si], section_name: val };
+    set('decommission_sections', arr);
+  };
+  const selectDecommissionLicense = (si, invId) => {
+    const selectedInventory = getInventoryById(invId);
+    if (!selectedInventory) return;
+    const arr = [...(form.decommission_sections || [])];
+    arr[si] = { ...arr[si], section_name: selectedInventory.license_name || '', inventory_id: selectedInventory.id };
     set('decommission_sections', arr);
   };
   const addDecommItemToSection = (si) => {
@@ -681,28 +728,29 @@ export default function InstallationReportForm() {
 
                   {commissionLicenseOpen[si] && (
                     <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                      {licenseNameOptions.filter(name =>
-                        name.toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase())
+                      {licenseOptions.filter(inv =>
+                        String(inv.license_name || '').toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase())
                       ).length > 0 ? (
-                        licenseNameOptions
-                          .filter(name => name.toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase()))
-                          .map(name => (
+                        licenseOptions
+                          .filter(inv => String(inv.license_name || '').toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase()))
+                          .map(inv => (
                             <button
-                              key={name}
+                              key={inv.id}
                               type="button"
                               onClick={() => {
-                                selectCommissionLicense(si, name);
+                                selectCommissionLicense(si, inv.id);
                                 setCommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
                                 setCommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
                               }}
                               className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
                             >
-                              {name}
+                              <span className="font-medium">{inv.license_name}</span>
+                              {inv.license_number && <span className="text-muted-foreground font-mono ml-2">{inv.license_number}</span>}
                             </button>
                           ))
                       ) : (
                         <div className="px-3 py-2 text-xs text-muted-foreground">
-                          No license found
+                          {form.site_id ? 'No license found for this site' : 'Select a site to choose a license'}
                         </div>
                       )}
                     </div>
@@ -782,7 +830,7 @@ export default function InstallationReportForm() {
 
                   {skuOpen[`${si}-${ii}`] && (
                     <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                      {getSkuOptions(sec.section_name)
+                      {getSkuOptions(sec)
                         .filter(sku => sku.toLowerCase().includes((skuSearch[`${si}-${ii}`] || '').toLowerCase()))
                         .map(sku => (
                           <button
@@ -835,7 +883,7 @@ export default function InstallationReportForm() {
 
           {modelOpen[`${si}-${ii}`] && (
             <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-              {getProcessorOptions(sec.section_name)
+              {getProcessorOptions(sec)
                 .filter(model => model.toLowerCase().includes((modelSearch[`${si}-${ii}`] || '').toLowerCase()))
                 .map(model => (
                   <button
@@ -859,7 +907,7 @@ export default function InstallationReportForm() {
                             <Label className="text-xs">Anydesk</Label>
                             <Input
                               className="h-8 text-xs bg-muted/40 cursor-not-allowed"
-                              value={item.anydesk || getAnydeskValue(sec.section_name)}
+                              value={item.anydesk || getAnydeskValue(sec)}
                               readOnly
                               placeholder="Autofilled from selected license"
                             />
@@ -905,7 +953,7 @@ export default function InstallationReportForm() {
 
                             {skuOpen[`${si}-${ii}`] && (
                               <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                                {getSkuOptions(sec.section_name)
+                                {getSkuOptions(sec)
                                   .filter(sku => sku.toLowerCase().includes((skuSearch[`${si}-${ii}`] || '').toLowerCase()))
                                   .map(sku => (
                                     <button
@@ -1049,22 +1097,28 @@ export default function InstallationReportForm() {
 
                     {decommissionLicenseOpen[si] && (
                       <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                        {licenseNameOptions
-                          .filter(name => name.toLowerCase().includes((decommissionLicenseSearch[si] || '').toLowerCase()))
-                          .map(name => (
+                        {licenseOptions
+                          .filter(inv => String(inv.license_name || '').toLowerCase().includes((decommissionLicenseSearch[si] || '').toLowerCase()))
+                          .map(inv => (
                             <button
-                              key={name}
+                              key={inv.id}
                               type="button"
                               onClick={() => {
-                                updateDecommSectionName(si, name);
+                                selectDecommissionLicense(si, inv.id);
                                 setDecommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
                                 setDecommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
                               }}
                               className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
                             >
-                              {name}
+                              <span className="font-medium">{inv.license_name}</span>
+                              {inv.license_number && <span className="text-muted-foreground font-mono ml-2">{inv.license_number}</span>}
                             </button>
                           ))}
+                        {licenseOptions.length === 0 && (
+                          <div className="px-3 py-2 text-xs text-muted-foreground">
+                            {form.site_id ? 'No license found for this site' : 'Select a site to choose a license'}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
