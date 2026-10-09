@@ -286,6 +286,62 @@
         }
       }
     },
+    "decommission_links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "section_index": {
+            "type": "number"
+          },
+          "item_index": {
+            "type": "number"
+          },
+          "equipment_id": {
+            "type": "string"
+          },
+          "is_unmatched_confirmed": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "decommission_scope": {
+      "type": "string",
+      "enum": [
+        "partial",
+        "full_site"
+      ],
+      "default": "partial"
+    },
+    "full_site_confirmed": {
+      "type": "boolean",
+      "default": false
+    },
+    "decommission_sync_status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "in_progress",
+        "succeeded",
+        "partially_failed",
+        "failed",
+        "pending_approval"
+      ],
+      "default": "not_started"
+    },
+    "decommission_sync_attempt_number": {
+      "type": "number"
+    },
+    "decommission_sync_last_attempt_at": {
+      "type": "string"
+    },
+    "decommission_sync_succeeded_at": {
+      "type": "string"
+    },
+    "decommission_sync_last_error": {
+      "type": "string"
+    },
     "supporting_photos": {
       "type": "array",
       "items": {

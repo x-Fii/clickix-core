@@ -16,7 +16,11 @@ import PhotoPairUploader from '@/components/installation/PhotoPairUploader';
 import AddClientDialog from '@/components/installation/AddClientDialog';
 import AddSiteDialog from '@/components/installation/AddSiteDialog';
 import AddLicenseDialog from '@/components/installation/AddLicenseDialog';
+import EquipmentPicker from '@/components/installation/EquipmentPicker';
+import DecommissionScopeBar from '@/components/installation/DecommissionScopeBar';
+import FullSiteConfirmDialog from '@/components/installation/FullSiteConfirmDialog';
 import { createStagedClient, createStagedSite, createStagedLicense, findLicenseNumberConflict } from '@/lib/installationStaging';
+import { getReliableEquipmentForContext, getLinkFor } from '@/lib/decommissionStaging';
 import { useAuth } from '@/lib/AuthContext';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
@@ -62,6 +66,10 @@ export default function InstallationReportForm() {
     work_order_number: '', quotation_number: '', site_pic_name: '',
     equipment_sections: [blankSection()],
     decommission_sections: [blankDecommSection()],
+    decommission_links: [],
+    decommission_scope: 'partial',
+    full_site_confirmed: false,
+    decommission_sync_status: 'not_started',
     equipment_installed: [],
     equipment_decommissioned: [],
     pre_job_assessment: '',
@@ -113,6 +121,7 @@ export default function InstallationReportForm() {
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
   const { data: staff = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
+  const { data: equipmentRecords = [] } = useQuery({ queryKey: ['equipment'], queryFn: () => base44.entities.Equipment.filter({ status: 'active' }) });
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
@@ -132,6 +141,13 @@ export default function InstallationReportForm() {
   const [stagedClients, setStagedClients] = useState([]);
   const [stagedSites, setStagedSites] = useState([]);
   const [stagedLicenses, setStagedLicenses] = useState([]);
+
+  // Phase 3 Decommissioning preparation (frontend only, no sync yet):
+  // decommission_links pairs each decommission item (by section/item index)
+  // to a reliably linked Equipment id, or marks it as explicitly confirmed
+  // unmatched. decommission_scope + full_site_confirmed track the full-site
+  // confirmation gate. No Equipment or Site status changes happen on save.
+  const [showFullSiteConfirm, setShowFullSiteConfirm] = useState(false);
 
   // Build the eligible license list for the currently selected site.
   // site_id-linked Inventory is matched directly; legacy records without
@@ -431,6 +447,57 @@ export default function InstallationReportForm() {
     });
   };
   // Decommission sections helpers
+  // Phase 3: decommission_links + scope helpers. Links live in a parallel
+  // array keyed by (section_index, item_index); the existing decommission
+  // item shape is unchanged.
+  const isFullSite = (form.decommission_scope || 'partial') === 'full_site';
+  const setDecommissionScope = (scope) => {
+    setForm(f => ({ ...f, decommission_scope: scope, full_site_confirmed: scope === 'full_site' ? f.full_site_confirmed : false }));
+    if (scope === 'full_site') setShowFullSiteConfirm(true);
+  };
+  const confirmFullSite = () => setForm(f => ({ ...f, full_site_confirmed: true }));
+  const ensureLink = (si, ii) => {
+    setForm(f => {
+      const links = f.decommission_links || [];
+      if (links.some(l => l.section_index === si && l.item_index === ii)) return f;
+      return { ...f, decommission_links: [...links, { section_index: si, item_index: ii, equipment_id: '', is_unmatched_confirmed: false }] };
+    });
+  };
+  const linkEquipment = (si, ii, equipmentId) => {
+    setForm(f => {
+      const links = (f.decommission_links || []).filter(l => !(l.section_index === si && l.item_index === ii));
+      // When linking to a real Equipment record, prefill the item's descriptive
+      // fields from it so the report shows what was removed. Unlinking clears
+      // only the link, preserving the user's manually entered details.
+      const eq = equipmentId ? equipmentRecords.find(e => e.id === equipmentId) : null;
+      const sections = (f.decommission_sections || []).map((sec, s) => {
+        if (s !== si) return sec;
+        const items = (sec.items || []).map((item, i) => {
+          if (i !== ii) return item;
+          if (!eq) return item;
+          return {
+            ...item,
+            device_type: eq.device_type || item.device_type,
+            device_name: eq.device_name || item.device_name,
+            serial_number: eq.serial_number || item.serial_number,
+          };
+        });
+        return { ...sec, items };
+      });
+      return {
+        ...f,
+        decommission_sections: sections,
+        decommission_links: [...links, { section_index: si, item_index: ii, equipment_id: equipmentId || '', is_unmatched_confirmed: false }],
+      };
+    });
+  };
+  const confirmUnmatched = (si, ii) => {
+    setForm(f => {
+      const links = (f.decommission_links || []).filter(l => !(l.section_index === si && l.item_index === ii));
+      return { ...f, decommission_links: [...links, { section_index: si, item_index: ii, equipment_id: '', is_unmatched_confirmed: true }] };
+    });
+  };
+
   const addDecommSection = () => set('decommission_sections', [...(form.decommission_sections || []), blankDecommSection()]);
   const removeDecommSection = (si) => set('decommission_sections', (form.decommission_sections || []).filter((_, idx) => idx !== si));
   const updateDecommSectionName = (si, val) => {
@@ -1167,6 +1234,23 @@ export default function InstallationReportForm() {
                 <Plus size={14} className="mr-1" /> Add Section
               </Button>
             </div>
+            <DecommissionScopeBar
+              sections={form.decommission_sections || []}
+              links={form.decommission_links || []}
+              equipment={equipmentRecords}
+              decommissionScope={form.decommission_scope}
+              fullSiteConfirmed={form.full_site_confirmed}
+              isFullSite={isFullSite}
+              onScopeChange={setDecommissionScope}
+              onFullSiteConfirm={() => setShowFullSiteConfirm(true)}
+            />
+            <FullSiteConfirmDialog
+              open={showFullSiteConfirm}
+              onOpenChange={setShowFullSiteConfirm}
+              siteName={form.site_name}
+              activeEquipmentCount={getReliableEquipmentForContext({ equipment: equipmentRecords, clientId: form.client_id, siteId: form.site_id, inventoryId: '' }).length}
+              onConfirm={confirmFullSite}
+            />
             {(form.decommission_sections || []).map((sec, si) => (
               <div key={si} className="border border-primary/30 rounded-lg p-4 space-y-3 bg-muted/10">
                 {/* Section header */}
@@ -1247,17 +1331,29 @@ export default function InstallationReportForm() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Device Name / Model</Label>
-                          <Input className="h-8 text-xs" value={item.device_name} onChange={e => updateDecommSectionItem(si, ii, 'device_name', e.target.value)} placeholder="Name / Model" />
+                          <Input className="h-8 text-xs" value={item.device_name} onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }} placeholder="Name / Model" />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Serial Number</Label>
-                          <Input className="h-8 text-xs" value={item.serial_number} onChange={e => updateDecommSectionItem(si, ii, 'serial_number', e.target.value)} placeholder="S/N" />
+                          <Input className="h-8 text-xs" value={item.serial_number} onChange={e => { updateDecommSectionItem(si, ii, 'serial_number', e.target.value); ensureLink(si, ii); }} placeholder="S/N" />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Reason for Decommission</Label>
                         <Input className="h-8 text-xs" value={item.reason_for_decommission} onChange={e => updateDecommSectionItem(si, ii, 'reason_for_decommission', e.target.value)} placeholder="Reason" />
                       </div>
+                      <EquipmentPicker
+                        sectionIndex={si}
+                        itemIndex={ii}
+                        item={item}
+                        links={form.decommission_links || []}
+                        equipment={equipmentRecords}
+                        clientId={form.client_id}
+                        siteId={form.site_id}
+                        inventoryId={sec.inventory_id || ''}
+                        onLinkEquipment={linkEquipment}
+                        onConfirmUnmatched={confirmUnmatched}
+                      />
                     </div>
                   ))}
                   <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => addDecommItemToSection(si)}>
