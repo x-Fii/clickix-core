@@ -9,31 +9,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, X, Save, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-
-
-
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
-
 const AFFECTED_DEVICE_TYPES = [
   'CMS', 'PC', 'TV', 'HDMI Extender', 'Cable', 'Others'
 ];
-
 const AFFECTED_INVENTORY_FIELDS = {
   'CMS': 'license_number',
   'PC': 'pc_sku',
   'TV': 'tv_sku'
 };
-
 const PILLARS = ['PC', 'TV', 'CMS', 'Display Connection', 'Network', 'Content', 'User'];
 const emptyItem = () => ({ device_type: '', device_name: '', issue_description: '' });
-
 const SectionHeader = ({ title, subtitle }) => (
   <div className="pb-3 mb-5 border-b border-border">
     <h3 className="font-semibold text-sm">{title}</h3>
     {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
   </div>
 );
-
 const Field = ({ label, required, children }) => (
   <div className="space-y-1.5">
     <Label className="text-xs text-muted-foreground uppercase tracking-wider font-mono">
@@ -42,22 +34,16 @@ const Field = ({ label, required, children }) => (
     {children}
   </div>
 );
-
 const ReadField = ({ label, value }) => (
   <div>
     <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono mb-1">{label}</p>
     <p className="text-sm">{value || <span className="text-muted-foreground/50">—</span>}</p>
   </div>
 );
-
 export default function L1DraftEditor({ report }) {
   const queryClient = useQueryClient();
-
-
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list()});
-
   const licenseNameOptions = [...new Set(inventoryItems.map((item) => String(item.license_name || '').trim()).filter(Boolean))].sort();
-
   const [form, setForm] = useState({
     reported_by: report.reported_by || '',
     do_number: report.do_number || '',
@@ -77,19 +63,15 @@ export default function L1DraftEditor({ report }) {
     return [{ section_name: '', items: [emptyItem()] }];
   });
   const [staffList, setStaffList] = useState([]);
-
   useEffect(() => {
     base44.entities.StaffMember.list().then(setStaffList).catch(() => {});
   }, []);
-
   const l1Staff = staffList.filter((s) => s.role === 'L1' || s.role === 'Admin');
   const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-
   const handleStaffChange = (id) => {
     const s = staffList.find((x) => x.id === id);
     if (s) setForm((f) => ({ ...f, l1_attended_staff_name: s.name, l1_attended_staff_id: s.staff_id, l1_attended_staff_email: s.email || '' }));
   };
-
   const addSection = () => setSections((p) => [...p, { section_name: '', items: [emptyItem()] }]);
   const removeSection = (si) => setSections((p) => p.filter((_, i) => i !== si));
   const updateSectionName = (si, val) => {
@@ -97,7 +79,6 @@ export default function L1DraftEditor({ report }) {
       prev.map((section, index) => {
         if (index !== si) return section;
         if (section.section_name === val) return section;
-
         return {
           ...section,
           section_name: val,
@@ -114,27 +95,21 @@ export default function L1DraftEditor({ report }) {
   const addItemToSection = (si) => setSections((p) => p.map((s, i) => (i === si ? { ...s, items: [...s.items, emptyItem()] } : s)));
   const removeItemFromSection = (si, ii) => setSections((p) => p.map((s, i) => (i === si ? { ...s, items: s.items.filter((_, j) => j !== ii) } : s)));
   const updateSectionItem = (si, ii, field, v) => setSections((p) => p.map((s, i) => (i === si ? { ...s, items: s.items.map((it, j) => (j === ii ? { ...it, [field]: v } : it)) } : s)));
-  
-
   const selectAffectedDeviceSlot = (sectionIndex, itemIndex, slotId) => {
     setSections(prev =>
       prev.map((section, si) => {
         if (si !== sectionIndex) return section;
-
         return {
           ...section,
           items: section.items.map((item, ii) => {
             if (ii !== itemIndex) return item;
-
             const slots = getAffectedDeviceSlots(
               section.section_name,
               item.device_type
             );
-
             const selectedSlot = slots.find(
               slot => slot.id === slotId
             );
-
             return {
               ...item,
               device_slot_id: selectedSlot?.id || '',
@@ -145,28 +120,21 @@ export default function L1DraftEditor({ report }) {
       })
     );
   };
-
-
   const toggleAffectedDevice = (sectionIndex, deviceType, checked) => {
     setSections(prev =>
       prev.map((section, index) => {
         if (index !== sectionIndex) return section;
-
         const items = section.items || [];
-
         if (checked) {
           if (items.some(item => item.device_type === deviceType)) {
             return section;
           }
-
           const slots = getAffectedDeviceSlots(
             section.section_name,
             deviceType
           );
-
           // Automatically select when only one device exists
           const autoSlot = slots.length === 1 ? slots[0] : null;
-
           return {
             ...section,
             items: [
@@ -180,7 +148,6 @@ export default function L1DraftEditor({ report }) {
             ]
           };
         }
-
         // Uncheck: remove all items of this device type
         return {
           ...section,
@@ -191,42 +158,33 @@ export default function L1DraftEditor({ report }) {
       })
     );
   };
-
   // Add another item under a specific Device Type
   const addAffectedDeviceItem = (sectionIndex, deviceType) => {
     setSections(prev =>
       prev.map((section, index) => {
         if (index !== sectionIndex) return section;
-
         const slots = getAffectedDeviceSlots(
           section.section_name,
           deviceType
         );
-
         const usedIds = new Set(
           (section.items || [])
             .filter(item => item.device_type === deviceType)
             .map(item => item.device_slot_id)
             .filter(Boolean)
         );
-
         const availableSlots = slots.filter(
           slot => !usedIds.has(slot.id)
         );
-
-
         // Do not exceed the available Inventory quantity
         if (slots.length > 0 && availableSlots.length === 0) {
           return section;
         }
-
-
         // Automatically select the last remaining device
         const autoSlot =
           availableSlots.length === 1
             ? availableSlots[0]
             : null;
-
         return {
           ...section,
           items: [
@@ -242,32 +200,24 @@ export default function L1DraftEditor({ report }) {
       })
     );
   };
-
-
   // Get matching Device Names from Inventory
   const getAffectedDeviceOptions = (sectionName, deviceType) => {
     const inventoryField = AFFECTED_INVENTORY_FIELDS[deviceType];
-
     if (!inventoryField || !sectionName) return [];
-
     const matchingInventory = inventoryItems.filter(inv => {
       const sameLicense =
         String(inv.license_name || '').trim() ===
         String(sectionName || '').trim();
-
       const sameClient =
         !report.client_id ||
         !inv.client_id ||
         String(inv.client_id) === String(report.client_id);
-
       const sameSite =
         !report.site_id ||
         !inv.site_id ||
         String(inv.site_id) === String(report.site_id);
-
       return sameLicense && sameClient && sameSite;
     });
-
     return [...new Set(
       matchingInventory
         .flatMap(inv =>
@@ -278,39 +228,29 @@ export default function L1DraftEditor({ report }) {
         .filter(Boolean)
     )].sort();
   };
-
-
   // Each Inventory device is an individual selectable slot.
   // Duplicate SKU values are kept as separate devices.
   const getAffectedDeviceSlots = (sectionName, deviceType) => {
     const inventoryField = AFFECTED_INVENTORY_FIELDS[deviceType];
-
     if (!inventoryField || !sectionName) return [];
-
     const slots = [];
-
     inventoryItems.forEach((inv, inventoryIndex) => {
       const sameLicense =
         String(inv.license_name || '').trim() ===
         String(sectionName || '').trim();
-
       const sameClient =
         !report.client_id ||
         !inv.client_id ||
         String(inv.client_id) === String(report.client_id);
-
       const sameSite =
         !report.site_id ||
         !inv.site_id ||
         String(inv.site_id) === String(report.site_id);
-
       if (!sameLicense || !sameClient || !sameSite) return;
-
       const values = String(inv[inventoryField] || '')
         .split(',')
         .map(value => value.trim())
         .filter(Boolean);
-
       values.forEach((name, valueIndex) => {
         slots.push({
           id: `${inv.id ?? inventoryIndex}-${inventoryField}-${valueIndex}`,
@@ -318,18 +258,14 @@ export default function L1DraftEditor({ report }) {
         });
       });
     });
-
     // Give identical names separate display labels.
     const counts = {};
     slots.forEach(slot => {
       counts[slot.name] = (counts[slot.name] || 0) + 1;
     });
-
     const seen = {};
-
     return slots.map(slot => {
       seen[slot.name] = (seen[slot.name] || 0) + 1;
-
       return {
         ...slot,
         label: counts[slot.name] > 1
@@ -338,8 +274,6 @@ export default function L1DraftEditor({ report }) {
       };
     });
   };
-
-
   // Prepare affected devices before saving
   const prepareAffectedSections = () => {
     return sections.map(section => ({
@@ -351,11 +285,9 @@ export default function L1DraftEditor({ report }) {
             section.section_name,
             item.device_type
           );
-
           const selectedSlot = slots.find(
             slot => slot.id === item.device_slot_id
           );
-
           // Preserve the selected device and unique slot ID
           if (selectedSlot) {
             return {
@@ -364,7 +296,6 @@ export default function L1DraftEditor({ report }) {
               device_slot_id: selectedSlot.id
             };
           }
-
           // Auto-fill when Inventory contains exactly one device
           if (
             slots.length === 1 &&
@@ -377,18 +308,14 @@ export default function L1DraftEditor({ report }) {
               device_slot_id: slots[0].id
             };
           }
-
           // Preserve manually entered values
           return item;
         })
     }));
   };
-
-
   const buildPayload = (l1Status, submit) => {
     const preparedSections = prepareAffectedSections();
     const allItems = preparedSections.flatMap(s => s.items);
-
     const status = l1Status === 'resolved' ? 'resolved' : l1Status === 'escalate' ? 'escalated' : 'reported';
     return {
       ...form,
@@ -400,7 +327,6 @@ export default function L1DraftEditor({ report }) {
       ...(submit ? { l1_submitted_at: new Date().toISOString() } : {}),
     };
   };
-
   const saveMutation = useMutation({
     mutationFn: ({ l1Status, submit }) => base44.entities.ServiceReport.update(report.id, buildPayload(l1Status, submit)),
     onSuccess: (_data, { l1Status, submit }) => {
@@ -416,10 +342,8 @@ export default function L1DraftEditor({ report }) {
     },
     onError: (err) => toast.error(err?.message || 'Failed to save report'),
   });
-
   const busy = saveMutation.isPending;
   const handleSubmit = (l1Status) => saveMutation.mutate({ l1Status, submit: true });
-
   return (
     <div className="bg-card border border-amber-500/30 rounded-xl p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -433,7 +357,6 @@ export default function L1DraftEditor({ report }) {
           <Save size={14} /> {busy ? 'Saving...' : 'Save Draft'}
         </Button>
       </div>
-
       {/* Job context (read-only) */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pb-4 border-b border-border">
         <ReadField label="Client" value={report.client_name} />
@@ -441,7 +364,6 @@ export default function L1DraftEditor({ report }) {
         <ReadField label="Location" value={report.site_location} />
         <ReadField label="L1 Report Number" value={report.running_number} />
       </div>
-
       {/* L1 fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="Reported By">
@@ -468,7 +390,6 @@ export default function L1DraftEditor({ report }) {
           <Input value={form.l1_attended_staff_email} onChange={(e) => setF('l1_attended_staff_email', e.target.value)} placeholder="staff@clickix.com" className="bg-background" />
         </Field>
       </div>
-
       <div className="space-y-4">
         <Field label="Issue Statement">
           <Textarea value={form.l1_issue_statement} onChange={(e) => setF('l1_issue_statement', e.target.value)} placeholder="Describe the issue reported..." className="bg-background resize-none" rows={3} />
@@ -519,7 +440,6 @@ export default function L1DraftEditor({ report }) {
           <Textarea value={form.l1_remarks} onChange={(e) => setF('l1_remarks', e.target.value)} placeholder="Any additional remarks or notes for this L1 session..." className="bg-background resize-none" rows={3} />
         </Field>
       </div>
-
       {/* Affected items */}
       <div>
         <div className="flex items-center justify-between mb-3">
@@ -530,51 +450,36 @@ export default function L1DraftEditor({ report }) {
         </div>
         <div className="space-y-3">
           {sections.map((sec, si) => (
-            <div key={si} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-muted/10">
+            <div key={si} className="border border-primary/30 rounded-lg p-2.5 space-y-2 bg-muted/10">
               <div className="flex items-center gap-2">
-                
-        
-
-
                 <Select value={sec.section_name || undefined} onValueChange={(v) => updateSectionName(si, v)}>
                   <SelectTrigger className="bg-background text-xs h-8 font-semibold flex-1">
                     <SelectValue placeholder="Select license name" />
                   </SelectTrigger>
-                 
-
-
                   <SelectContent>
                     {licenseNameOptions.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}
                   </SelectContent>
-
-
-
                 </Select>
-
                 {sections.length > 1 && (
                   <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                     <X size={14} />
                   </button>
                 )}
               </div>
-              
               {/* Items within section */}
-              <div className="space-y-3 pl-2 border-l-2 border-border">
-
+              <div className="space-y-2 pl-2 border-l-2 border-border">
                 {/* Affected Device Checkboxes */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <Label className="text-xs text-muted-foreground shrink-0">
                     Affected Devices
                   </Label>
-
-                  <div className="flex flex-wrap gap-x-5 gap-y-2 bg-background border border-input rounded-md p-3">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     {AFFECTED_DEVICE_TYPES.map(type => {
                       const checked = (sec.items || []).some(
                         item => item.device_type === type
                       );
-
                       return (
-                        <div key={type} className="flex items-center gap-2">
+                        <div key={type} className="flex items-center gap-1.5">
                           <Checkbox
                             id={`draft-affected-${si}-${type}`}
                             checked={checked}
@@ -584,7 +489,7 @@ export default function L1DraftEditor({ report }) {
                           />
                           <label
                             htmlFor={`draft-affected-${si}-${type}`}
-                            className="text-sm cursor-pointer"
+                            className="text-xs cursor-pointer"
                           >
                             {type}
                           </label>
@@ -593,7 +498,6 @@ export default function L1DraftEditor({ report }) {
                     })}
                   </div>
                 </div>
-
                 {/* Each selected Device Type */}
                 {AFFECTED_DEVICE_TYPES.filter(type =>
                   (sec.items || []).some(item => item.device_type === type)
@@ -604,51 +508,43 @@ export default function L1DraftEditor({ report }) {
                       actualIndex: index
                     }))
                     .filter(entry => entry.item.device_type === type);
-
                   const deviceOptions = getAffectedDeviceOptions(
                     sec.section_name,
                     type
                   );
-
                   const inventoryField = AFFECTED_INVENTORY_FIELDS[type];
-
                   return (
                     <div
                       key={type}
-                      className="border border-border rounded-lg p-3 space-y-3 bg-muted/10"
+                      className="border border-border rounded-md p-2.5 space-y-2 bg-muted/10"
                     >
-
                       {/* Device Type Header */}
                       <div className="flex items-center justify-between">
                         <div className="font-semibold text-sm">
                           {type}
                         </div>
-
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="gap-1 text-xs"
+                          className="gap-1 text-xs h-7 px-2.5"
                           onClick={() => addAffectedDeviceItem(si, type)}
                         >
                           <Plus size={12} />
                           Add Item
                         </Button>
                       </div>
-
                       {/* Device Items */}
                       {deviceItems.map(({ item, actualIndex }, itemIndex) => (
                         <div
                           key={`${type}-${actualIndex}`}
-                          className="border border-border rounded-md p-3 space-y-3 bg-card"
+                          className="border border-border rounded-md p-2.5 space-y-2 bg-card"
                         >
-
                           {/* Item Number and Remove */}
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-muted-foreground">
                               Item {itemIndex + 1}
                             </span>
-
                             {deviceItems.length > 1 && (
                               <Button
                                 type="button"
@@ -663,9 +559,7 @@ export default function L1DraftEditor({ report }) {
                               </Button>
                             )}
                           </div>
-
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-
                             {/* Device Type */}
                             <Field label="Device Type">
                               <Input
@@ -674,7 +568,6 @@ export default function L1DraftEditor({ report }) {
                                 className="bg-muted text-xs h-8"
                               />
                             </Field>
-
                             {/* Device Name */}
                             <Field label="Device Name">
                               {(() => {
@@ -682,7 +575,6 @@ export default function L1DraftEditor({ report }) {
                                   sec.section_name,
                                   type
                                 );
-
                                 const usedSlotIds = new Set(
                                   (sec.items || [])
                                     .filter((other, index) =>
@@ -692,15 +584,12 @@ export default function L1DraftEditor({ report }) {
                                     )
                                     .map(other => other.device_slot_id)
                                 );
-
                                 const availableSlots = slots.filter(
                                   slot => !usedSlotIds.has(slot.id)
                                 );
-
                                 const selectedSlot = slots.find(
                                   slot => slot.id === item.device_slot_id
                                 );
-
                                 if (!inventoryField || slots.length === 0) {
                                   return (
                                     <Input
@@ -722,8 +611,6 @@ export default function L1DraftEditor({ report }) {
                                     />
                                   );
                                 }
-
-                                
                                 if (item.device_name && !selectedSlot) {
                                   return (
                                     <Input
@@ -733,7 +620,6 @@ export default function L1DraftEditor({ report }) {
                                     />
                                   );
                                 }
-
                                 if (selectedSlot && availableSlots.length === 1) {
                                   return (
                                     <Input
@@ -743,7 +629,6 @@ export default function L1DraftEditor({ report }) {
                                     />
                                   );
                                 }
-
                                 return (
                                   <Select
                                     value={
@@ -764,7 +649,6 @@ export default function L1DraftEditor({ report }) {
                                     <SelectTrigger className="bg-background text-xs h-8">
                                       <SelectValue placeholder="Select Device Name" />
                                     </SelectTrigger>
-
                                     <SelectContent>
                                       {availableSlots.map(slot => (
                                         <SelectItem key={slot.id} value={slot.id}>
@@ -776,10 +660,7 @@ export default function L1DraftEditor({ report }) {
                                 );
                               })()}
                             </Field>
-
-
                           </div>
-
                           {/* Issue Description */}
                           <Field label="Issue Description">
                             <Textarea
@@ -807,7 +688,6 @@ export default function L1DraftEditor({ report }) {
           ))}
         </div>
       </div>
-
       {/* Resolution actions */}
       <div className="pt-4 border-t border-border">
         <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-3">L1 Resolution — Submit</p>
