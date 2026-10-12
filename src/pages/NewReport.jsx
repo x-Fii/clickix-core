@@ -98,18 +98,25 @@ export default function NewReport() {
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
 
   
+
+  const normalizeSiteName = (value) =>
+    String(value || '')
+      .toLowerCase()
+      .replace(/\s+/g, '');
+
   const licenseNameOptions = [
     ...new Set(
       inventoryItems
         .filter(inv =>
-          form.site_name &&
-          String(inv.site_name || '').trim().toLowerCase() ===
-          String(form.site_name || '').trim().toLowerCase()
+          Boolean(form.site_name) &&
+          normalizeSiteName(inv.site_name) ===
+            normalizeSiteName(form.site_name)
         )
         .map(inv => String(inv.license_name || '').trim())
         .filter(Boolean)
     )
   ].sort();
+
 
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
@@ -375,10 +382,10 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
         String(inv.client_id) === String(form.client_id);
 
       const sameSite =
-        !form.site_id ||
-        !inv.site_id ||
-        String(inv.site_id) === String(form.site_id);
-
+        Boolean(form.site_name) &&
+        normalizeSiteName(inv.site_name) ===
+          normalizeSiteName(form.site_name);
+          
       if (!sameLicense || !sameClient || !sameSite) return;
 
       const values = String(inv[inventoryField] || '')
