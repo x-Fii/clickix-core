@@ -114,6 +114,38 @@ export default function L1DraftEditor({ report }) {
   const addItemToSection = (si) => setSections((p) => p.map((s, i) => (i === si ? { ...s, items: [...s.items, emptyItem()] } : s)));
   const removeItemFromSection = (si, ii) => setSections((p) => p.map((s, i) => (i === si ? { ...s, items: s.items.filter((_, j) => j !== ii) } : s)));
   const updateSectionItem = (si, ii, field, v) => setSections((p) => p.map((s, i) => (i === si ? { ...s, items: s.items.map((it, j) => (j === ii ? { ...it, [field]: v } : it)) } : s)));
+  
+
+  const selectAffectedDeviceSlot = (sectionIndex, itemIndex, slotId) => {
+    setSections(prev =>
+      prev.map((section, si) => {
+        if (si !== sectionIndex) return section;
+
+        return {
+          ...section,
+          items: section.items.map((item, ii) => {
+            if (ii !== itemIndex) return item;
+
+            const slots = getAffectedDeviceSlots(
+              section.section_name,
+              item.device_type
+            );
+
+            const selectedSlot = slots.find(
+              slot => slot.id === slotId
+            );
+
+            return {
+              ...item,
+              device_slot_id: selectedSlot?.id || '',
+              device_name: selectedSlot?.name || ''
+            };
+          })
+        };
+      })
+    );
+  };
+
 
   const toggleAffectedDevice = (sectionIndex, deviceType, checked) => {
     setSections(prev =>
@@ -127,19 +159,29 @@ export default function L1DraftEditor({ report }) {
             return section;
           }
 
+          const slots = getAffectedDeviceSlots(
+            section.section_name,
+            deviceType
+          );
+
+          // Automatically select when only one device exists
+          const autoSlot = slots.length === 1 ? slots[0] : null;
+
           return {
             ...section,
             items: [
               ...items,
               {
                 device_type: deviceType,
-                device_name: '',
+                device_name: autoSlot?.name || '',
+                device_slot_id: autoSlot?.id || '',
                 issue_description: ''
               }
             ]
           };
         }
 
+        // Uncheck: remove all items of this device type
         return {
           ...section,
           items: items.filter(
@@ -156,13 +198,41 @@ export default function L1DraftEditor({ report }) {
       prev.map((section, index) => {
         if (index !== sectionIndex) return section;
 
+        const slots = getAffectedDeviceSlots(
+          section.section_name,
+          deviceType
+        );
+
+        const usedIds = new Set(
+          (section.items || [])
+            .filter(item => item.device_type === deviceType)
+            .map(item => item.device_slot_id)
+            .filter(Boolean)
+        );
+
+        const availableSlots = slots.filter(
+          slot => !usedIds.has(slot.id)
+        );
+
+        // Do not exceed the available Inventory quantity
+        if (slots.length > 0 && availableSlots.length === 0) {
+          return section;
+        }
+
+        // Automatically select the last remaining device
+        const autoSlot =
+          availableSlots.length === 1
+            ? availableSlots[0]
+            : null;
+
         return {
           ...section,
           items: [
             ...(section.items || []),
             {
               device_type: deviceType,
-              device_name: '',
+              device_name: autoSlot?.name || '',
+              device_slot_id: autoSlot?.id || '',
               issue_description: ''
             }
           ]
@@ -170,6 +240,7 @@ export default function L1DraftEditor({ report }) {
       })
     );
   };
+
 
   // Get matching Device Names from Inventory
   const getAffectedDeviceOptions = (sectionName, deviceType) => {
@@ -274,26 +345,43 @@ export default function L1DraftEditor({ report }) {
       items: (section.items || [])
         .filter(item => item.device_type)
         .map(item => {
-          const options = getAffectedDeviceOptions(
+          const slots = getAffectedDeviceSlots(
             section.section_name,
             item.device_type
           );
 
-          const inventoryField =
-            AFFECTED_INVENTORY_FIELDS[item.device_type];
+          const selectedSlot = slots.find(
+            slot => slot.id === item.device_slot_id
+          );
 
-          const deviceName =
-            inventoryField && options.length === 1
-              ? options[0]
-              : item.device_name || '';
+          // Preserve the selected device and unique slot ID
+          if (selectedSlot) {
+            return {
+              ...item,
+              device_name: selectedSlot.name,
+              device_slot_id: selectedSlot.id
+            };
+          }
 
-          return {
-            ...item,
-            device_name: deviceName
-          };
+          // Auto-fill when Inventory contains exactly one device
+          if (
+            slots.length === 1 &&
+            !item.device_slot_id &&
+            !item.device_name
+          ) {
+            return {
+              ...item,
+              device_name: slots[0].name,
+              device_slot_id: slots[0].id
+            };
+          }
+
+          // Preserve manually entered values
+          return item;
         })
     }));
   };
+
 
   const buildPayload = (l1Status, submit) => {
     const preparedSections = prepareAffectedSections();
@@ -587,42 +675,75 @@ export default function L1DraftEditor({ report }) {
 
                             {/* Device Name */}
                             <Field label="Device Name">
-                              {inventoryField ? (
+                              {(() => {
+                                const slots = getAffectedDeviceSlots(
+                                  sec.section_name,
+                                  type
+                                );
 
-                                deviceOptions.length === 0 ? (
-                                  <Input
-                                    value={item.device_name || ''}
-                                    onChange={e =>
-                                      updateSectionItem(
-                                        si,
-                                        actualIndex,
-                                        'device_name',
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="No matching device - enter manually"
-                                    className="bg-background text-xs h-8"
-                                  />
+                                const usedSlotIds = new Set(
+                                  (sec.items || [])
+                                    .filter((other, index) =>
+                                      index !== actualIndex &&
+                                      other.device_type === type &&
+                                      other.device_slot_id
+                                    )
+                                    .map(other => other.device_slot_id)
+                                );
 
-                                ) : deviceOptions.length === 1 ? (
-                                  <Input
-                                    value={deviceOptions[0]}
-                                    readOnly
-                                    className="bg-muted text-xs h-8"
-                                  />
+                                const availableSlots = slots.filter(
+                                  slot => !usedSlotIds.has(slot.id)
+                                );
 
-                                ) : (
+                                const selectedSlot = slots.find(
+                                  slot => slot.id === item.device_slot_id
+                                );
+
+                                if (!inventoryField || slots.length === 0) {
+                                  return (
+                                    <Input
+                                      value={item.device_name || ''}
+                                      onChange={e =>
+                                        updateSectionItem(
+                                          si,
+                                          actualIndex,
+                                          'device_name',
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder={
+                                        inventoryField
+                                          ? "No matching device - enter manually"
+                                          : "Enter Device Name"
+                                      }
+                                      className="bg-background text-xs h-8"
+                                    />
+                                  );
+                                }
+
+                                if (selectedSlot && availableSlots.length === 1) {
+                                  return (
+                                    <Input
+                                      value={selectedSlot.label}
+                                      readOnly
+                                      className="bg-muted text-xs h-8"
+                                    />
+                                  );
+                                }
+
+                                return (
                                   <Select
                                     value={
-                                      deviceOptions.includes(item.device_name)
-                                        ? item.device_name
+                                      availableSlots.some(
+                                        slot => slot.id === item.device_slot_id
+                                      )
+                                        ? item.device_slot_id
                                         : undefined
                                     }
                                     onValueChange={value =>
-                                      updateSectionItem(
+                                      selectAffectedDeviceSlot(
                                         si,
                                         actualIndex,
-                                        'device_name',
                                         value
                                       )
                                     }
@@ -632,31 +753,17 @@ export default function L1DraftEditor({ report }) {
                                     </SelectTrigger>
 
                                     <SelectContent>
-                                      {deviceOptions.map(name => (
-                                        <SelectItem key={name} value={name}>
-                                          {name}
+                                      {availableSlots.map(slot => (
+                                        <SelectItem key={slot.id} value={slot.id}>
+                                          {slot.label}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
-                                )
-
-                              ) : (
-                                <Input
-                                  value={item.device_name || ''}
-                                  onChange={e =>
-                                    updateSectionItem(
-                                      si,
-                                      actualIndex,
-                                      'device_name',
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Enter Device Name"
-                                  className="bg-background text-xs h-8"
-                                />
-                              )}
+                                );
+                              })()}
                             </Field>
+
 
                           </div>
 
