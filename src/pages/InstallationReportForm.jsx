@@ -1557,37 +1557,36 @@ function AddClientDialog({ open, onOpenChange, clients = [], onConfirm, busy }) 
   };
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[560px]" onKeyDown={e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); handleConfirm(); } }}>
+      <DialogContent className="bg-card border-border max-w-lg max-h-[95vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Add New Client</DialogTitle></DialogHeader>
-        <fieldset disabled={locked} className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 max-h-[60vh] overflow-y-auto pr-1 border-0 m-0">
-          <div className="space-y-1 sm:col-span-2">
-            <Label>Company Name *</Label>
-            <Input value={draft.company_name} onChange={e => setField('company_name', e.target.value)} placeholder="Company name" />
-            {conflicts.length > 0 && <p className="text-xs text-amber-500">A client with a similar name already exists. Check the existing clients before adding.</p>}
-          </div>
-          <div className="space-y-1"><Label>Contact Person</Label><Input value={draft.contact_person} onChange={e => setField('contact_person', e.target.value)} placeholder="Contact person" /></div>
-          <div className="space-y-1"><Label>PIC Designation</Label><Input value={draft.pic_designation} onChange={e => setField('pic_designation', e.target.value)} placeholder="Designation" /></div>
-          <div className="space-y-1"><Label>Contact Email</Label><Input type="email" value={draft.contact_email} onChange={e => setField('contact_email', e.target.value)} placeholder="Email" /></div>
-          <div className="space-y-1"><Label>Contact Phone</Label><Input value={draft.contact_phone} onChange={e => setField('contact_phone', e.target.value)} placeholder="Phone" /></div>
-          <div className="space-y-1 sm:col-span-2"><Label>Company Website</Label><Input value={draft.company_website} onChange={e => setField('company_website', e.target.value)} placeholder="https://" /></div>
-          <div className="space-y-1"><Label>SLA</Label><Select value={draft.sla || undefined} onValueChange={v => setField('sla', v)}><SelectTrigger><SelectValue placeholder="Select SLA" /></SelectTrigger><SelectContent>{SLA_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></div>
-          <div className="space-y-1"><Label>CMS Subscriptions</Label><div className="flex flex-wrap gap-1.5 border border-input rounded-md p-2 min-h-9">{CMS_OPTIONS.map(o => <label key={o} className="flex items-center gap-1 text-xs cursor-pointer"><input type="checkbox" checked={(draft.cms_subscriptions || []).includes(o)} onChange={() => toggleArray('cms_subscriptions', o)} className="accent-primary" />{o}</label>)}</div></div>
-          <div className="space-y-1 sm:col-span-2"><Label>Hardware</Label><div className="flex flex-wrap gap-1.5">{HARDWARE_OPTIONS.map(o => <label key={o} className="flex items-center gap-1 text-xs cursor-pointer"><input type="checkbox" checked={(draft.hardware || []).includes(o)} onChange={() => toggleArray('hardware', o)} className="accent-primary" />{o}</label>)}</div></div>
-          <div className="space-y-1 sm:col-span-2"><Label>Address</Label><Textarea value={draft.address} onChange={e => setField('address', e.target.value)} placeholder="Address" rows={2} className="text-sm" /></div>
-          <div className="space-y-1 sm:col-span-2"><Label>Notes</Label><Textarea value={draft.notes} onChange={e => setField('notes', e.target.value)} placeholder="Notes" rows={2} className="text-sm" /></div>
+        <fieldset disabled={locked} className="space-y-3 mt-2 border-0 p-0 m-0">
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Company Name <span className="text-red-400">*</span></Label><Input value={draft.company_name} onChange={e => setField('company_name', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Contact Person</Label><Input value={draft.contact_person} onChange={e => setField('contact_person', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">PIC Designation</Label><Input value={draft.pic_designation} onChange={e => setField('pic_designation', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Contact Email</Label><Input type="email" value={draft.contact_email} onChange={e => setField('contact_email', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Contact Phone</Label><Input value={draft.contact_phone} onChange={e => setField('contact_phone', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Company Website</Label><Input value={draft.company_website} onChange={e => setField('company_website', e.target.value)} className="bg-background" /></div>
+          {conflicts.length > 0 && <p className="text-xs text-amber-500">A client with a similar name already exists.</p>}
+          <div className="space-y-1.5"><Label className="text-muted-foreground">SLA</Label><Select value={draft.sla || undefined} onValueChange={v => setField('sla', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select SLA type" /></SelectTrigger><SelectContent>{SLA_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">CMS Subscription</Label><div className="flex flex-wrap gap-1.5">{CMS_OPTIONS.map(o => <button key={o} type="button" aria-pressed={(draft.cms_subscriptions || []).includes(o)} onClick={() => toggleArray('cms_subscriptions', o)} className={`px-2 py-0.5 rounded-md text-sm border transition-colors ${(draft.cms_subscriptions || []).includes(o) ? 'bg-primary/15 text-primary border-primary/40' : 'border-border text-muted-foreground hover:border-primary/40'}`}>{o}</button>)}</div></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Hardware</Label><div className="flex flex-wrap gap-1.5">{HARDWARE_OPTIONS.map(o => <button key={o} type="button" aria-pressed={(draft.hardware || []).includes(o)} onClick={() => toggleArray('hardware', o)} className={`px-2 py-0.5 rounded-md text-sm border transition-colors ${(draft.hardware || []).includes(o) ? 'bg-primary/15 text-primary border-primary/40' : 'border-border text-muted-foreground hover:border-primary/40'}`}>{o}</button>)}</div></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Address</Label><Textarea value={draft.address} onChange={e => setField('address', e.target.value)} className="bg-background resize-none" rows={2} /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Notes</Label><Textarea value={draft.notes} onChange={e => setField('notes', e.target.value)} className="bg-background resize-none" rows={2} /></div>
         </fieldset>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <DialogFooter><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={handleConfirm} disabled={locked || !draft.company_name.trim()}>{locked ? 'Saving...' : 'Add Client'}</Button></DialogFooter>
+        <DialogFooter className="mt-4"><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={handleConfirm} disabled={locked || !draft.company_name.trim()}>{locked ? 'Saving...' : 'Add Client'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+const MY_STATES = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'];
+const REGIONS = ['Central', 'Northern', 'Southern', 'East Coast', 'East Malaysia'];
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' },
   { value: 're-instating', label: 'Re-Instating' }, { value: 're-instated', label: 'Re-Instated' },
 ];
 function AddSiteDialog({ open, onOpenChange, clients = [], sites = [], isAdmin = false, linkedClientId = '', onConfirm, busy }) {
-  const build = () => ({ client_id: linkedClientId || '', site_name: '', site_location: '', region: '', state: '', pic_name: '', pic_phone: '', notes: '', status: ['active'] });
+  const build = () => ({ client_id: linkedClientId || '', site_name: '', site_location: '', region: '', state: '', pic_name: '', pic_phone: '', notes: '', status: [] });
   const [draft, setDraft] = useState(build);
   const [conflicts, setConflicts] = useState([]);
   const [error, setError] = useState('');
@@ -1614,25 +1613,24 @@ function AddSiteDialog({ open, onOpenChange, clients = [], sites = [], isAdmin =
   };
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[520px]" onKeyDown={e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); handleConfirm(); } }}>
+      <DialogContent className="bg-card border-border max-w-lg max-h-[95vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Add New Site</DialogTitle></DialogHeader>
-        <fieldset disabled={locked} className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 max-h-[60vh] overflow-y-auto pr-1 border-0 m-0">
-          <div className="space-y-1 sm:col-span-2"><Label>Client *</Label>
-            <Select value={draft.client_id || undefined} onValueChange={v => setField('client_id', v)}><SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger><SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent></Select>
+        <fieldset disabled={locked} className="space-y-3 mt-2 border-0 p-0 m-0">
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Client <span className="text-red-400">*</span></Label><Select value={draft.client_id || undefined} onValueChange={v => setField('client_id', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select client" /></SelectTrigger><SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent></Select></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label className="text-muted-foreground">State</Label><Select value={draft.state || undefined} onValueChange={v => setField('state', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select state..." /></SelectTrigger><SelectContent className="max-h-60">{MY_STATES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1.5"><Label className="text-muted-foreground">Region</Label><Select value={draft.region || undefined} onValueChange={v => setField('region', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select region..." /></SelectTrigger><SelectContent>{REGIONS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
           </div>
-          <div className="space-y-1 sm:col-span-2"><Label>Site / Outlet Name *</Label><Input value={draft.site_name} onChange={e => setField('site_name', e.target.value)} placeholder="Site name" />
-            {conflicts.length > 0 && <p className="text-xs text-amber-500">A site with a similar name already exists under this client. Check the existing sites before adding.</p>}
-          </div>
-          <div className="space-y-1 sm:col-span-2"><Label>Site Location</Label><Input value={draft.site_location} onChange={e => setField('site_location', e.target.value)} placeholder="Address" /></div>
-          <div className="space-y-1"><Label>Region</Label><Input value={draft.region} onChange={e => setField('region', e.target.value)} placeholder="Region" /></div>
-          <div className="space-y-1"><Label>State</Label><Input value={draft.state} onChange={e => setField('state', e.target.value)} placeholder="State" /></div>
-          <div className="space-y-1"><Label>PIC Name</Label><Input value={draft.pic_name} onChange={e => setField('pic_name', e.target.value)} placeholder="Person in charge" /></div>
-          <div className="space-y-1"><Label>PIC Phone</Label><Input value={draft.pic_phone} onChange={e => setField('pic_phone', e.target.value)} placeholder="Phone" /></div>
-          {isAdmin && <div className="space-y-1 sm:col-span-2"><Label>Status (admin override)</Label><Select value={(draft.status || ['active'])[0]} onValueChange={v => setField('status', [v])}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div>}
-          <div className="space-y-1 sm:col-span-2"><Label>Notes</Label><Textarea value={draft.notes} onChange={e => setField('notes', e.target.value)} placeholder="Notes" rows={2} className="text-sm" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Site Status</Label><Select value={draft.status?.[0] || undefined} onValueChange={v => setField('status', [v])}><SelectTrigger className="bg-background"><SelectValue placeholder="Select status..." /></SelectTrigger><SelectContent>{STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Site Name <span className="text-red-400">*</span></Label><Input value={draft.site_name} onChange={e => setField('site_name', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Site Location</Label><Input value={draft.site_location} onChange={e => setField('site_location', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">PIC Name</Label><Input value={draft.pic_name} onChange={e => setField('pic_name', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">PIC Phone</Label><Input value={draft.pic_phone} onChange={e => setField('pic_phone', e.target.value)} className="bg-background" /></div>
+          {conflicts.length > 0 && <p className="text-xs text-amber-500">A site with a similar name already exists under this client.</p>}
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Notes</Label><Textarea value={draft.notes} onChange={e => setField('notes', e.target.value)} className="bg-background resize-none" rows={2} /></div>
         </fieldset>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <DialogFooter><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={handleConfirm} disabled={locked || !draft.client_id || !draft.site_name.trim()}>{locked ? 'Saving...' : 'Add Site'}</Button></DialogFooter>
+        <DialogFooter className="mt-4"><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={handleConfirm} disabled={locked || !draft.client_id || !draft.site_name.trim()}>{locked ? 'Saving...' : 'Add Site'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
