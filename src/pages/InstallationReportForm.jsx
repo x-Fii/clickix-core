@@ -13,13 +13,10 @@ import { useToast } from '@/components/ui/use-toast';
 import SignaturePad from '@/components/SignaturePad';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
 import PhotoPairUploader from '@/components/installation/PhotoPairUploader';
-import AddClientDialog from '@/components/installation/AddClientDialog';
-import AddSiteDialog from '@/components/installation/AddSiteDialog';
-import AddLicenseDialog from '@/components/installation/AddLicenseDialog';
 import EquipmentPicker from '@/components/installation/EquipmentPicker';
 import DecommissionScopeBar from '@/components/installation/DecommissionScopeBar';
 import FullSiteConfirmDialog from '@/components/installation/FullSiteConfirmDialog';
-import { createStagedClient, createStagedSite, createStagedLicense, findLicenseNumberConflict } from '@/lib/installationStaging';
+import { findLicenseNumberConflict } from '@/lib/installationStaging';
 import { getReliableEquipmentForContext, getLinkFor } from '@/lib/decommissionStaging';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -130,9 +127,8 @@ export default function InstallationReportForm() {
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
-  // Phase 2 staging: new Client / Site / License records are staged on the
-  // report draft with stable temp IDs and only persisted as master records on
-  // official completion (handled by the backend synchronizer on Main).
+  // Retain staged records from older drafts. New Add actions below create
+  // master records immediately and do not add new staging entries.
   // These state declarations MUST come before the derived license/site
   // computations below, which reference stagedLicenses/stagedSites/stagedClients.
   const [showAddClient, setShowAddClient] = useState(false);
@@ -149,31 +145,29 @@ export default function InstallationReportForm() {
   // confirmation gate. No Equipment or Site status changes happen on save.
   const [showFullSiteConfirm, setShowFullSiteConfirm] = useState(false);
 
-  // Build the eligible license list for the currently selected site.
-  // site_id-linked Inventory is matched directly; legacy records without
-  // site_id are eligible only via a unique normalized Client + Site Name
-  // match to a Site under the selected client — never via Inventory.outlet.
-  // Ambiguous legacy matches (more than one Site) are excluded entirely.
+  // Prefer stable IDs. Legacy names must resolve to one site for this client.
   const siteLicenses = (() => {
-    if (!form.site_id) return [];
-    const site = sites.find(s => s.id === form.site_id);
-    const siteClientName = clients.find(c => c.id === form.client_id)?.company_name || '';
-    const matched = [];
-    for (const inv of inventoryItems) {
-      if (inv.site_id) {
-        if (inv.site_id === form.site_id) matched.push(inv);
-        continue;
-      }
-      // Legacy fallback: unique normalized Client + Site Name -> Site.site_name
-      if (!siteClientName || norm(inv.client) !== norm(siteClientName)) continue;
-      if (!inv.site_name || norm(inv.site_name) !== norm(site?.site_name)) continue;
-      const sameNameSites = sites.filter(s => s.client_id === form.client_id && norm(s.site_name) === norm(inv.site_name));
-      if (sameNameSites.length === 1) matched.push(inv);
-    }
-    // De-duplicate by inventory id so duplicate license names each stay selectable
+    if (!form.client_id || !form.site_id) return [];
+    const site = sites.find(s => s.id === form.site_id && s.client_id === form.client_id);
+    if (!site) return [];
+    const clientName = clients.find(c => c.id === form.client_id)?.company_name || form.client_name;
+    const matched = inventoryItems.filter(inv => {
+      if (inv.client_id && inv.client_id !== form.client_id) return false;
+      if (inv.site_id) return inv.site_id === site.id;
+      if (!clientName || norm(inv.client) !== norm(clientName)) return false;
+      const legacyName = inv.site_name || inv.outlet;
+      if (!legacyName || norm(legacyName) !== norm(site.site_name)) return false;
+      return sites.filter(s => s.client_id === form.client_id && norm(s.site_name) === norm(legacyName)).length === 1;
+    });
     const seen = new Set();
-    return matched.filter(inv => { if (seen.has(inv.id)) return false; seen.add(inv.id); return true; });
+    return matched.filter(inv => { if (!inv.id || seen.has(inv.id)) return false; seen.add(inv.id); return true; });
   })();
+
+  // Device/serial choices use existing Equipment records, never SKU as a serial.
+  const getDecommissionEquipment = (sec) => {
+    if (!form.client_id || !form.site_id || !sec.inventory_id) return [];
+    return equipmentRecords.filter(eq => eq.client_id === form.client_id && eq.site_id === form.site_id && eq.inventory_id === sec.inventory_id);
+  };
 
   // Merge staged licenses that belong to the selected site (existing or staged)
   // into the license options so they appear and are selectable in the dropdown.
@@ -207,66 +201,59 @@ export default function InstallationReportForm() {
 
   const getAnydeskValue = (sec) => getSectionInventory(sec)?.anydesk || '';
 
-  // Phase 2 staging handlers — stage on the report draft, never create master records here.
-  const stageNewClient = (fields) => {
-    const staged = createStagedClient(fields);
-    setStagedClients(prev => [...prev, staged]);
-    setForm(f => ({
-      ...f,
-      client_id: staged.temp_id,
-      client_name: staged.company_name,
-      site_id: '', site_name: '', site_location: '', site_pic_name: '',
-      staged_clients: [...(f.staged_clients || []), staged],
-    }));
-    setShowAddClient(false);
-    toast({ title: 'Client staged', description: `${staged.company_name} will be created on completion.` });
-  };
-
-  const stageNewSite = (fields) => {
-    const staged = createStagedSite(fields);
-    setStagedSites(prev => [...prev, staged]);
-    setForm(f => ({
-      ...f,
-      site_id: staged.temp_id,
-      site_name: staged.site_name,
-      site_location: staged.site_location || '',
-      site_pic_name: staged.pic_name || '',
-      staged_sites: [...(f.staged_sites || []), staged],
-    }));
-    setSiteRegionFilter(staged.region || '');
-    setSiteStateFilter(staged.state || '');
-    setShowAddSite(false);
-    toast({ title: 'Site staged', description: `${staged.site_name} will be created on completion.` });
-  };
-
-  const stageNewLicense = (fields, sectionIndex) => {
-    const conflict = findLicenseNumberConflict(fields.license_number, { inventoryItems, stagedLicenses });
-    if (conflict) {
-      toast({ title: 'License number already in use', description: 'Resolve the conflict before staging.', variant: 'destructive' });
+  // Add dialogs persist master records immediately. Existing draft staging is retained.
+  const addBusyRef = useRef(false);
+  const [addBusy, setAddBusy] = useState(false);
+  const persistMaster = async (entity, fields, afterSave) => {
+    if (addBusyRef.current) return false;
+    addBusyRef.current = true;
+    setAddBusy(true);
+    try {
+      const record = await base44.entities[entity].create(fields);
+      if (!record?.id) throw new Error('The saved record did not return an ID. Refresh before retrying.');
+      const key = { Client: 'clients', Site: 'sites', Inventory: 'inventory' }[entity];
+      queryClient.setQueryData([key], old => [...(old || []).filter(r => r.id !== record.id), record]);
+      afterSave(record);
+      queryClient.invalidateQueries({ queryKey: [key] });
+      toast({ title: `${entity === 'Inventory' ? 'License' : entity} added` });
+      return true;
+    } catch (error) {
+      toast({ title: 'Unable to add record', description: error.message || 'Please try again.', variant: 'destructive' });
       return false;
-    }
-    const staged = createStagedLicense(fields);
-    setStagedLicenses(prev => [...prev, staged]);
-    setForm(f => {
-      const arr = (f.equipment_sections || []).map((sec, index) =>
-        sectionIndex == null || index !== sectionIndex
-          ? sec
-          : {
-              ...sec,
-              section_name: staged.license_name,
-              license_key: staged.license_number,
-              inventory_id: '',
-              staged_inventory_temp_id: staged.temp_id,
-              items: (sec.items || []).map(item =>
-                item.device_name === 'PC' ? { ...item, anydesk: staged.anydesk || '' } : item
-              ),
-            }
-      );
-      return { ...f, equipment_sections: arr, staged_licenses: [...(f.staged_licenses || []), staged] };
+    } finally { addBusyRef.current = false; setAddBusy(false); }
+  };
+  const stageNewClient = async (fields) => {
+    if (form.report_type !== 'commissioning' || ['scheduled', 'completed', 'cancelled'].includes(form.status)) throw new Error('Adding records is available in unlocked Commissioning reports only.');
+    const company_name = fields.company_name.trim();
+    const latest = await base44.entities.Client.list();
+    if (latest.some(c => norm(c.company_name) === norm(company_name))) throw new Error('This client already exists. Select the existing client.');
+    return persistMaster('Client', { company_name }, record => {
+      setForm(f => ({ ...f, client_id: record.id, client_name: record.company_name, site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
+      setSiteRegionFilter(''); setSiteStateFilter(''); setShowAddClient(false);
     });
-    setShowAddLicense(false);
-    toast({ title: 'License staged', description: `${staged.license_name} will be created on completion.` });
-    return true;
+  };
+  const stageNewSite = async (fields) => {
+    if (form.report_type !== 'commissioning' || ['scheduled', 'completed', 'cancelled'].includes(form.status)) throw new Error('Add Site is available in unlocked Commissioning reports only.');
+    const client = clients.find(c => c.id === fields.client_id);
+    if (!client) throw new Error('Select a saved client first.');
+    const latest = await base44.entities.Site.list();
+    if (latest.some(site => site.client_id === client.id && norm(site.site_name) === norm(fields.site_name))) throw new Error('This site already exists for this client. Select the existing site.');
+    return persistMaster('Site', { ...fields, site_name: fields.site_name.trim(), client_id: client.id, client_name: client.company_name }, record => {
+      setForm(f => ({ ...f, client_id: client.id, client_name: client.company_name, site_id: record.id, site_name: record.site_name, site_location: record.site_location || '', site_pic_name: record.pic_name || '' }));
+      setSiteRegionFilter(record.region || ''); setSiteStateFilter(record.state || ''); setShowAddSite(false);
+    });
+  };
+  const stageNewLicense = async (fields, sectionIndex) => {
+    if (form.report_type !== 'commissioning' || ['scheduled', 'completed', 'cancelled'].includes(form.status)) throw new Error('Adding records is available in unlocked Commissioning reports only.');
+    const client = clients.find(c => c.id === form.client_id);
+    const site = sites.find(s => s.id === form.site_id && s.client_id === client?.id);
+    if (!client || !site) throw new Error('Select a saved client and site first.');
+    const latest = await base44.entities.Inventory.list();
+    if (findLicenseNumberConflict(fields.license_number.trim(), { inventoryItems: latest, stagedLicenses })) throw new Error('License number already exists. Use a unique license number.');
+    return persistMaster('Inventory', { ...fields, license_name: fields.license_name.trim(), license_number: fields.license_number.trim(), client_id: client.id, client: client.company_name, site_id: site.id, site_name: site.site_name, outlet: site.site_name }, record => {
+      setForm(f => ({ ...f, equipment_sections: (f.equipment_sections || []).map((sec, index) => index !== sectionIndex ? sec : { ...sec, section_name: record.license_name, license_key: record.license_number, inventory_id: record.id, staged_inventory_temp_id: '', items: (sec.items || []).map(item => item.device_name === 'PC' ? { ...item, anydesk: record.anydesk || '' } : item) }) }));
+      setShowAddLicense(false); setAddLicenseForSection(null);
+    });
   };
 
   // Seed the form from the loaded report exactly once per report id. Doing
@@ -656,9 +643,7 @@ export default function InstallationReportForm() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddSite(true)} disabled={jobLocked}>
-                <Plus size={14} /> Add New Site
-              </Button>
+
             </div>
           </div>
           <fieldset disabled={jobLocked} className="space-y-4 m-0 p-0 border-0">
@@ -712,9 +697,11 @@ export default function InstallationReportForm() {
                       {stagedClients.map(c => <SelectItem key={c.temp_id} value={c.temp_id}>{c.company_name} (staged)</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {form.report_type === 'commissioning' && (
                   <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => setShowAddClient(true)} disabled={jobLocked}>
                     <Plus size={14} /> Add Client
                   </Button>
+                  )}
                 </div>
               </div>
               <div className="space-y-1">
@@ -738,7 +725,14 @@ export default function InstallationReportForm() {
                 {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
               </div>
               <div className="space-y-1">
-                <Label>Site / Outlet</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Site / Outlet</Label>
+                  {form.report_type === 'commissioning' && (
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddSite(true)} disabled={jobLocked}>
+                      <Plus size={14} /> Add Site
+                    </Button>
+                  )}
+                </div>
                 <Select value={form.site_id} onValueChange={v => {
                   if (String(v).startsWith('tmp_site_')) {
                     const staged = stagedSites.find(s => s.temp_id === v);
@@ -768,26 +762,29 @@ export default function InstallationReportForm() {
         </div>
 
         <AddClientDialog
-          open={showAddClient}
+          open={showAddClient && form.report_type === 'commissioning' && !jobLocked}
           onOpenChange={setShowAddClient}
           clients={clients}
+          busy={addBusy}
           onConfirm={(fields) => stageNewClient(fields)}
         />
         <AddSiteDialog
-          open={showAddSite}
+          open={showAddSite && form.report_type === 'commissioning' && !jobLocked}
           onOpenChange={setShowAddSite}
           clients={clients}
           stagedClients={stagedClients}
           sites={sites}
+          busy={addBusy}
           isAdmin={isAdmin}
           linkedClientId={form.client_id}
           linkedStagedClientTempId={isStagedClientId ? form.client_id : ''}
           onConfirm={(fields) => stageNewSite(fields)}
         />
         <AddLicenseDialog
-          open={showAddLicense}
+          open={showAddLicense && form.report_type === 'commissioning' && !jobLocked}
           onOpenChange={(o) => { setShowAddLicense(o); if (!o) setAddLicenseForSection(null); }}
           inventoryItems={inventoryItems}
+          busy={addBusy}
           stagedLicenses={stagedLicenses}
           linkedClientId={form.client_id}
           linkedClientName={form.client_name}
@@ -886,6 +883,7 @@ export default function InstallationReportForm() {
                     <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
                       <button
                         type="button"
+                        disabled={jobLocked || form.report_type !== 'commissioning'}
                         onClick={() => {
                           setAddLicenseForSection(si);
                           setShowAddLicense(true);
@@ -1283,7 +1281,7 @@ export default function InstallationReportForm() {
 
                     {decommissionLicenseOpen[si] && (
                       <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                        {licenseOptions
+                        {siteLicenses
                           .filter(inv => String(inv.license_name || '').toLowerCase().includes((decommissionLicenseSearch[si] || '').toLowerCase()))
                           .map(inv => (
                             <button
@@ -1300,7 +1298,7 @@ export default function InstallationReportForm() {
                               {inv.license_number && <span className="text-muted-foreground font-mono ml-2">{inv.license_number}</span>}
                             </button>
                           ))}
-                        {licenseOptions.length === 0 && (
+                        {siteLicenses.length === 0 && (
                           <div className="px-3 py-2 text-xs text-muted-foreground">
                             {form.site_id ? 'No license found for this site' : 'Select a site to choose a license'}
                           </div>
@@ -1331,11 +1329,17 @@ export default function InstallationReportForm() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Device Name / Model</Label>
-                          <Input className="h-8 text-xs" value={item.device_name} onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }} placeholder="Name / Model" />
+                          <Input className="h-8 text-xs" list={`decomm-device-${si}-${ii}`} value={item.device_name} onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }} placeholder="Select or enter Name / Model" />
+                          <datalist id={`decomm-device-${si}-${ii}`}>
+                            {[...new Set(getDecommissionEquipment(sec).filter(eq => !item.device_type || eq.device_type === item.device_type).map(eq => eq.device_name).filter(Boolean))].map(name => <option key={name} value={name} />)}
+                          </datalist>
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Serial Number</Label>
-                          <Input className="h-8 text-xs" value={item.serial_number} onChange={e => { updateDecommSectionItem(si, ii, 'serial_number', e.target.value); ensureLink(si, ii); }} placeholder="S/N" />
+                          <Input className="h-8 text-xs" list={`decomm-serial-${si}-${ii}`} value={item.serial_number} onChange={e => { updateDecommSectionItem(si, ii, 'serial_number', e.target.value); ensureLink(si, ii); }} placeholder="Select or enter S/N" />
+                          <datalist id={`decomm-serial-${si}-${ii}`}>
+                            {[...new Set(getDecommissionEquipment(sec).filter(eq => (!item.device_type || eq.device_type === item.device_type) && (!item.device_name || norm(eq.device_name) === norm(item.device_name))).map(eq => eq.serial_number).filter(Boolean))].map(serial => <option key={serial} value={serial} />)}
+                          </datalist>
                         </div>
                       </div>
                       <div className="space-y-1">
@@ -1518,3 +1522,57 @@ export default function InstallationReportForm() {
     </div>
   );
 }
+// Inline Add dialogs: no separate Add*.jsx component files required.
+const IR_STATES = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'];
+const IR_REGIONS = ['Central', 'Northern', 'Southern', 'East Coast', 'East Malaysia'];
+const IR_STATUS_STYLES = { active: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25', inactive: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/25', 're-instating': 'bg-amber-500/15 text-amber-400 border-amber-500/25', 're-instated': 'bg-sky-500/15 text-sky-400 border-sky-500/25' };
+function InlineAddDialog({ kind, open, onOpenChange, clients = [], linkedClientId = '', linkedSiteName = '', busy, onConfirm }) {
+  const [values, setValues] = useState({});
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const pendingRef = useRef(false);
+  useEffect(() => {
+    if (open) {
+      setValues(kind === 'Site' ? { client_id: clients.some(c => c.id === linkedClientId) ? linkedClientId : '', state: '', region: '', status: [], site_name: '', site_location: '', pic_name: '', pic_phone: '', notes: '' } : kind === 'Client' ? { company_name: '' } : { license_name: '', license_number: '', pc_sku: '', processor: '', anydesk: '', tv_sku: '' });
+      setError('');
+    }
+  }, [open, kind, linkedClientId]);
+  const setValue = (key, value) => setValues(v => ({ ...v, [key]: value }));
+  const save = async () => {
+    if (pendingRef.current || busy) return;
+    const required = kind === 'Client' ? ['company_name'] : kind === 'Site' ? ['client_id', 'site_name'] : ['license_name', 'license_number'];
+    if (required.some(key => !String(values[key] || '').trim())) { setError('Please complete all required fields.'); return; }
+    pendingRef.current = true; setSaving(true); setError('');
+    try { await onConfirm(values); } catch (err) { setError(err.message || 'Unable to save. Please try again.'); }
+    finally { pendingRef.current = false; setSaving(false); }
+  };
+  const locked = busy || saving;
+  const fields = kind === 'Client' ? [['company_name', 'Client Name', true]] : kind === 'Site' ? [['site_name', 'Site Name', true], ['site_location', 'Site Location'], ['pic_name', 'PIC Name'], ['pic_phone', 'PIC Phone']] : [['license_name', 'License Name', true], ['license_number', 'License Number', true], ['pc_sku', 'PC SKU'], ['processor', 'Processor'], ['anydesk', 'AnyDesk'], ['tv_sku', 'TV SKU']];
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!locked) onOpenChange(v); }}>
+      <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto" onKeyDown={e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); save(); } }}>
+        <DialogHeader><DialogTitle>Add New {kind}</DialogTitle></DialogHeader>
+        <fieldset disabled={locked} className="space-y-3 mt-2 border-0 p-0 m-0">
+          {kind === 'Site' && <>
+            <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">Client <span className="text-red-400">*</span></Label>
+              <Select value={values.client_id || undefined} onValueChange={v => setValue('client_id', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select client" /></SelectTrigger><SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent></Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">{[['state', 'State', IR_STATES], ['region', 'Region', IR_REGIONS]].map(([key, label, options]) => <div key={key} className="space-y-1.5"><Label className="text-xs text-muted-foreground">{label}</Label><Select value={values[key] || undefined} onValueChange={v => setValue(key, v)}><SelectTrigger className="bg-background text-sm"><SelectValue placeholder={`Select ${label.toLowerCase()}...`} /></SelectTrigger><SelectContent className="max-h-60">{options.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>)}</div>
+            <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">Site Status</Label><div className="flex flex-wrap gap-1.5 min-h-9 items-center rounded-md border border-input bg-background px-2 py-1.5">
+              {(values.status || []).map(st => <span key={st} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border ${IR_STATUS_STYLES[st]}`} >{st}<button type="button" onClick={() => setValue('status', values.status.filter(v => v !== st))}>✕</button></span>)}
+              <select value="" className="text-xs bg-transparent text-muted-foreground flex-1 min-w-[120px]" onChange={e => { if (e.target.value && !(values.status || []).includes(e.target.value)) setValue('status', [...(values.status || []), e.target.value]); }}><option value="">{values.status?.length ? '+ Add status' : 'Select status...'}</option>{Object.keys(IR_STATUS_STYLES).map(st => <option key={st} value={st}>{st}</option>)}</select>
+            </div></div>
+          </>}
+          {kind === 'License' && <p className="text-xs text-muted-foreground">Site / Outlet: {linkedSiteName || 'Select a saved site first'}</p>}
+          {fields.map(([key, label, required]) => <div key={key} className="space-y-1.5"><Label className="text-xs text-muted-foreground">{label}{required && <span className="text-red-400 ml-1">*</span>}</Label><Input className="bg-background" value={values[key] || ''} onChange={e => setValue(key, e.target.value)} /></div>)}
+          {kind === 'Site' && <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">Notes</Label><Textarea className="bg-background resize-none" rows={2} value={values.notes || ''} onChange={e => setValue('notes', e.target.value)} /></div>}
+        </fieldset>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <DialogFooter><Button type="button" variant="outline" disabled={locked} onClick={() => onOpenChange(false)}>Cancel</Button><Button type="button" disabled={locked} onClick={save}>{locked ? 'Saving...' : `Add ${kind}`}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+function AddClientDialog(props) { return <InlineAddDialog {...props} kind="Client" />; }
+function AddSiteDialog(props) { return <InlineAddDialog {...props} kind="Site" />; }
+function AddLicenseDialog(props) { return <InlineAddDialog {...props} kind="License" />; }
