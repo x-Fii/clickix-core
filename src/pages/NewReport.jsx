@@ -277,12 +277,12 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
       const availableSlots = slots.filter(
         slot => !usedIds.has(slot.id)
       );
-/*
+
       // Do not add more than the available Inventory quantity
       if (slots.length > 0 && availableSlots.length === 0) {
         return section;
       }
-*/
+
       // Automatically select the last remaining device
       const autoSlot =
         availableSlots.length === 1
@@ -784,7 +784,7 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                               size="sm"
                               className="gap-1 text-xs"
                               onClick={() => addAffectedDeviceItem(si, type)}
-                              /*
+                           
                               disabled={
                                 inventoryField &&
                                 getAffectedDeviceSlots(sec.section_name, type).length > 0 &&
@@ -793,7 +793,7 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                                   deviceItems.some(({ item }) => !item.device_slot_id)
                                 )
                               }
-                              */
+                              
                             >
                               <Plus size={12} />
                               Add Item
