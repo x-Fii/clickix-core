@@ -723,6 +723,17 @@ export default function L1DraftEditor({ report }) {
                                   );
                                 }
 
+                                
+                                if (item.device_name && !selectedSlot) {
+                                  return (
+                                    <Input
+                                      value={item.device_name}
+                                      readOnly
+                                      className="bg-muted text-xs h-8"
+                                    />
+                                  );
+                                }
+
                                 if (selectedSlot && availableSlots.length === 1) {
                                   return (
                                     <Input
