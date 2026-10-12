@@ -214,10 +214,12 @@ export default function L1DraftEditor({ report }) {
           slot => !usedIds.has(slot.id)
         );
 
+        /*
         // Do not exceed the available Inventory quantity
         if (slots.length > 0 && availableSlots.length === 0) {
           return section;
         }
+        */
 
         // Automatically select the last remaining device
         const autoSlot =
