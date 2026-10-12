@@ -16,7 +16,7 @@ import PhotoPairUploader from '@/components/installation/PhotoPairUploader';
 import EquipmentPicker from '@/components/installation/EquipmentPicker';
 import DecommissionScopeBar from '@/components/installation/DecommissionScopeBar';
 import FullSiteConfirmDialog from '@/components/installation/FullSiteConfirmDialog';
-import { findLicenseNumberConflict } from '@/lib/installationStaging';
+import { findLicenseNumberConflict, findSimilarClients, findSimilarSites } from '@/lib/installationStaging';
 import { getReliableEquipmentForContext, getLinkFor } from '@/lib/decommissionStaging';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -227,7 +227,7 @@ export default function InstallationReportForm() {
     const company_name = fields.company_name.trim();
     const latest = await base44.entities.Client.list();
     if (latest.some(c => norm(c.company_name) === norm(company_name))) throw new Error('This client already exists. Select the existing client.');
-    return persistMaster('Client', { company_name }, record => {
+    return persistMaster('Client', { ...fields, company_name }, record => {
       setForm(f => ({ ...f, client_id: record.id, client_name: record.company_name, site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
       setSiteRegionFilter(''); setSiteStateFilter(''); setShowAddClient(false);
     });
@@ -250,7 +250,7 @@ export default function InstallationReportForm() {
     if (!client || !site) throw new Error('Select a saved client and site first.');
     const latest = await base44.entities.Inventory.list();
     if (findLicenseNumberConflict(fields.license_number.trim(), { inventoryItems: latest, stagedLicenses })) throw new Error('License number already exists. Use a unique license number.');
-    return persistMaster('Inventory', { ...fields, license_name: fields.license_name.trim(), license_number: fields.license_number.trim(), client_id: client.id, client: client.company_name, site_id: site.id, site_name: site.site_name, outlet: site.site_name }, record => {
+    return persistMaster('Inventory', { ...fields, license_name: fields.license_name.trim(), license_number: fields.license_number.trim(), client_id: client.id, client: client.company_name, site_id: site.id, site_name: site.site_name, outlet: fields.outlet || '' }, record => {
       setForm(f => ({ ...f, equipment_sections: (f.equipment_sections || []).map((sec, index) => index !== sectionIndex ? sec : { ...sec, section_name: record.license_name, license_key: record.license_number, inventory_id: record.id, staged_inventory_temp_id: '', items: (sec.items || []).map(item => item.device_name === 'PC' ? { ...item, anydesk: record.anydesk || '' } : item) }) }));
       setShowAddLicense(false); setAddLicenseForSection(null);
     });
@@ -1523,56 +1523,164 @@ export default function InstallationReportForm() {
   );
 }
 // Inline Add dialogs: no separate Add*.jsx component files required.
-const IR_STATES = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'];
-const IR_REGIONS = ['Central', 'Northern', 'Southern', 'East Coast', 'East Malaysia'];
-const IR_STATUS_STYLES = { active: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25', inactive: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/25', 're-instating': 'bg-amber-500/15 text-amber-400 border-amber-500/25', 're-instated': 'bg-sky-500/15 text-sky-400 border-sky-500/25' };
-function InlineAddDialog({ kind, open, onOpenChange, clients = [], linkedClientId = '', linkedSiteName = '', busy, onConfirm }) {
-  const [values, setValues] = useState({});
+const SLA_OPTIONS = ['subscribe', 'on-demand'];
+const CMS_OPTIONS = ['CS Play', 'CS Sign Hub', 'CS Deals', 'CS Context', 'OmniBuy', 'DOTS'];
+const HARDWARE_OPTIONS = ['PC', 'Cable', 'Controller', 'TV', 'LED', 'Network Device'];
+const blankClient = () => ({ company_name: '', contact_person: '', pic_designation: '', contact_email: '', contact_phone: '', company_website: '', sla: '', cms_subscriptions: [], hardware: [], address: '', notes: '' });
+function AddClientDialog({ open, onOpenChange, clients = [], onConfirm, busy }) {
+  const [draft, setDraft] = useState(blankClient());
+  const [conflicts, setConflicts] = useState([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const pendingRef = useRef(false);
-  useEffect(() => {
-    if (open) {
-      setValues(kind === 'Site' ? { client_id: clients.some(c => c.id === linkedClientId) ? linkedClientId : '', state: '', region: '', status: [], site_name: '', site_location: '', pic_name: '', pic_phone: '', notes: '' } : kind === 'Client' ? { company_name: '' } : { license_name: '', license_number: '', pc_sku: '', processor: '', anydesk: '', tv_sku: '' });
-      setError('');
-    }
-  }, [open, kind, linkedClientId]);
-  const setValue = (key, value) => setValues(v => ({ ...v, [key]: value }));
-  const save = async () => {
-    if (pendingRef.current || busy) return;
-    const required = kind === 'Client' ? ['company_name'] : kind === 'Site' ? ['client_id', 'site_name'] : ['license_name', 'license_number'];
-    if (required.some(key => !String(values[key] || '').trim())) { setError('Please complete all required fields.'); return; }
+  useEffect(() => { if (!open) { setDraft(blankClient()); setConflicts([]); setError(''); } }, [open]);
+  const setField = (field, value) => setDraft(d => ({ ...d, [field]: value }));
+  const toggleArray = (field, value) => setDraft(d => {
+    const arr = d[field] || [];
+    return { ...d, [field]: arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value] };
+  });
+  const handleConfirm = async () => {
+    if (!draft.company_name.trim() || pendingRef.current || busy) return;
     pendingRef.current = true; setSaving(true); setError('');
-    try { await onConfirm(values); } catch (err) { setError(err.message || 'Unable to save. Please try again.'); }
+    try {
+      const matches = findSimilarClients(draft.company_name, clients);
+      setConflicts(matches);
+      await onConfirm({ ...draft, company_name: draft.company_name.trim() }, matches);
+    } catch (err) { setError(err.message || 'Unable to save client.'); }
     finally { pendingRef.current = false; setSaving(false); }
   };
   const locked = busy || saving;
-  const fields = kind === 'Client' ? [['company_name', 'Client Name', true]] : kind === 'Site' ? [['site_name', 'Site Name', true], ['site_location', 'Site Location'], ['pic_name', 'PIC Name'], ['pic_phone', 'PIC Phone']] : [['license_name', 'License Name', true], ['license_number', 'License Number', true], ['pc_sku', 'PC SKU'], ['processor', 'Processor'], ['anydesk', 'AnyDesk'], ['tv_sku', 'TV SKU']];
+  const handleClose = (value) => {
+    if (locked) return;
+    if (!value) { setDraft(blankClient()); setConflicts([]); setError(''); }
+    onOpenChange(value);
+  };
   return (
-    <Dialog open={open} onOpenChange={v => { if (!locked) onOpenChange(v); }}>
-      <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto" onKeyDown={e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); save(); } }}>
-        <DialogHeader><DialogTitle>Add New {kind}</DialogTitle></DialogHeader>
-        <fieldset disabled={locked} className="space-y-3 mt-2 border-0 p-0 m-0">
-          {kind === 'Site' && <>
-            <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">Client <span className="text-red-400">*</span></Label>
-              <Select value={values.client_id || undefined} onValueChange={v => setValue('client_id', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select client" /></SelectTrigger><SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent></Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">{[['state', 'State', IR_STATES], ['region', 'Region', IR_REGIONS]].map(([key, label, options]) => <div key={key} className="space-y-1.5"><Label className="text-xs text-muted-foreground">{label}</Label><Select value={values[key] || undefined} onValueChange={v => setValue(key, v)}><SelectTrigger className="bg-background text-sm"><SelectValue placeholder={`Select ${label.toLowerCase()}...`} /></SelectTrigger><SelectContent className="max-h-60">{options.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>)}</div>
-            <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">Site Status</Label><div className="flex flex-wrap gap-1.5 min-h-9 items-center rounded-md border border-input bg-background px-2 py-1.5">
-              {(values.status || []).map(st => <span key={st} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border ${IR_STATUS_STYLES[st]}`} >{st}<button type="button" onClick={() => setValue('status', values.status.filter(v => v !== st))}>✕</button></span>)}
-              <select value="" className="text-xs bg-transparent text-muted-foreground flex-1 min-w-[120px]" onChange={e => { if (e.target.value && !(values.status || []).includes(e.target.value)) setValue('status', [...(values.status || []), e.target.value]); }}><option value="">{values.status?.length ? '+ Add status' : 'Select status...'}</option>{Object.keys(IR_STATUS_STYLES).map(st => <option key={st} value={st}>{st}</option>)}</select>
-            </div></div>
-          </>}
-          {kind === 'License' && <p className="text-xs text-muted-foreground">Site / Outlet: {linkedSiteName || 'Select a saved site first'}</p>}
-          {fields.map(([key, label, required]) => <div key={key} className="space-y-1.5"><Label className="text-xs text-muted-foreground">{label}{required && <span className="text-red-400 ml-1">*</span>}</Label><Input className="bg-background" value={values[key] || ''} onChange={e => setValue(key, e.target.value)} /></div>)}
-          {kind === 'Site' && <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">Notes</Label><Textarea className="bg-background resize-none" rows={2} value={values.notes || ''} onChange={e => setValue('notes', e.target.value)} /></div>}
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[560px]" onKeyDown={e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); handleConfirm(); } }}>
+        <DialogHeader><DialogTitle>Add New Client</DialogTitle></DialogHeader>
+        <fieldset disabled={locked} className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 max-h-[60vh] overflow-y-auto pr-1 border-0 m-0">
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Company Name *</Label>
+            <Input value={draft.company_name} onChange={e => setField('company_name', e.target.value)} placeholder="Company name" />
+            {conflicts.length > 0 && <p className="text-xs text-amber-500">A client with a similar name already exists. Check the existing clients before adding.</p>}
+          </div>
+          <div className="space-y-1"><Label>Contact Person</Label><Input value={draft.contact_person} onChange={e => setField('contact_person', e.target.value)} placeholder="Contact person" /></div>
+          <div className="space-y-1"><Label>PIC Designation</Label><Input value={draft.pic_designation} onChange={e => setField('pic_designation', e.target.value)} placeholder="Designation" /></div>
+          <div className="space-y-1"><Label>Contact Email</Label><Input type="email" value={draft.contact_email} onChange={e => setField('contact_email', e.target.value)} placeholder="Email" /></div>
+          <div className="space-y-1"><Label>Contact Phone</Label><Input value={draft.contact_phone} onChange={e => setField('contact_phone', e.target.value)} placeholder="Phone" /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Company Website</Label><Input value={draft.company_website} onChange={e => setField('company_website', e.target.value)} placeholder="https://" /></div>
+          <div className="space-y-1"><Label>SLA</Label><Select value={draft.sla || undefined} onValueChange={v => setField('sla', v)}><SelectTrigger><SelectValue placeholder="Select SLA" /></SelectTrigger><SelectContent>{SLA_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></div>
+          <div className="space-y-1"><Label>CMS Subscriptions</Label><div className="flex flex-wrap gap-1.5 border border-input rounded-md p-2 min-h-9">{CMS_OPTIONS.map(o => <label key={o} className="flex items-center gap-1 text-xs cursor-pointer"><input type="checkbox" checked={(draft.cms_subscriptions || []).includes(o)} onChange={() => toggleArray('cms_subscriptions', o)} className="accent-primary" />{o}</label>)}</div></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Hardware</Label><div className="flex flex-wrap gap-1.5">{HARDWARE_OPTIONS.map(o => <label key={o} className="flex items-center gap-1 text-xs cursor-pointer"><input type="checkbox" checked={(draft.hardware || []).includes(o)} onChange={() => toggleArray('hardware', o)} className="accent-primary" />{o}</label>)}</div></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Address</Label><Textarea value={draft.address} onChange={e => setField('address', e.target.value)} placeholder="Address" rows={2} className="text-sm" /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Notes</Label><Textarea value={draft.notes} onChange={e => setField('notes', e.target.value)} placeholder="Notes" rows={2} className="text-sm" /></div>
         </fieldset>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <DialogFooter><Button type="button" variant="outline" disabled={locked} onClick={() => onOpenChange(false)}>Cancel</Button><Button type="button" disabled={locked} onClick={save}>{locked ? 'Saving...' : `Add ${kind}`}</Button></DialogFooter>
+        <DialogFooter><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={handleConfirm} disabled={locked || !draft.company_name.trim()}>{locked ? 'Saving...' : 'Add Client'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-function AddClientDialog(props) { return <InlineAddDialog {...props} kind="Client" />; }
-function AddSiteDialog(props) { return <InlineAddDialog {...props} kind="Site" />; }
-function AddLicenseDialog(props) { return <InlineAddDialog {...props} kind="License" />; }
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' },
+  { value: 're-instating', label: 'Re-Instating' }, { value: 're-instated', label: 'Re-Instated' },
+];
+function AddSiteDialog({ open, onOpenChange, clients = [], sites = [], isAdmin = false, linkedClientId = '', onConfirm, busy }) {
+  const build = () => ({ client_id: linkedClientId || '', site_name: '', site_location: '', region: '', state: '', pic_name: '', pic_phone: '', notes: '', status: ['active'] });
+  const [draft, setDraft] = useState(build);
+  const [conflicts, setConflicts] = useState([]);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const pendingRef = useRef(false);
+  useEffect(() => { if (open) { setDraft(d => ({ ...build(), client_id: linkedClientId || d.client_id })); setConflicts([]); setError(''); } }, [open, linkedClientId]);
+  const setField = (field, value) => setDraft(d => ({ ...d, [field]: value }));
+  const selectedClientName = clients.find(c => c.id === draft.client_id)?.company_name || '';
+  const handleConfirm = async () => {
+    if (!draft.client_id || !draft.site_name.trim() || pendingRef.current || busy) return;
+    pendingRef.current = true; setSaving(true); setError('');
+    try {
+      const matches = findSimilarSites(draft.site_name, draft.client_id, sites);
+      setConflicts(matches);
+      await onConfirm({ ...draft, site_name: draft.site_name.trim(), client_name: selectedClientName }, matches);
+    } catch (err) { setError(err.message || 'Unable to save site.'); }
+    finally { pendingRef.current = false; setSaving(false); }
+  };
+  const locked = busy || saving;
+  const handleClose = (value) => {
+    if (locked) return;
+    if (!value) { setDraft(build()); setConflicts([]); setError(''); }
+    onOpenChange(value);
+  };
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[520px]" onKeyDown={e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); handleConfirm(); } }}>
+        <DialogHeader><DialogTitle>Add New Site</DialogTitle></DialogHeader>
+        <fieldset disabled={locked} className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 max-h-[60vh] overflow-y-auto pr-1 border-0 m-0">
+          <div className="space-y-1 sm:col-span-2"><Label>Client *</Label>
+            <Select value={draft.client_id || undefined} onValueChange={v => setField('client_id', v)}><SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger><SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent></Select>
+          </div>
+          <div className="space-y-1 sm:col-span-2"><Label>Site / Outlet Name *</Label><Input value={draft.site_name} onChange={e => setField('site_name', e.target.value)} placeholder="Site name" />
+            {conflicts.length > 0 && <p className="text-xs text-amber-500">A site with a similar name already exists under this client. Check the existing sites before adding.</p>}
+          </div>
+          <div className="space-y-1 sm:col-span-2"><Label>Site Location</Label><Input value={draft.site_location} onChange={e => setField('site_location', e.target.value)} placeholder="Address" /></div>
+          <div className="space-y-1"><Label>Region</Label><Input value={draft.region} onChange={e => setField('region', e.target.value)} placeholder="Region" /></div>
+          <div className="space-y-1"><Label>State</Label><Input value={draft.state} onChange={e => setField('state', e.target.value)} placeholder="State" /></div>
+          <div className="space-y-1"><Label>PIC Name</Label><Input value={draft.pic_name} onChange={e => setField('pic_name', e.target.value)} placeholder="Person in charge" /></div>
+          <div className="space-y-1"><Label>PIC Phone</Label><Input value={draft.pic_phone} onChange={e => setField('pic_phone', e.target.value)} placeholder="Phone" /></div>
+          {isAdmin && <div className="space-y-1 sm:col-span-2"><Label>Status (admin override)</Label><Select value={(draft.status || ['active'])[0]} onValueChange={v => setField('status', [v])}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div>}
+          <div className="space-y-1 sm:col-span-2"><Label>Notes</Label><Textarea value={draft.notes} onChange={e => setField('notes', e.target.value)} placeholder="Notes" rows={2} className="text-sm" /></div>
+        </fieldset>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <DialogFooter><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={handleConfirm} disabled={locked || !draft.client_id || !draft.site_name.trim()}>{locked ? 'Saving...' : 'Add Site'}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+function AddLicenseDialog({ open, onOpenChange, inventoryItems = [], stagedLicenses = [], linkedClientId = '', linkedClientName = '', linkedSiteId = '', linkedSiteName = '', outlet = '', onConfirm, busy }) {
+  const build = () => ({ license_name: '', license_number: '', pc_sku: '', tv_sku: '', processor: '', anydesk: '', outlet: outlet || '', client_id: linkedClientId || '', client_name: linkedClientName || '', site_id: linkedSiteId || '', site_name: linkedSiteName || '' });
+  const [draft, setDraft] = useState(build);
+  const [conflict, setConflict] = useState(null);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const pendingRef = useRef(false);
+  useEffect(() => { if (open) { setDraft(build()); setConflict(null); setError(''); } }, [open, linkedClientId, linkedClientName, linkedSiteId, linkedSiteName, outlet]);
+  const setField = (field, value) => setDraft(d => ({ ...d, [field]: value }));
+  const checkAndConfirm = async () => {
+    if (!draft.license_number.trim() || pendingRef.current || busy) return;
+    const found = findLicenseNumberConflict(draft.license_number, { inventoryItems, stagedLicenses });
+    setConflict(found);
+    if (found) return;
+    pendingRef.current = true; setSaving(true); setError('');
+    try { await onConfirm({ ...draft, license_number: draft.license_number.trim() }); }
+    catch (err) { setError(err.message || 'Unable to save license.'); }
+    finally { pendingRef.current = false; setSaving(false); }
+  };
+  const locked = busy || saving;
+  const handleClose = value => {
+    if (locked) return;
+    if (!value) { setDraft(build()); setConflict(null); setError(''); }
+    onOpenChange(value);
+  };
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[560px]" onKeyDown={e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); checkAndConfirm(); } }}>
+        <DialogHeader><DialogTitle>Add New License</DialogTitle></DialogHeader>
+        <fieldset disabled={locked} className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 max-h-[60vh] overflow-y-auto pr-1 border-0 m-0">
+          <div className="space-y-1 sm:col-span-2"><Label>License Name</Label><Input value={draft.license_name} onChange={e => setField('license_name', e.target.value)} placeholder="License / system name" /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>License Number *</Label><Input value={draft.license_number} onChange={e => { setField('license_number', e.target.value); setConflict(null); }} placeholder="Globally unique license number" />
+            {conflict && <p className="text-xs text-destructive">{conflict.kind === 'inventory' ? 'An existing inventory license' : 'A staged license'} already uses this number: {conflict.record.license_name || conflict.record.company_name}. Resolve the conflict before saving.</p>}
+          </div>
+          <div className="space-y-1"><Label>PC SKU</Label><Input value={draft.pc_sku} onChange={e => setField('pc_sku', e.target.value)} placeholder="PC SKU" /></div>
+          <div className="space-y-1"><Label>TV SKU</Label><Input value={draft.tv_sku} onChange={e => setField('tv_sku', e.target.value)} placeholder="TV SKU" /></div>
+          <div className="space-y-1"><Label>Processor</Label><Input value={draft.processor} onChange={e => setField('processor', e.target.value)} placeholder="Processor / model" /></div>
+          <div className="space-y-1"><Label>AnyDesk</Label><Input value={draft.anydesk} onChange={e => setField('anydesk', e.target.value)} placeholder="AnyDesk ID" /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Outlet</Label><Input value={draft.outlet} onChange={e => setField('outlet', e.target.value)} placeholder="Outlet (distinct from site name)" /></div>
+          <div className="space-y-1 sm:col-span-2 text-xs text-muted-foreground border-t border-border pt-2">Linked to {draft.client_name || '—'} · {draft.site_name || '—'}</div>
+        </fieldset>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <DialogFooter><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={checkAndConfirm} disabled={locked || !draft.license_number.trim() || !!conflict}>{locked ? 'Saving...' : 'Add License'}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
