@@ -14,6 +14,7 @@ const empty = { client: '', outlet: '', license_name: '', license_number: '', pc
 const FIELDS = [
   ['client', 'Client'],
   ['outlet', 'Outlet'],
+  ['site_name', 'Site Name'],
   ['license_name', 'License Name'],
   ['license_number', 'License Number'],
   ['pc_sku', 'PC SKU'],
