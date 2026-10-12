@@ -10,8 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock, Save, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
-
-
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 
 const AFFECTED_DEVICE_TYPES = [
@@ -24,12 +22,14 @@ const AFFECTED_INVENTORY_FIELDS = {
   'TV': 'tv_sku'
 };
 
-
 const emptyItem = () => ({ device_type: '', device_name: '', issue_description: '' });
+
 const emptySection = () => ({ section_name: '', items: [emptyItem()] });
 
 // Assigns the lowest skipped sequence number within the current year's range,
+
 // keeping the existing max as the ceiling; once gaps are filled it continues past the max.
+
 const fetchNextRunningNumber = async () => {
   const yy = String(new Date().getFullYear()).slice(-2);
   const prefix = `SR${yy}-`;
@@ -70,7 +70,6 @@ export default function NewReport() {
   const queryClient = useQueryClient();
   const [licenseSearch, setLicenseSearch] = useState({});
   const [licenseOpen, setLicenseOpen] = useState({});
-
   const [form, setForm] = useState({
     running_number: '',
     l1_date: new Date().toISOString().split('T')[0],
@@ -85,25 +84,18 @@ export default function NewReport() {
     l1_remarks: '',
     whatsapp_response_id: '',
   });
-
   // const [affectedSections, setAffectedSections] = useState([emptySection()]);
-
   const [affectedSections, setAffectedSections] = useState([
     { section_name: '', items: [] }
   ]);
-
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
   const { data: staffList = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
-
-  
-
   const normalizeSiteName = (value) =>
     String(value || '')
       .toLowerCase()
       .replace(/\s+/g, '');
-
   const licenseNameOptions = [
     ...new Set(
       inventoryItems
@@ -116,26 +108,19 @@ export default function NewReport() {
         .filter(Boolean)
     )
   ].sort();
-
-
-
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
-
   const regionOptions = [...new Set(sites.map(s => s.region).filter(Boolean))].sort();
   const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
-
   const filteredSites = sites.filter(s =>
     (!form.client_id || s.client_id === form.client_id) &&
     (!siteRegionFilter || s.region === siteRegionFilter) &&
     (!siteStateFilter || s.state === siteStateFilter)
   );
   const l1Staff = staffList.filter(s => s.role === 'L1' || s.role === 'Admin');
-
   useEffect(() => {
     fetchNextRunningNumber().then(num => setForm(f => ({ ...f, running_number: num })));
   }, []);
-
   const createReport = useMutation({
     mutationFn: (data) => base44.entities.ServiceReport.create(data),
     onSuccess: (report) => {
@@ -143,43 +128,33 @@ export default function NewReport() {
       navigate(`/reports/${report.id}`);
     },
   });
-
   const setF = (key, val) => setForm(f => ({ ...f, [key]: val }));
-
   const handleClientChange = (id) => {
     const c = clients.find(c => c.id === id);
     setForm(f => ({ ...f, client_id: id, client_name: c?.company_name || '', site_id: '', site_name: '', site_location: '' }));
   };
-
   const handleSiteChange = (id) => {
     const s = sites.find(s => s.id === id);
     setForm(f => ({ ...f, site_id: id, site_name: s?.site_name || '', site_location: s?.site_location || '' }));
   };
-
   const handleStaffChange = (id) => {
     const s = staffList.find(s => s.id === id);
     if (s) setForm(f => ({ ...f, l1_attended_staff_name: s.name, l1_attended_staff_id: s.staff_id, l1_attended_staff_email: s.email || '' }));
   };
-
   // const addSection = () => setAffectedSections(prev => [...prev, emptySection()]);
-
   const addSection = () =>
   setAffectedSections(prev => [
     ...prev,
     { section_name: '', items: [] }
   ]);
-  
   const removeSection = (si) => setAffectedSections(prev => prev.filter((_, idx) => idx !== si));
   // const updateSectionName = (si, val) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, section_name: val } : s));
-
   const updateSectionName = (si, val) => {
     setAffectedSections(prev =>
       prev.map((section, index) => {
         if (index !== si) return section;
-
         // No change to the selected section name
         if (section.section_name === val) return section;
-
         return {
           ...section,
           section_name: val,
@@ -194,31 +169,24 @@ export default function NewReport() {
       })
     );
   };
-
   const addItemToSection = (si) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: [...s.items, emptyItem()] } : s));
   const removeItemFromSection = (si, ii) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.filter((_, i) => i !== ii) } : s));
   const updateSectionItem = (si, ii, field, val) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.map((item, i) => i === ii ? { ...item, [field]: val } : item) } : s));
-
-  
   const selectAffectedDeviceSlot = (sectionIndex, itemIndex, slotId) => {
     setAffectedSections(prev =>
       prev.map((section, si) => {
         if (si !== sectionIndex) return section;
-
         return {
           ...section,
           items: section.items.map((item, ii) => {
             if (ii !== itemIndex) return item;
-
             const slots = getAffectedDeviceSlots(
               section.section_name,
               item.device_type
             );
-
             const selectedSlot = slots.find(
               slot => slot.id === slotId
             );
-
             return {
               ...item,
               device_slot_id: selectedSlot?.id || '',
@@ -229,29 +197,22 @@ export default function NewReport() {
       })
     );
   };
-
-
   // Checkbox selection for Affected Hardware / Software only
   const toggleAffectedDevice = (sectionIndex, deviceType, checked) => {
     setAffectedSections(prev =>
       prev.map((section, index) => {
         if (index !== sectionIndex) return section;
-
         const items = section.items || [];
-
         if (checked) {
           if (items.some(item => item.device_type === deviceType)) {
             return section;
           }
-
           const slots = getAffectedDeviceSlots(
             section.section_name,
             deviceType
           );
-
           // Automatically select when Inventory has only one device
           const autoSlot = slots.length === 1 ? slots[0] : null;
-
           return {
             ...section,
             items: [
@@ -265,7 +226,6 @@ export default function NewReport() {
             ]
           };
         }
-
         // Uncheck: remove all items of this device type
         return {
           ...section,
@@ -281,34 +241,28 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
   setAffectedSections(prev =>
     prev.map((section, index) => {
       if (index !== sectionIndex) return section;
-
       const slots = getAffectedDeviceSlots(
         section.section_name,
         deviceType
       );
-
       const usedIds = new Set(
         (section.items || [])
           .filter(item => item.device_type === deviceType)
           .map(item => item.device_slot_id)
           .filter(Boolean)
       );
-
       const availableSlots = slots.filter(
         slot => !usedIds.has(slot.id)
       );
-
       // Do not add more than the available Inventory quantity
       if (slots.length > 0 && availableSlots.length === 0) {
         return section;
       }
-
       // Automatically select the last remaining device
       const autoSlot =
         availableSlots.length === 1
           ? availableSlots[0]
           : null;
-
       return {
         ...section,
         items: [
@@ -324,32 +278,24 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
     })
   );
 };
-
-  
   // Get matching device names from Inventory
   const getAffectedDeviceOptions = (sectionName, deviceType) => {
     const inventoryField = AFFECTED_INVENTORY_FIELDS[deviceType];
-
     if (!inventoryField || !sectionName) return [];
-
     const matchingInventory = inventoryItems.filter(inv => {
       const sameLicense =
         String(inv.license_name || '').trim() ===
         String(sectionName || '').trim();
-
       const sameClient =
         !form.client_id ||
         !inv.client_id ||
         String(inv.client_id) === String(form.client_id);
-
       const sameSite =
         !form.site_id ||
         !inv.site_id ||
         String(inv.site_id) === String(form.site_id);
-
       return sameLicense && sameClient && sameSite;
     });
-
     return [...new Set(
       matchingInventory
         .flatMap(inv =>
@@ -360,39 +306,29 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
         .filter(Boolean)
     )].sort();
   };
-
-
   // Each Inventory device is an individual selectable slot.
   // Duplicate SKU values are kept as separate devices.
   const getAffectedDeviceSlots = (sectionName, deviceType) => {
     const inventoryField = AFFECTED_INVENTORY_FIELDS[deviceType];
-
     if (!inventoryField || !sectionName) return [];
-
     const slots = [];
-
     inventoryItems.forEach((inv, inventoryIndex) => {
       const sameLicense =
         String(inv.license_name || '').trim() ===
         String(sectionName || '').trim();
-
       const sameClient =
         !form.client_id ||
         !inv.client_id ||
         String(inv.client_id) === String(form.client_id);
-
       const sameSite =
         Boolean(form.site_name) &&
         normalizeSiteName(inv.site_name) ===
           normalizeSiteName(form.site_name);
-          
       if (!sameLicense || !sameClient || !sameSite) return;
-
       const values = String(inv[inventoryField] || '')
         .split(',')
         .map(value => value.trim())
         .filter(Boolean);
-
       values.forEach((name, valueIndex) => {
         slots.push({
           id: `${inv.id ?? inventoryIndex}-${inventoryField}-${valueIndex}`,
@@ -400,17 +336,13 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
         });
       });
     });
-
     const counts = {};
     slots.forEach(slot => {
       counts[slot.name] = (counts[slot.name] || 0) + 1;
     });
-
     const seen = {};
-
     return slots.map(slot => {
       seen[slot.name] = (seen[slot.name] || 0) + 1;
-
       return {
         ...slot,
         label: counts[slot.name] > 1
@@ -419,8 +351,6 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
       };
     });
   };
-
-
   // Prepare Affected Devices before saving
   const prepareAffectedSections = () => {
     return affectedSections.map(section => ({
@@ -432,11 +362,9 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
             section.section_name,
             item.device_type
           );
-
           const selectedSlot = slots.find(
             slot => slot.id === item.device_slot_id
           );
-
           // Keep the selected device and its unique slot ID
           if (selectedSlot) {
             return {
@@ -445,7 +373,6 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
               device_slot_id: selectedSlot.id
             };
           }
-
           // Automatically fill when Inventory has only one device
           if (
             slots.length === 1 &&
@@ -458,17 +385,13 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
               device_slot_id: slots[0].id
             };
           }
-
           // Keep manually entered devices unchanged
           return item;
         })
     }));
   };
-
-
   const handleSaveDraft = () => {
     const preparedSections = prepareAffectedSections();
-
     createReport.mutate({
       ...form,
       l1_status: 'pending',
@@ -479,19 +402,15 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
         .filter(i => i.device_type),
       l1_submitted: false,
     });
-
     toast.success('Draft saved');
   };
-
   const handleSubmit = (l1Status) => {
     const preparedSections = prepareAffectedSections();
-
     if (!form.client_id) { toast.error('Please select a client'); return; }
     if (!form.reported_by) { toast.error('Please enter reported by'); return; }
     if (!form.l1_attended_staff_name) { toast.error('Please select attending staff'); return; }
     const allItems = preparedSections.flatMap(s => s.items);
     if (allItems.every(i => !i.device_type)) { toast.error('Please add at least one affected item'); return; }
-
     const status = l1Status === 'resolved' ? 'resolved' : l1Status === 'escalate' ? 'escalated' : 'reported';
     createReport.mutate({
       ...form,
@@ -503,12 +422,10 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
       l1_submitted: true,
       l1_submitted_at: new Date().toISOString(),
     });
-
     if (l1Status === 'resolved') toast.success('Report submitted — marking as resolved');
     else if (l1Status === 'escalate') toast.success('Report saved — escalating to L2');
     else toast.success('Report saved — marking as pending');
   };
-
   return (
     <div className="p-6 max-w-3xl mx-auto pb-20">
       {/* Header */}
@@ -521,7 +438,6 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
           <p className="text-xs font-mono text-primary mt-0.5">{form.running_number || 'Generating…'}</p>
         </div>
       </div>
-
       <div className="space-y-8">
         {/* Job Info */}
         <div className="bg-card border border-border rounded-xl p-6">
@@ -568,7 +484,6 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
             </Field>
           </div>
         </div>
-
         {/* L1 Support */}
         <div className="bg-card border border-border rounded-xl p-6">
           <SectionHeader title="L1 Remote Support" subtitle="Remote support attendance details" />
@@ -594,10 +509,9 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
               <Input value={form.l1_attended_staff_name} onChange={e => setF('l1_attended_staff_name', e.target.value)} className="bg-background" />
             </Field>
             <Field label="Staff Email">
-              <Input value={form.l1_attended_staff_email} onChange={e => setF('l1_attended_staff_email', e.target.value)} placeholder="staff@clickix.com" className="bg-background" />
+              <Input value={form.l1_attended_staff_email} onChange={e => setF('l1_attended_staff_email', e.target.value)} placeholder="staff\@clickix.com" className="bg-background" />
             </Field>
           </div>
-
           {/* L1 Session Details */}
           <div className="mb-6 space-y-4">
             <Field label="Issue Statement">
@@ -649,7 +563,6 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
               <Textarea value={form.l1_remarks} onChange={e => setF('l1_remarks', e.target.value)} placeholder="Any additional remarks or notes for this L1 session..." className="bg-background resize-none" rows={3} />
             </Field>
           </div>
-
           {/* Affected Items — Sectioned */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -660,10 +573,9 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
             </div>
             <div className="space-y-3">
               {affectedSections.map((sec, si) => (
-                <div key={si} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-muted/10">
+                <div key={si} className="border border-primary/30 rounded-lg p-2.5 space-y-2 bg-muted/10">
                   {/* Section header */}
                   <div className="flex items-center gap-2">
-                    
                     <div className="relative flex-1">
                       <div className="relative">
                         <Input
@@ -686,13 +598,11 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                           placeholder="Select license"
                           className="bg-background text-xs h-8 font-semibold pr-9"
                         />
-
                         <ChevronDown
                           size={16}
                           className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${licenseOpen[si] ? 'rotate-180' : ''}`}
                         />
                       </div>
-
                       {licenseOpen[si] && (
                         <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
                           {licenseNameOptions.filter(name =>
@@ -722,31 +632,26 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                         </div>
                       )}
                     </div>
-
                     {affectedSections.length > 1 && (
                       <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                         <X size={14} />
                       </button>
                     )}
                   </div>
-                  
                   {/* Items within section */}
-                  <div className="space-y-3 pl-2 border-l-2 border-border">
-
+                  <div className="space-y-2 pl-2 border-l-2 border-border">
                     {/* Affected Devices Checkboxes */}
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <Label className="text-xs text-muted-foreground shrink-0">
                         Affected Devices
                       </Label>
-
-                      <div className="flex flex-wrap gap-x-5 gap-y-2 bg-background border border-input rounded-md p-3">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                         {AFFECTED_DEVICE_TYPES.map(type => {
                           const checked = (sec.items || []).some(
                             item => item.device_type === type
                           );
-
                           return (
-                            <div key={type} className="flex items-center gap-2">
+                            <div key={type} className="flex items-center gap-1.5">
                               <Checkbox
                                 id={`affected-${si}-${type}`}
                                 checked={checked}
@@ -754,10 +659,9 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                                   toggleAffectedDevice(si, type, value === true)
                                 }
                               />
-
                               <label
                                 htmlFor={`affected-${si}-${type}`}
-                                className="text-sm cursor-pointer"
+                                className="text-xs cursor-pointer"
                               >
                                 {type}
                               </label>
@@ -766,45 +670,37 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                         })}
                       </div>
                     </div>
-
                     {/* Each selected Device Type */}
                     {AFFECTED_DEVICE_TYPES.filter(type =>
                       (sec.items || []).some(item => item.device_type === type)
                     ).map(type => {
-
                       const deviceItems = (sec.items || [])
                         .map((item, index) => ({
                           item,
                           actualIndex: index
                         }))
                         .filter(entry => entry.item.device_type === type);
-
                       const deviceOptions = getAffectedDeviceOptions(
                         sec.section_name,
                         type
                       );
-
                       const inventoryField = AFFECTED_INVENTORY_FIELDS[type];
-
                       return (
                         <div
                           key={type}
-                          className="border border-border rounded-lg p-3 space-y-3 bg-muted/10"
+                          className="border border-border rounded-md p-2.5 space-y-2 bg-muted/10"
                         >
-
                           {/* Device Type Header */}
                           <div className="flex items-center justify-between">
                             <div className="font-semibold text-sm">
                               {type}
                             </div>
-
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="gap-1 text-xs"
+                              className="gap-1 text-xs h-7 px-2.5"
                               onClick={() => addAffectedDeviceItem(si, type)}
-                           
                               disabled={
                                 inventoryField &&
                                 getAffectedDeviceSlots(sec.section_name, type).length > 0 &&
@@ -813,18 +709,14 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                                   deviceItems.some(({ item }) => !item.device_slot_id)
                                 )
                               }
-                              
                             >
                               <Plus size={12} />
                               Add Item
                             </Button>
                           </div>
-
                           {/* Device Items */}
                           {deviceItems.map(({ item, actualIndex }, itemIndex) => {
-                            
                             const slots = getAffectedDeviceSlots(sec.section_name, type);
-
                             const usedSlotIds = new Set(
                               (sec.items || [])
                                 .filter((other, index) =>
@@ -834,23 +726,19 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                                 )
                                 .map(other => other.device_slot_id)
                             );
-
                             const availableSlots = slots.filter(
                               slot => !usedSlotIds.has(slot.id)
                             );
-
                             return (
                               <div
                                 key={`${type}-${actualIndex}`}
-                                className="border border-border rounded-md p-3 space-y-3 bg-card"
+                                className="border border-border rounded-md p-2.5 space-y-2 bg-card"
                               >
-
                                 {/* Item Number and Remove */}
                                 <div className="flex items-center justify-between">
                                   <span className="text-xs text-muted-foreground">
                                     Item {itemIndex + 1}
                                   </span>
-
                                   {deviceItems.length > 1 && (
                                     <Button
                                       type="button"
@@ -865,9 +753,7 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                                     </Button>
                                   )}
                                 </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-
                                   {/* Device Type */}
                                   <Field label="Device Type">
                                     <Input
@@ -876,7 +762,6 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                                       className="bg-muted text-xs h-8"
                                     />
                                   </Field>
-
                                   {/* Device Name */}
                                   <Field label="Device Name">
                                     {inventoryField && slots.length > 0 ? (
@@ -895,7 +780,6 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                                         <SelectTrigger className="bg-background text-xs h-8">
                                           <SelectValue placeholder="Select Device Name" />
                                         </SelectTrigger>
-
                                         <SelectContent>
                                           {availableSlots.map(slot => (
                                             <SelectItem key={slot.id} value={slot.id}>
@@ -924,10 +808,7 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                                       />
                                     )}
                                   </Field>
-
-
                                 </div>
-
                                 {/* Issue Description */}
                                 <Field label="Issue Description">
                                   <Textarea
@@ -945,56 +826,46 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                                     className="bg-background resize-y"
                                   />
                                 </Field>
-
                             </div>
                           );
                         })}
-
                       </div>
                     );
                   })}
-
                 </div>
               </div>
             ))}
           </div>
         </div>
       </div>
-
       {/* L1 Summary Statement */}
         <div className="bg-card border border-border rounded-xl p-6">
           <SectionHeader
             title="L1 Session Summary"
             subtitle="Auto-generated summary based on information entered above"
           />
-
           <div className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs space-y-1 text-foreground leading-relaxed">
-
             <p>
               • <span className="text-muted-foreground">Response ID:</span>{' '}
               {form.whatsapp_response_id || (
                 <span className="italic text-muted-foreground">—</span>
               )}
             </p>
-
             <p>
               • <span className="text-muted-foreground">Site Name:</span>{' '}
               {form.site_name || (
                 <span className="italic text-muted-foreground">—</span>
               )}
             </p>
-
             {affectedSections.map((sec, si) =>
               sec.items
                 .filter(i => i.device_type || i.issue_description)
                 .map((item, ii) => (
                   <div key={`${si}-${ii}`} className="space-y-1">
-
                     <p>
                       • <span className="text-muted-foreground">Section:</span>{' '}
                       {sec.section_name || `Section ${si + 1}`}
                     </p>
-
                     {item.device_type && (
                       <p>
                         • <span className="text-muted-foreground">Device:</span>{' '}
@@ -1004,36 +875,30 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                             sec.section_name,
                             item.device_type
                           );
-
                           const deviceName =
                             AFFECTED_INVENTORY_FIELDS[item.device_type] &&
                             options.length === 1
                               ? options[0]
                               : item.device_name;
-
                           return deviceName ? ` (${deviceName})` : '';
                         })()}
                       </p>
                     )}
-
                     {item.issue_description && (
                       <p>
                         • <span className="text-muted-foreground">Issue:</span>{' '}
                         {item.issue_description}
                       </p>
                     )}
-
                   </div>
                 ))
             )}
-
             <p>
               • <span className="text-muted-foreground">Issue Statement:</span>{' '}
               {form.l1_issue_statement || (
                 <span className="italic text-muted-foreground">—</span>
               )}
             </p>
-
             <p>
               • <span className="text-muted-foreground">Issue Pillar:</span>{' '}
               {(Array.isArray(form.l1_issue_pillar)
@@ -1043,19 +908,16 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                 <span className="italic text-muted-foreground">—</span>
               )}
             </p>
-
             <p>
               • <span className="text-muted-foreground">Rectification Done:</span>{' '}
               {form.l1_rectification_done || (
                 <span className="italic text-muted-foreground">—</span>
               )}
             </p>
-
             <div>
               <p>
                 • <span className="text-muted-foreground">Remarks:</span>
               </p>
-
               {form.l1_remarks ? (
                 <div className="pl-4 whitespace-pre-wrap">
                   {form.l1_remarks
@@ -1070,10 +932,8 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                 <div className="pl-4 italic text-muted-foreground">—</div>
               )}
             </div>
-
           </div>
         </div>
-
         {/* Status Actions */}
         <div className="bg-card border border-border rounded-xl p-6">
           <SectionHeader title="L1 Resolution" subtitle="Mark the outcome of this remote support session" />
