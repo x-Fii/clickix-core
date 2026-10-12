@@ -12,8 +12,19 @@ import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock, Save, ChevronDow
 import { toast } from 'sonner';
 
 
-
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
+
+const AFFECTED_DEVICE_TYPES = [
+  'License Number', 'PC', 'TV', 'HDMI Extender', 'Cable', 'Others'
+];
+
+const AFFECTED_INVENTORY_FIELDS = {
+  'License Number': 'license_number',
+  'PC': 'pc_sku',
+  'TV': 'tv_sku'
+};
+
+
 const emptyItem = () => ({ device_type: '', device_name: '', issue_description: '' });
 const emptySection = () => ({ section_name: '', items: [emptyItem()] });
 
@@ -74,7 +85,12 @@ export default function NewReport() {
     l1_remarks: '',
     whatsapp_response_id: '',
   });
-  const [affectedSections, setAffectedSections] = useState([emptySection()]);
+
+  // const [affectedSections, setAffectedSections] = useState([emptySection()]);
+
+  const [affectedSections, setAffectedSections] = useState([
+    { section_name: '', items: [] }
+  ]);
 
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
@@ -125,12 +141,81 @@ export default function NewReport() {
     if (s) setForm(f => ({ ...f, l1_attended_staff_name: s.name, l1_attended_staff_id: s.staff_id, l1_attended_staff_email: s.email || '' }));
   };
 
-  const addSection = () => setAffectedSections(prev => [...prev, emptySection()]);
+  // const addSection = () => setAffectedSections(prev => [...prev, emptySection()]);
+
+  const addSection = () =>
+  setAffectedSections(prev => [
+    ...prev,
+    { section_name: '', items: [] }
+  ]);
+  
   const removeSection = (si) => setAffectedSections(prev => prev.filter((_, idx) => idx !== si));
-  const updateSectionName = (si, val) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, section_name: val } : s));
+  // const updateSectionName = (si, val) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, section_name: val } : s));
+
+  const updateSectionName = (si, val) => {
+    setAffectedSections(prev =>
+      prev.map((section, index) => {
+        if (index !== si) return section;
+
+        // No change to the selected section name
+        if (section.section_name === val) return section;
+
+        return {
+          ...section,
+          section_name: val,
+          items: (section.items || []).map(item => ({
+            ...item,
+            // Clear Inventory-linked Device Name only
+            device_name: AFFECTED_INVENTORY_FIELDS[item.device_type]
+              ? ''
+              : item.device_name
+          }))
+        };
+      })
+    );
+  };
+
   const addItemToSection = (si) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: [...s.items, emptyItem()] } : s));
   const removeItemFromSection = (si, ii) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.filter((_, i) => i !== ii) } : s));
   const updateSectionItem = (si, ii, field, val) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.map((item, i) => i === ii ? { ...item, [field]: val } : item) } : s));
+
+  // Checkbox selection for Affected Hardware / Software only
+  const toggleAffectedDevice = (sectionIndex, deviceType, checked) => {
+    setAffectedSections(prev =>
+      prev.map((section, index) => {
+        if (index !== sectionIndex) return section;
+
+        const currentItems = section.items || [];
+
+        if (checked) {
+          if (currentItems.some(item => item.device_type === deviceType)) {
+            return section;
+          }
+
+          return {
+            ...section,
+            items: [
+              ...currentItems.filter(item => item.device_type),
+              {
+                device_type: deviceType,
+                device_name: '',
+                issue_description: ''
+              }
+            ]
+          };
+        }
+
+        return {
+          ...section,
+          items: currentItems.filter(
+            item => item.device_type !== deviceType
+          )
+        };
+      })
+    );
+  };
+
+  
 
   const handleSaveDraft = () => {
     createReport.mutate({
@@ -388,29 +473,158 @@ export default function NewReport() {
                       </button>
                     )}
                   </div>
+                  
                   {/* Items within section */}
-                  <div className="space-y-2 pl-2 border-l-2 border-border">
-                    {sec.items.map((item, ii) => (
-                      <div key={ii} className="flex gap-2 items-start p-2 bg-card rounded border border-border">
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
-                          <Select value={item.device_type || undefined} onValueChange={v => updateSectionItem(si, ii, 'device_type', v)}>
-                            <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Device Type" /></SelectTrigger>
-                            <SelectContent>{DEVICE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                          </Select>
-                          <Input value={item.device_name} onChange={e => updateSectionItem(si, ii, 'device_name', e.target.value)} placeholder="Device name / ID" className="bg-background text-xs h-8" />
-                          <Input value={item.issue_description} onChange={e => updateSectionItem(si, ii, 'issue_description', e.target.value)} placeholder="Issue description" className="bg-background text-xs h-8" />
+                  <div className="space-y-3 pl-2 border-l-2 border-border">
+
+                    {/* Device Checkboxes */}
+                    <div className="flex flex-wrap gap-4 py-2">
+                      {AFFECTED_DEVICE_TYPES.map(type => {
+                        const checked = (sec.items || []).some(
+                          item => item.device_type === type
+                        );
+
+                        return (
+                          <div key={type} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`affected-${si}-${type}`}
+                              checked={checked}
+                              onCheckedChange={value =>
+                                toggleAffectedDevice(si, type, value === true)
+                              }
+                            />
+                            <Label
+                              htmlFor={`affected-${si}-${type}`}
+                              className="text-xs cursor-pointer"
+                            >
+                              {type}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Selected Device Details */}
+                    {(sec.items || []).filter(item => item.device_type).map((item, ii) => {
+                      const actualIndex = sec.items.indexOf(item);
+
+                      const inventoryField =
+                        AFFECTED_INVENTORY_FIELDS[item.device_type];
+
+                      const matchingInventory = inventoryItems.filter(inv => {
+                        const sameLicense =
+                          String(inv.license_name || '').trim() ===
+                          String(sec.section_name || '').trim();
+
+                        const sameClient =
+                          !form.client_id ||
+                          !inv.client_id ||
+                          String(inv.client_id) === String(form.client_id);
+
+                        const sameSite =
+                          !form.site_id ||
+                          !inv.site_id ||
+                          String(inv.site_id) === String(form.site_id);
+
+                        return Boolean(sec.section_name) &&
+                          sameLicense && sameClient && sameSite;
+                      });
+
+                      const deviceOptions = inventoryField
+                        ? [...new Set(
+                            matchingInventory
+                              .map(inv => String(inv[inventoryField] || '').trim())
+                              .filter(Boolean)
+                          )]
+                        : [];
+
+                      return (
+                        <div
+                          key={`${si}-${item.device_type}-${actualIndex}`}
+                          className="p-3 bg-card rounded border border-border space-y-3"
+                        >
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                            {/* Device Type */}
+                            <Field label="Device Type">
+                              <Input
+                                value={item.device_type}
+                                readOnly
+                                className="bg-muted text-xs h-8"
+                              />
+                            </Field>
+
+                            {/* Device Name */}
+                            <Field label="Device Name">
+                              {inventoryField ? (
+                                <Select
+                                  value={item.device_name || undefined}
+                                  onValueChange={value =>
+                                    updateSectionItem(
+                                      si, actualIndex, 'device_name', value
+                                    )
+                                  }
+                                >
+                                  <SelectTrigger className="bg-background text-xs h-8">
+                                    <SelectValue placeholder="Select Device Name" />
+                                  </SelectTrigger>
+
+                                  <SelectContent>
+                                    {item.device_name &&
+                                      !deviceOptions.includes(item.device_name) && (
+                                        <SelectItem value={item.device_name}>
+                                          {item.device_name}
+                                        </SelectItem>
+                                      )}
+
+                                    {deviceOptions.map(name => (
+                                      <SelectItem key={name} value={name}>
+                                        {name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Input
+                                  value={item.device_name || ''}
+                                  onChange={e =>
+                                    updateSectionItem(
+                                      si, actualIndex, 'device_name', e.target.value
+                                    )
+                                  }
+                                  placeholder="Enter Device Name"
+                                  className="bg-background text-xs h-8"
+                                />
+                              )}
+                            </Field>
+
+                          </div>
+
+                          {/* Issue Description */}
+                          <Field label="Issue Description">
+                            <Textarea
+                              value={item.issue_description || ''}
+                              onChange={e =>
+                                updateSectionItem(
+                                  si,
+                                  actualIndex,
+                                  'issue_description',
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Describe the issue..."
+                              rows={4}
+                              className="bg-background resize-y"
+                            />
+                          </Field>
+
                         </div>
-                        {sec.items.length > 1 && (
-                          <button type="button" onClick={() => removeItemFromSection(si, ii)} className="text-muted-foreground hover:text-destructive mt-1 shrink-0">
-                            <X size={12} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    <Button type="button" variant="ghost" size="sm" onClick={() => addItemToSection(si)} className="text-xs gap-1 h-7">
-                      <Plus size={11} /> Add Item
-                    </Button>
+                      );
+                    })}
+
                   </div>
+                  
                 </div>
               ))}
             </div>
