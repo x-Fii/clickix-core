@@ -261,7 +261,11 @@ export default function NewReport() {
 
     return [...new Set(
       matchingInventory
-        .map(inv => String(inv[inventoryField] || '').trim())
+        .flatMap(inv =>
+          String(inv[inventoryField] || '')
+            .split(',')
+            .map(value => value.trim())
+        )
         .filter(Boolean)
     )].sort();
   };
