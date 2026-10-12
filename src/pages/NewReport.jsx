@@ -97,7 +97,20 @@ export default function NewReport() {
   const { data: staffList = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
 
-  const licenseNameOptions = [...new Set(inventoryItems.map(item => String(item.license_name || '').trim()).filter(Boolean))].sort();
+  
+  const licenseNameOptions = [
+    ...new Set(
+      inventoryItems
+        .filter(inv =>
+          form.site_name &&
+          String(inv.site_name || '').trim().toLowerCase() ===
+          String(form.site_name || '').trim().toLowerCase()
+        )
+        .map(inv => String(inv.license_name || '').trim())
+        .filter(Boolean)
+    )
+  ].sort();
+
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
