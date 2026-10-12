@@ -179,6 +179,38 @@ export default function NewReport() {
   const removeItemFromSection = (si, ii) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.filter((_, i) => i !== ii) } : s));
   const updateSectionItem = (si, ii, field, val) => setAffectedSections(prev => prev.map((s, idx) => idx === si ? { ...s, items: s.items.map((item, i) => i === ii ? { ...item, [field]: val } : item) } : s));
 
+  
+  const selectAffectedDeviceSlot = (sectionIndex, itemIndex, slotId) => {
+    setAffectedSections(prev =>
+      prev.map((section, si) => {
+        if (si !== sectionIndex) return section;
+
+        return {
+          ...section,
+          items: section.items.map((item, ii) => {
+            if (ii !== itemIndex) return item;
+
+            const slots = getAffectedDeviceSlots(
+              section.section_name,
+              item.device_type
+            );
+
+            const selectedSlot = slots.find(
+              slot => slot.id === slotId
+            );
+
+            return {
+              ...item,
+              device_slot_id: selectedSlot?.id || '',
+              device_name: selectedSlot?.name || ''
+            };
+          })
+        };
+      })
+    );
+  };
+
+
   // Checkbox selection for Affected Hardware / Software only
   const toggleAffectedDevice = (sectionIndex, deviceType, checked) => {
     setAffectedSections(prev =>
@@ -192,47 +224,86 @@ export default function NewReport() {
             return section;
           }
 
+          const slots = getAffectedDeviceSlots(
+            section.section_name,
+            deviceType
+          );
+
+          // Automatically select when Inventory has only one device
+          const autoSlot = slots.length === 1 ? slots[0] : null;
+
           return {
             ...section,
             items: [
               ...items,
               {
                 device_type: deviceType,
-                device_name: '',
+                device_name: autoSlot?.name || '',
+                device_slot_id: autoSlot?.id || '',
                 issue_description: ''
               }
             ]
           };
         }
 
+        // Uncheck: remove all items of this device type
         return {
           ...section,
-          items: items.filter(item => item.device_type !== deviceType)
+          items: items.filter(
+            item => item.device_type !== deviceType
+          )
         };
       })
     );
   };
 
-  // Add another item for the selected device type
-  const addAffectedDeviceItem = (sectionIndex, deviceType) => {
-    setAffectedSections(prev =>
-      prev.map((section, index) => {
-        if (index !== sectionIndex) return section;
+const addAffectedDeviceItem = (sectionIndex, deviceType) => {
+  setAffectedSections(prev =>
+    prev.map((section, index) => {
+      if (index !== sectionIndex) return section;
 
-        return {
-          ...section,
-          items: [
-            ...(section.items || []),
-            {
-              device_type: deviceType,
-              device_name: '',
-              issue_description: ''
-            }
-          ]
-        };
-      })
-    );
-  };
+      const slots = getAffectedDeviceSlots(
+        section.section_name,
+        deviceType
+      );
+
+      const usedIds = new Set(
+        (section.items || [])
+          .filter(item => item.device_type === deviceType)
+          .map(item => item.device_slot_id)
+          .filter(Boolean)
+      );
+
+      const availableSlots = slots.filter(
+        slot => !usedIds.has(slot.id)
+      );
+
+      // Do not add more than the available Inventory quantity
+      if (slots.length > 0 && availableSlots.length === 0) {
+        return section;
+      }
+
+      // Automatically select the last remaining device
+      const autoSlot =
+        availableSlots.length === 1
+          ? availableSlots[0]
+          : null;
+
+      return {
+        ...section,
+        items: [
+          ...(section.items || []),
+          {
+            device_type: deviceType,
+            device_name: autoSlot?.name || '',
+            device_slot_id: autoSlot?.id || '',
+            issue_description: ''
+          }
+        ]
+      };
+    })
+  );
+};
 
   
   // Get matching device names from Inventory
@@ -337,28 +408,43 @@ export default function NewReport() {
       items: (section.items || [])
         .filter(item => item.device_type)
         .map(item => {
-          const options = getAffectedDeviceOptions(
+          const slots = getAffectedDeviceSlots(
             section.section_name,
             item.device_type
           );
 
-          const inventoryField =
-            AFFECTED_INVENTORY_FIELDS[item.device_type];
+          const selectedSlot = slots.find(
+            slot => slot.id === item.device_slot_id
+          );
 
-          let deviceName = item.device_name || '';
-
-          // Auto populate when exactly one match exists
-          if (inventoryField && options.length === 1) {
-            deviceName = options[0];
+          // Keep the selected device and its unique slot ID
+          if (selectedSlot) {
+            return {
+              ...item,
+              device_name: selectedSlot.name,
+              device_slot_id: selectedSlot.id
+            };
           }
 
-          return {
-            ...item,
-            device_name: deviceName
-          };
+          // Automatically fill when Inventory has only one device
+          if (
+            slots.length === 1 &&
+            !item.device_slot_id &&
+            !item.device_name
+          ) {
+            return {
+              ...item,
+              device_name: slots[0].name,
+              device_slot_id: slots[0].id
+            };
+          }
+
+          // Keep manually entered devices unchanged
+          return item;
         })
     }));
   };
+
 
   const handleSaveDraft = () => {
     const preparedSections = prepareAffectedSections();
@@ -698,6 +784,14 @@ export default function NewReport() {
                               size="sm"
                               className="gap-1 text-xs"
                               onClick={() => addAffectedDeviceItem(si, type)}
+                              disabled={
+                                inventoryField &&
+                                getAffectedDeviceSlots(sec.section_name, type).length > 0 &&
+                                (
+                                  deviceItems.length >= getAffectedDeviceSlots(sec.section_name, type).length ||
+                                  deviceItems.some(({ item }) => !item.device_slot_id)
+                                )
+                              }
                             >
                               <Plus size={12} />
                               Add Item
@@ -706,6 +800,22 @@ export default function NewReport() {
 
                           {/* Device Items */}
                           {deviceItems.map(({ item, actualIndex }, itemIndex) => {
+                            
+                            const slots = getAffectedDeviceSlots(sec.section_name, type);
+
+                            const usedSlotIds = new Set(
+                              (sec.items || [])
+                                .filter((other, index) =>
+                                  index !== actualIndex &&
+                                  other.device_type === type &&
+                                  other.device_slot_id
+                                )
+                                .map(other => other.device_slot_id)
+                            );
+
+                            const availableSlots = slots.filter(
+                              slot => !usedSlotIds.has(slot.id)
+                            );
 
                             return (
                               <div
@@ -747,74 +857,32 @@ export default function NewReport() {
 
                                   {/* Device Name */}
                                   <Field label="Device Name">
+                                    {inventoryField && slots.length > 0 ? (
+                                      <Select
+                                        value={
+                                          availableSlots.some(
+                                            slot => slot.id === item.device_slot_id
+                                          )
+                                            ? item.device_slot_id
+                                            : undefined
+                                        }
+                                        onValueChange={value =>
+                                          selectAffectedDeviceSlot(si, actualIndex, value)
+                                        }
+                                      >
+                                        <SelectTrigger className="bg-background text-xs h-8">
+                                          <SelectValue placeholder="Select Device Name" />
+                                        </SelectTrigger>
 
-                                    {inventoryField ? (
-
-                                      deviceOptions.length === 0 ? (
-
-                                        /* No match: Manual Input */
-                                        <Input
-                                          value={item.device_name || ''}
-                                          onChange={e =>
-                                            updateSectionItem(
-                                              si,
-                                              actualIndex,
-                                              'device_name',
-                                              e.target.value
-                                            )
-                                          }
-                                          placeholder="No matching device - enter manually"
-                                          className="bg-background text-xs h-8"
-                                        />
-
-                                      ) : deviceOptions.length === 1 ? (
-
-                                        /* One match: Auto Populate */
-                                        <Input
-                                          value={deviceOptions[0]}
-                                          readOnly
-                                          className="bg-muted text-xs h-8"
-                                        />
-
-                                      ) : (
-
-                                        /* Multiple matches: Dropdown */
-                                        <Select
-                                          value={
-                                            deviceOptions.includes(item.device_name)
-                                              ? item.device_name
-                                              : undefined
-                                          }
-                                          onValueChange={value =>
-                                            updateSectionItem(
-                                              si,
-                                              actualIndex,
-                                              'device_name',
-                                              value
-                                            )
-                                          }
-                                        >
-                                          <SelectTrigger className="bg-background text-xs h-8">
-                                            <SelectValue placeholder="Select Device Name" />
-                                          </SelectTrigger>
-
-                                          <SelectContent>
-                                            {deviceOptions.map(name => (
-                                              <SelectItem
-                                                key={name}
-                                                value={name}
-                                              >
-                                                {name}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-
-                                      )
-
+                                        <SelectContent>
+                                          {availableSlots.map(slot => (
+                                            <SelectItem key={slot.id} value={slot.id}>
+                                              {slot.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
                                     ) : (
-
-                                      /* HDMI Extender, Cable, Others */
                                       <Input
                                         value={item.device_name || ''}
                                         onChange={e =>
@@ -825,13 +893,16 @@ export default function NewReport() {
                                             e.target.value
                                           )
                                         }
-                                        placeholder="Enter Device Name"
+                                        placeholder={
+                                          inventoryField
+                                            ? "No matching device - enter manually"
+                                            : "Enter Device Name"
+                                        }
                                         className="bg-background text-xs h-8"
                                       />
-
                                     )}
-
                                   </Field>
+
 
                                 </div>
 
