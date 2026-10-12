@@ -270,6 +270,66 @@ export default function NewReport() {
     )].sort();
   };
 
+
+  // Each Inventory device is an individual selectable slot.
+  // Duplicate SKU values are kept as separate devices.
+  const getAffectedDeviceSlots = (sectionName, deviceType) => {
+    const inventoryField = AFFECTED_INVENTORY_FIELDS[deviceType];
+
+    if (!inventoryField || !sectionName) return [];
+
+    const slots = [];
+
+    inventoryItems.forEach((inv, inventoryIndex) => {
+      const sameLicense =
+        String(inv.license_name || '').trim() ===
+        String(sectionName || '').trim();
+
+      const sameClient =
+        !form.client_id ||
+        !inv.client_id ||
+        String(inv.client_id) === String(form.client_id);
+
+      const sameSite =
+        !form.site_id ||
+        !inv.site_id ||
+        String(inv.site_id) === String(form.site_id);
+
+      if (!sameLicense || !sameClient || !sameSite) return;
+
+      const values = String(inv[inventoryField] || '')
+        .split(',')
+        .map(value => value.trim())
+        .filter(Boolean);
+
+      values.forEach((name, valueIndex) => {
+        slots.push({
+          id: `${inv.id ?? inventoryIndex}-${inventoryField}-${valueIndex}`,
+          name
+        });
+      });
+    });
+
+    const counts = {};
+    slots.forEach(slot => {
+      counts[slot.name] = (counts[slot.name] || 0) + 1;
+    });
+
+    const seen = {};
+
+    return slots.map(slot => {
+      seen[slot.name] = (seen[slot.name] || 0) + 1;
+
+      return {
+        ...slot,
+        label: counts[slot.name] > 1
+          ? `${slot.name} (${seen[slot.name]})`
+          : slot.name
+      };
+    });
+  };
+
+
   // Prepare Affected Devices before saving
   const prepareAffectedSections = () => {
     return affectedSections.map(section => ({
