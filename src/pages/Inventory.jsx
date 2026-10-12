@@ -13,8 +13,8 @@ import ExportButtons from '@/components/ExportButtons';
 const empty = { client: '', outlet: '', license_name: '', license_number: '', pc_sku: '', processor: '', anydesk: '', tv_sku: '' };
 const FIELDS = [
   ['client', 'Client'],
-  ['outlet', 'Outlet'],
   ['site_name', 'Site Name'],
+  ['outlet', 'Outlet'],
   ['license_name', 'License Name'],
   ['license_number', 'License Number'],
   ['pc_sku', 'PC SKU'],
