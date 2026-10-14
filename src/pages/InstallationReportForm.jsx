@@ -443,6 +443,7 @@ export default function InstallationReportForm() {
       const items = sec.items || [];
       if (!checked) return { ...sec, items: items.filter(it => it.device_type !== type) };
       if (items.some(it => it.device_type === type)) return sec;
+      if (['CMS', 'PC', 'TV'].includes(type) && getCommissionSlots(sec, type).length === 0) return sec;
       return { ...sec, items: [...items, makeCommissionItem(sec, type)] };
     }) }));
   };
@@ -453,7 +454,7 @@ export default function InstallationReportForm() {
       const slots = getCommissionSlots(sec, type);
       const existing = (sec.items || []).filter(it => it.device_type === type);
       // All Inventory slots must be used at most once. No records = manual unlimited.
-      if (slots.length && existing.length >= slots.length) return sec;
+      if (['CMS', 'PC', 'TV'].includes(type) && (slots.length === 0 || existing.length >= slots.length)) return sec;
       const item = makeCommissionItem(sec, type);
       return { ...sec, items: [...(sec.items || []), item] };
     }) }));
@@ -625,6 +626,7 @@ export default function InstallationReportForm() {
     const items = sec.items || [];
     if (checked) {
       if (items.some(item => decommCategory(item) === type)) return;
+      if (['CMS', 'PC', 'TV'].includes(type) && getDecommSlots(sec, type).length === 0) return;
       updateDecommItems(si, [...items, makeDecommItem(sec, type)]);
     } else {
       updateDecommItems(si, items.filter(item => decommCategory(item) !== type));
@@ -635,7 +637,7 @@ export default function InstallationReportForm() {
     if (!sec) return;
     const slots = getDecommSlots(sec, type);
     const existing = (sec.items || []).filter(item => decommCategory(item) === type);
-    if (['CMS', 'PC', 'TV'].includes(type) && slots.length > 0 && existing.length >= slots.length) return;
+    if (['CMS', 'PC', 'TV'].includes(type) && (slots.length === 0 || existing.length >= slots.length)) return;
     updateDecommItems(si, [...(sec.items || []), makeDecommItem(sec, type)]);
   };
   const removeDecommItemFromSection = (si, ii) => {
@@ -1079,8 +1081,9 @@ export default function InstallationReportForm() {
                     {COMM_DEVICE_TYPES.map(type => (
                       <label key={type} className="flex items-center gap-1.5 text-xs cursor-pointer">
                         <Checkbox checked={(sec.items || []).some(item => item.device_type === type)}
+                          disabled={['CMS', 'PC', 'TV'].includes(type) && getCommissionSlots(sec, type).length === 0 && !(sec.items || []).some(item => item.device_type === type)}
                           onCheckedChange={value => toggleCommissionDevice(si, type, value === true)} />
-                        {type}
+                        {type}{['CMS', 'PC', 'TV'].includes(type) && getCommissionSlots(sec, type).length === 0 ? ' (No Record)' : ''}
                       </label>
                     ))}
                   </div>
@@ -1088,7 +1091,7 @@ export default function InstallationReportForm() {
                     const entries = (sec.items || []).map((item, actualIndex) => ({ item, actualIndex }))
                       .filter(entry => entry.item.device_type === type);
                     const slots = getCommissionSlots(sec, type);
-                    const canAdd = !slots.length || entries.length < slots.length;
+                    const canAdd = ['CMS', 'PC', 'TV'].includes(type) ? slots.length > 0 && entries.length < slots.length : true;
                     return (
                       <div key={type} className="border border-border rounded-lg p-3 space-y-3 bg-muted/10">
                         <div className="flex items-center justify-between">
@@ -1119,10 +1122,13 @@ export default function InstallationReportForm() {
                                 </div>
                                 <div className="space-y-1">
                                   <Label className="text-xs">Device Name</Label>
-                                  {slots.length === 0 || legacyManual ? (
+                                  {['CMS', 'PC', 'TV'].includes(type) && slots.length === 0 ? (
+                                    <Input className="h-8 text-xs bg-muted/40" value={item.device_name || 'No Record'} readOnly />
+                                  ) : legacyManual ? (
+                                    <Input className="h-8 text-xs bg-muted/40" value={item.device_name} readOnly title="Historical device name" />
+                                  ) : !['CMS', 'PC', 'TV'].includes(type) ? (
                                     <Input className="h-8 text-xs" value={item.device_name || ''}
-                                      onChange={e => updateSectionItem(si, actualIndex, 'device_name', e.target.value)}
-                                      placeholder={slots.length ? 'Previously saved name' : 'No matching record — enter manually'} />
+                                      onChange={e => updateSectionItem(si, actualIndex, 'device_name', e.target.value)} placeholder="Enter Device Name" />
                                   ) : selected && available.length === 1 ? (
                                     <Input className="h-8 text-xs bg-muted/40" value={selected.label} readOnly />
                                   ) : (
@@ -1318,9 +1324,10 @@ export default function InstallationReportForm() {
                           <Checkbox
                             id={`decomm-related-${si}-${type}`}
                             checked={(sec.items || []).some(item => decommCategory(item) === type)}
+                            disabled={['CMS', 'PC', 'TV'].includes(type) && getDecommSlots(sec, type).length === 0 && !(sec.items || []).some(item => decommCategory(item) === type)}
                             onCheckedChange={checked => toggleDecommDevice(si, type, checked === true)}
                           />
-                          <label htmlFor={`decomm-related-${si}-${type}`} className="text-xs cursor-pointer">{type}</label>
+                          <label htmlFor={`decomm-related-${si}-${type}`} className="text-xs cursor-pointer">{type}{['CMS', 'PC', 'TV'].includes(type) && getDecommSlots(sec, type).length === 0 ? ' (No Record)' : ''}</label>
                         </div>
                       ))}
                     </div>
@@ -1334,7 +1341,7 @@ export default function InstallationReportForm() {
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-sm">{type}</span>
                           <Button type="button" size="sm" variant="outline" className="gap-1 text-xs h-7"
-                            disabled={limited && slots.length > 0 && entries.length >= slots.length}
+                            disabled={limited && (slots.length === 0 || entries.length >= slots.length)}
                             onClick={() => addDecommItemToSection(si, type)}>
                             <Plus size={12} /> Add Item
                           </Button>
@@ -1358,10 +1365,13 @@ export default function InstallationReportForm() {
                             const available = slots.filter(slot => !usedIds.has(slot.id));
                             const selected = slots.find(slot => slot.id === item.device_slot_id);
                             // As in SR: no Inventory value means user may key in a device name.
-                            if (!inventoryType || slots.length === 0) return (
+                            if (inventoryType && slots.length === 0) return (
+                              <Input className="h-8 text-xs bg-muted/40" value={item.device_name || 'No Record'} readOnly />
+                            );
+                            if (!inventoryType) return (
                               <Input className="h-8 text-xs" value={item.device_name || ''}
                                 onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }}
-                                placeholder={inventoryType ? 'No matching device - enter manually' : 'Enter Device Name'} />
+                                placeholder="Enter Device Name" />
                             );
                             // Keep historical manually recorded values visible, even if Inventory changed.
                             if (item.device_name && !selected) return (
