@@ -440,11 +440,16 @@ export default function InstallationReportForm() {
   const isFullSite = (form.decommission_scope || 'partial') === 'full_site';
   const setDecommissionScope = (scope) => {
     return; // Temporarily disabled
-    
+
     setForm(f => ({ ...f, decommission_scope: scope, full_site_confirmed: scope === 'full_site' ? f.full_site_confirmed : false }));
     if (scope === 'full_site') setShowFullSiteConfirm(true);
   };
-  const confirmFullSite = () => setForm(f => ({ ...f, full_site_confirmed: true }));
+  const confirmFullSite = () => {
+    return; // Temporarily disabled
+    // Original code:
+    // setForm(f => ({ ...f, full_site_confirmed: true }));
+  };
+
   const ensureLink = (si, ii) => {
     setForm(f => {
       const links = f.decommission_links || [];
@@ -1245,7 +1250,8 @@ export default function InstallationReportForm() {
               onFullSiteConfirm={() => setShowFullSiteConfirm(true)}
             />
             <FullSiteConfirmDialog
-              open={showFullSiteConfirm}
+              open={false}
+              // open={showFullSiteConfirm}
               onOpenChange={setShowFullSiteConfirm}
               siteName={form.site_name}
               activeEquipmentCount={getReliableEquipmentForContext({ equipment: equipmentRecords, clientId: form.client_id, siteId: form.site_id, inventoryId: '' }).length}
