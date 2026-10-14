@@ -443,8 +443,8 @@ export default function InstallationReportForm() {
       const items = sec.items || [];
       if (!checked) return { ...sec, items: items.filter(it => it.device_type !== type) };
       if (items.some(it => it.device_type === type)) return sec;
-      if (['CMS', 'PC', 'TV'].includes(type) && getCommissionSlots(sec, type).length === 0) return sec;
-      return { ...sec, items: [...items, makeCommissionItem(sec, type)] };
+      const noRecord = ['CMS', 'PC', 'TV'].includes(type) && getCommissionSlots(sec, type).length === 0;
+      return { ...sec, items: [...items, { ...makeCommissionItem(sec, type), __no_record_placeholder: noRecord }] };
     }) }));
   };
 
@@ -453,7 +453,7 @@ export default function InstallationReportForm() {
       if (index !== si) return sec;
       const slots = getCommissionSlots(sec, type);
       const existing = (sec.items || []).filter(it => it.device_type === type);
-      // All Inventory slots must be used at most once. No records = manual unlimited.
+      // All Inventory slots must be used at most once. No records = read-only placeholder; cannot add more.
       if (['CMS', 'PC', 'TV'].includes(type) && (slots.length === 0 || existing.length >= slots.length)) return sec;
       const item = makeCommissionItem(sec, type);
       return { ...sec, items: [...(sec.items || []), item] };
@@ -626,8 +626,8 @@ export default function InstallationReportForm() {
     const items = sec.items || [];
     if (checked) {
       if (items.some(item => decommCategory(item) === type)) return;
-      if (['CMS', 'PC', 'TV'].includes(type) && getDecommSlots(sec, type).length === 0) return;
-      updateDecommItems(si, [...items, makeDecommItem(sec, type)]);
+      const noRecord = ['CMS', 'PC', 'TV'].includes(type) && getDecommSlots(sec, type).length === 0;
+      updateDecommItems(si, [...items, { ...makeDecommItem(sec, type), __no_record_placeholder: noRecord }]);
     } else {
       updateDecommItems(si, items.filter(item => decommCategory(item) !== type));
     }
@@ -716,8 +716,8 @@ export default function InstallationReportForm() {
   };
   const sanitize = (data) => ({
     ...data,
-    equipment_sections: (data.equipment_sections || []).map(sec => ({ ...sec, items: (sec.items || []).map(sanitizeItem) })),
-    decommission_sections: (data.decommission_sections || []).map(sec => ({ ...sec, items: (sec.items || []).map(sanitizeItem) })),
+    equipment_sections: (data.equipment_sections || []).map(sec => ({ ...sec, items: (sec.items || []).filter(item => !item.__no_record_placeholder).map(sanitizeItem) })),
+    decommission_sections: (data.decommission_sections || []).map(sec => ({ ...sec, items: (sec.items || []).filter(item => !item.__no_record_placeholder).map(sanitizeItem) })),
     equipment_installed: (data.equipment_installed || []).map(sanitizeItem),
     equipment_decommissioned: (data.equipment_decommissioned || []).map(sanitizeItem),
   });
@@ -1081,7 +1081,6 @@ export default function InstallationReportForm() {
                     {COMM_DEVICE_TYPES.map(type => (
                       <label key={type} className="flex items-center gap-1.5 text-xs cursor-pointer">
                         <Checkbox checked={(sec.items || []).some(item => item.device_type === type)}
-                          disabled={['CMS', 'PC', 'TV'].includes(type) && getCommissionSlots(sec, type).length === 0 && !(sec.items || []).some(item => item.device_type === type)}
                           onCheckedChange={value => toggleCommissionDevice(si, type, value === true)} />
                         {type}{['CMS', 'PC', 'TV'].includes(type) && getCommissionSlots(sec, type).length === 0 ? ' (No Record)' : ''}
                       </label>
@@ -1123,7 +1122,7 @@ export default function InstallationReportForm() {
                                 <div className="space-y-1">
                                   <Label className="text-xs">Device Name</Label>
                                   {['CMS', 'PC', 'TV'].includes(type) && slots.length === 0 ? (
-                                    <Input className="h-8 text-xs bg-muted/40" value={item.device_name || 'No Record'} readOnly />
+                                    <Input className="h-8 text-xs bg-muted/40" value={item.__no_record_placeholder ? 'No Record' : (item.device_name || 'No Record')} readOnly />
                                   ) : legacyManual ? (
                                     <Input className="h-8 text-xs bg-muted/40" value={item.device_name} readOnly title="Historical device name" />
                                   ) : !['CMS', 'PC', 'TV'].includes(type) ? (
@@ -1324,7 +1323,6 @@ export default function InstallationReportForm() {
                           <Checkbox
                             id={`decomm-related-${si}-${type}`}
                             checked={(sec.items || []).some(item => decommCategory(item) === type)}
-                            disabled={['CMS', 'PC', 'TV'].includes(type) && getDecommSlots(sec, type).length === 0 && !(sec.items || []).some(item => decommCategory(item) === type)}
                             onCheckedChange={checked => toggleDecommDevice(si, type, checked === true)}
                           />
                           <label htmlFor={`decomm-related-${si}-${type}`} className="text-xs cursor-pointer">{type}{['CMS', 'PC', 'TV'].includes(type) && getDecommSlots(sec, type).length === 0 ? ' (No Record)' : ''}</label>
@@ -1366,7 +1364,7 @@ export default function InstallationReportForm() {
                             const selected = slots.find(slot => slot.id === item.device_slot_id);
                             // As in SR: no Inventory value means user may key in a device name.
                             if (inventoryType && slots.length === 0) return (
-                              <Input className="h-8 text-xs bg-muted/40" value={item.device_name || 'No Record'} readOnly />
+                              <Input className="h-8 text-xs bg-muted/40" value={item.__no_record_placeholder ? 'No Record' : (item.device_name || 'No Record')} readOnly />
                             );
                             if (!inventoryType) return (
                               <Input className="h-8 text-xs" value={item.device_name || ''}
