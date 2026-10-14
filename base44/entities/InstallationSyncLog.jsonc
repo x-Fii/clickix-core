@@ -1,0 +1,160 @@
+{
+  "name": "InstallationSyncLog",
+  "type": "object",
+  "properties": {
+    "installation_report_id": {
+      "type": "string"
+    },
+    "installation_report_number": {
+      "type": "string"
+    },
+    "attempt_number": {
+      "type": "number"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "validate",
+        "resolve_client",
+        "resolve_site",
+        "resolve_inventory",
+        "create_equipment",
+        "append_inventory",
+        "finalize"
+      ]
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "Client",
+        "Site",
+        "Inventory",
+        "Equipment"
+      ]
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "created",
+        "updated",
+        "appended",
+        "skipped",
+        "verified",
+        "failed",
+        "pending_approval"
+      ]
+    },
+    "target_id": {
+      "type": "string"
+    },
+    "target_name": {
+      "type": "string"
+    },
+    "temp_id": {
+      "type": "string"
+    },
+    "real_id": {
+      "type": "string"
+    },
+    "values_appended": {
+      "type": "object",
+      "properties": {
+        "pc_sku": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tv_sku": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "processor": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "anydesk": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "values_skipped": {
+      "type": "object",
+      "properties": {
+        "pc_sku": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tv_sku": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "processor": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "anydesk": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "success",
+        "partial",
+        "failed"
+      ]
+    },
+    "error": {
+      "type": "string"
+    },
+    "approved_by": {
+      "type": "string"
+    },
+    "approved_at": {
+      "type": "string"
+    },
+    "change_summary": {
+      "type": "string"
+    },
+    "sync_status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "in_progress",
+        "succeeded",
+        "partially_failed",
+        "failed",
+        "pending_approval"
+      ]
+    },
+    "actor_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "installation_report_id",
+    "stage",
+    "result"
+  ],
+  "rls": {
+    "delete": false
+  }
+}

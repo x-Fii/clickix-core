@@ -1,0 +1,106 @@
+{
+  "name": "Equipment",
+  "type": "object",
+  "properties": {
+    "device_type": {
+      "type": "string"
+    },
+    "device_name": {
+      "type": "string"
+    },
+    "serial_number": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "sku": {
+      "type": "string"
+    },
+    "anydesk": {
+      "type": "string"
+    },
+    "length": {
+      "type": "string"
+    },
+    "quantity": {
+      "type": "number"
+    },
+    "num_ports": {
+      "type": "number"
+    },
+    "num_gang": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "hdmi_rx": {
+      "type": "boolean"
+    },
+    "hdmi_rx_length": {
+      "type": "string"
+    },
+    "hdmi_tx": {
+      "type": "boolean"
+    },
+    "hdmi_tx_length": {
+      "type": "string"
+    },
+    "is_serialized": {
+      "type": "boolean"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "decommissioned",
+        "spare",
+        "faulty"
+      ],
+      "default": "active"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "site_id": {
+      "type": "string"
+    },
+    "site_name": {
+      "type": "string"
+    },
+    "inventory_id": {
+      "type": "string"
+    },
+    "license_name": {
+      "type": "string"
+    },
+    "license_number": {
+      "type": "string"
+    },
+    "installation_report_id": {
+      "type": "string"
+    },
+    "installation_report_number": {
+      "type": "string"
+    },
+    "equipment_section_index": {
+      "type": "number"
+    },
+    "item_index": {
+      "type": "number"
+    },
+    "commissioned_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "device_name"
+  ],
+  "rls": {
+    "delete": false
+  }
+}

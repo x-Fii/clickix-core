@@ -13,6 +13,12 @@ import { useToast } from '@/components/ui/use-toast';
 import SignaturePad from '@/components/SignaturePad';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
 import PhotoPairUploader from '@/components/installation/PhotoPairUploader';
+import EquipmentPicker from '@/components/installation/EquipmentPicker';
+import DecommissionScopeBar from '@/components/installation/DecommissionScopeBar';
+import FullSiteConfirmDialog from '@/components/installation/FullSiteConfirmDialog';
+import { findLicenseNumberConflict, findSimilarClients, findSimilarSites } from '@/lib/installationStaging';
+import { getReliableEquipmentForContext, getLinkFor } from '@/lib/decommissionStaging';
+import { useAuth } from '@/lib/AuthContext';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const RELATED_DEVICES = [
@@ -26,14 +32,16 @@ const RELATED_DEVICES = [
 ];
 
 const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '' });
-const blankSection = () => ({ section_name: '', license_key: '', items: [] });
+const blankSection = () => ({ section_name: '', license_key: '', inventory_id: '', items: [] });
 const blankDecommItem = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '' });
-const blankDecommSection = () => ({ section_name: '', items: [blankDecommItem()] });
+const blankDecommSection = () => ({ section_name: '', inventory_id: '', items: [blankDecommItem()] });
 
 const parseInventoryValues = (value) => {
   if (!value) return [];
   return String(value).split(/[,，]/).map(v => v.trim()).filter(Boolean);
 };
+
+const norm = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
 export default function InstallationReportForm() {
   const { id } = useParams();
@@ -55,6 +63,10 @@ export default function InstallationReportForm() {
     work_order_number: '', quotation_number: '', site_pic_name: '',
     equipment_sections: [blankSection()],
     decommission_sections: [blankDecommSection()],
+    decommission_links: [],
+    decommission_scope: 'partial',
+    full_site_confirmed: false,
+    decommission_sync_status: 'not_started',
     equipment_installed: [],
     equipment_decommissioned: [],
     pre_job_assessment: '',
@@ -106,55 +118,142 @@ export default function InstallationReportForm() {
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => base44.entities.Site.list() });
   const { data: staff = [] } = useQuery({ queryKey: ['staff'], queryFn: () => base44.entities.StaffMember.list() });
   const { data: inventoryItems = [] } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
-
-  const licenseNameOptions = [...new Set(inventoryItems.map(item => String(item.license_name || '').trim()).filter(Boolean))].sort();
-
-  const getInventoryByLicense = (licenseName) => inventoryItems.find(item => String(item.license_name || '').trim() === String(licenseName || '').trim());
-
-  const getSkuOptions = (licenseName) => {
-    const inventory = getInventoryByLicense(licenseName);
-    return [...new Set([...parseInventoryValues(inventory?.pc_sku), ...parseInventoryValues(inventory?.tv_sku)])];
-  };
-
-  const getProcessorOptions = (licenseName) => parseInventoryValues(getInventoryByLicense(licenseName)?.processor);
-
-  const getAnydeskValue = (licenseName) => getInventoryByLicense(licenseName)?.anydesk || '';
+  const { data: equipmentRecords = [] } = useQuery({ queryKey: ['equipment'], queryFn: () => base44.entities.Equipment.filter({ status: 'active' }) });
 
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
   const [showAddSite, setShowAddSite] = useState(false);
-  const [newSite, setNewSite] = useState({ client_id: '', site_name: '', site_location: '', state: '', region: '', pic_name: '', pic_phone: '' });
 
-  const siteCreateMutation = useMutation({
-    mutationFn: data => base44.entities.Site.create(data),
-    onSuccess: (created) => {
-      queryClient.invalidateQueries(['sites']);
-      const c = clients.find(x => x.id === created.client_id) || clients.find(x => x.id === newSite.client_id);
-      setForm(f => ({
-        ...f,
-        client_id: created.client_id,
-        client_name: created.client_name || c?.company_name || '',
-        site_id: created.id,
-        site_name: created.site_name,
-        site_location: created.site_location || '',
-        site_pic_name: created.pic_name || '',
-      }));
-      setSiteRegionFilter(created.region || '');
-      setSiteStateFilter(created.state || '');
-      setShowAddSite(false);
-      setNewSite({ client_id: '', site_name: '', site_location: '', state: '', region: '', pic_name: '', pic_phone: '' });
-      toast({ title: 'Site created', description: `${created.site_name} added and selected.` });
-    },
-    onError: () => toast({ title: 'Failed to create site', variant: 'destructive' }),
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Retain staged records from older drafts. New Add actions below create
+  // master records immediately and do not add new staging entries.
+  // These state declarations MUST come before the derived license/site
+  // computations below, which reference stagedLicenses/stagedSites/stagedClients.
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [showAddLicense, setShowAddLicense] = useState(false);
+  const [addLicenseForSection, setAddLicenseForSection] = useState(null);
+  const [stagedClients, setStagedClients] = useState([]);
+  const [stagedSites, setStagedSites] = useState([]);
+  const [stagedLicenses, setStagedLicenses] = useState([]);
+
+  // Phase 3 Decommissioning preparation (frontend only, no sync yet):
+  // decommission_links pairs each decommission item (by section/item index)
+  // to a reliably linked Equipment id, or marks it as explicitly confirmed
+  // unmatched. decommission_scope + full_site_confirmed track the full-site
+  // confirmation gate. No Equipment or Site status changes happen on save.
+  const [showFullSiteConfirm, setShowFullSiteConfirm] = useState(false);
+
+  // Prefer stable IDs. Legacy names must resolve to one site for this client.
+  const siteLicenses = (() => {
+    if (!form.client_id || !form.site_id) return [];
+    const site = sites.find(s => s.id === form.site_id && s.client_id === form.client_id);
+    if (!site) return [];
+    const clientName = clients.find(c => c.id === form.client_id)?.company_name || form.client_name;
+    const matched = inventoryItems.filter(inv => {
+      if (inv.client_id && inv.client_id !== form.client_id) return false;
+      if (inv.site_id) return inv.site_id === site.id;
+      if (!clientName || norm(inv.client) !== norm(clientName)) return false;
+      const legacyName = inv.site_name || inv.outlet;
+      if (!legacyName || norm(legacyName) !== norm(site.site_name)) return false;
+      return sites.filter(s => s.client_id === form.client_id && norm(s.site_name) === norm(legacyName)).length === 1;
+    });
+    const seen = new Set();
+    return matched.filter(inv => { if (!inv.id || seen.has(inv.id)) return false; seen.add(inv.id); return true; });
+  })();
+
+  // Device/serial choices use existing Equipment records, never SKU as a serial.
+  const getDecommissionEquipment = (sec) => {
+    if (!form.client_id || !form.site_id || !sec.inventory_id) return [];
+    return equipmentRecords.filter(eq => eq.client_id === form.client_id && eq.site_id === form.site_id && eq.inventory_id === sec.inventory_id);
+  };
+
+  // Merge staged licenses that belong to the selected site (existing or staged)
+  // into the license options so they appear and are selectable in the dropdown.
+  const isStagedSiteId = String(form.site_id).startsWith('tmp_site_');
+  const stagedLicensesForSite = stagedLicenses.filter(l => {
+    if (isStagedSiteId) return l.staged_site_temp_id === form.site_id || l.site_id === form.site_id;
+    return l.site_id === form.site_id;
   });
+  const licenseOptions = [...siteLicenses, ...stagedLicensesForSite]; // existing keyed by inv.id, staged by temp_id
 
-  const handleAddSite = () => {
-    if (!newSite.client_id || !newSite.site_name) {
-      toast({ title: 'Client and Site Name are required', variant: 'destructive' });
-      return;
-    }
-    const c = clients.find(x => x.id === newSite.client_id);
-    siteCreateMutation.mutate({ ...newSite, client_name: c?.company_name || '', status: ['active'] });
+  const getInventoryById = (invId) => inventoryItems.find(item => item.id === invId);
+  const getStagedLicenseById = (tempId) => stagedLicenses.find(l => l.temp_id === tempId);
+
+  // Resolve the inventory record backing a section: prefer the stored
+  // inventory_id; fall back to a unique license-name match within the
+  // current site's eligible licenses (for legacy sections without an id).
+  const getSectionInventory = (sec) => {
+    if (sec.staged_inventory_temp_id) return getStagedLicenseById(sec.staged_inventory_temp_id);
+    if (sec.inventory_id) return getInventoryById(sec.inventory_id);
+    if (!sec.section_name) return undefined;
+    const matches = siteLicenses.filter(inv => norm(inv.license_name) === norm(sec.section_name));
+    return matches.length === 1 ? matches[0] : undefined;
+  };
+
+  const getSkuOptions = (sec) => {
+    const inventory = getSectionInventory(sec);
+    return [...new Set([...parseInventoryValues(inventory?.pc_sku), ...parseInventoryValues(inventory?.tv_sku)])];
+  };
+
+  const getProcessorOptions = (sec) => parseInventoryValues(getSectionInventory(sec)?.processor);
+
+  const getAnydeskValue = (sec) => getSectionInventory(sec)?.anydesk || '';
+
+  // Add dialogs persist master records immediately. Existing draft staging is retained.
+  const addBusyRef = useRef(false);
+  const [addBusy, setAddBusy] = useState(false);
+  const persistMaster = async (entity, fields, afterSave) => {
+    if (addBusyRef.current) return false;
+    addBusyRef.current = true;
+    setAddBusy(true);
+    try {
+      const record = await base44.entities[entity].create(fields);
+      if (!record?.id) throw new Error('The saved record did not return an ID. Refresh before retrying.');
+      const key = { Client: 'clients', Site: 'sites', Inventory: 'inventory' }[entity];
+      queryClient.setQueryData([key], old => [...(old || []).filter(r => r.id !== record.id), record]);
+      afterSave(record);
+      queryClient.invalidateQueries({ queryKey: [key] });
+      toast({ title: `${entity === 'Inventory' ? 'License' : entity} added` });
+      return true;
+    } catch (error) {
+      toast({ title: 'Unable to add record', description: error.message || 'Please try again.', variant: 'destructive' });
+      return false;
+    } finally { addBusyRef.current = false; setAddBusy(false); }
+  };
+  const stageNewClient = async (fields) => {
+    if (form.report_type !== 'commissioning' || ['scheduled', 'completed', 'cancelled'].includes(form.status)) throw new Error('Adding records is available in unlocked Commissioning reports only.');
+    const company_name = fields.company_name.trim();
+    const latest = await base44.entities.Client.list();
+    if (latest.some(c => norm(c.company_name) === norm(company_name))) throw new Error('This client already exists. Select the existing client.');
+    return persistMaster('Client', { ...fields, company_name }, record => {
+      setForm(f => ({ ...f, client_id: record.id, client_name: record.company_name, site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
+      setSiteRegionFilter(''); setSiteStateFilter(''); setShowAddClient(false);
+    });
+  };
+  const stageNewSite = async (fields) => {
+    if (form.report_type !== 'commissioning' || ['scheduled', 'completed', 'cancelled'].includes(form.status)) throw new Error('Add Site is available in unlocked Commissioning reports only.');
+    const client = clients.find(c => c.id === fields.client_id);
+    if (!client) throw new Error('Select a saved client first.');
+    const latest = await base44.entities.Site.list();
+    if (latest.some(site => site.client_id === client.id && norm(site.site_name) === norm(fields.site_name))) throw new Error('This site already exists for this client. Select the existing site.');
+    return persistMaster('Site', { ...fields, site_name: fields.site_name.trim(), client_id: client.id, client_name: client.company_name }, record => {
+      setForm(f => ({ ...f, client_id: client.id, client_name: client.company_name, site_id: record.id, site_name: record.site_name, site_location: record.site_location || '', site_pic_name: record.pic_name || '' }));
+      setSiteRegionFilter(record.region || ''); setSiteStateFilter(record.state || ''); setShowAddSite(false);
+    });
+  };
+  const stageNewLicense = async (fields, sectionIndex) => {
+    if (form.report_type !== 'commissioning' || ['scheduled', 'completed', 'cancelled'].includes(form.status)) throw new Error('Adding records is available in unlocked Commissioning reports only.');
+    const client = clients.find(c => c.id === form.client_id);
+    const site = sites.find(s => s.id === form.site_id && s.client_id === client?.id);
+    if (!client || !site) throw new Error('Select a saved client and site first.');
+    const latest = await base44.entities.Inventory.list();
+    if (findLicenseNumberConflict(fields.license_number.trim(), { inventoryItems: latest, stagedLicenses })) throw new Error('License number already exists. Use a unique license number.');
+    return persistMaster('Inventory', { ...fields, license_name: fields.license_name.trim(), license_number: fields.license_number.trim(), client_id: client.id, client: client.company_name, site_id: site.id, site_name: site.site_name, outlet: fields.outlet || '' }, record => {
+      setForm(f => ({ ...f, equipment_sections: (f.equipment_sections || []).map((sec, index) => index !== sectionIndex ? sec : { ...sec, section_name: record.license_name, license_key: record.license_number, inventory_id: record.id, staged_inventory_temp_id: '', items: (sec.items || []).map(item => item.device_name === 'PC' ? { ...item, anydesk: record.anydesk || '' } : item) }) }));
+      setShowAddLicense(false); setAddLicenseForSection(null);
+    });
   };
 
   // Seed the form from the loaded report exactly once per report id. Doing
@@ -182,6 +281,18 @@ export default function InstallationReportForm() {
     }
   }, [existing, sites, id, isEdit]);
 
+  // Restore staged Client/Site/License records from the saved draft so
+  // dependent dropdowns keep showing them after reopen. Staged records are
+  // persisted on the report (staged_clients/sites/licenses) and only become
+  // master records on official completion.
+  useEffect(() => {
+    if (!isEdit || !existing || seededRef.current !== id) return;
+    setStagedClients(existing.staged_clients || []);
+    setStagedSites(existing.staged_sites || []);
+    setStagedLicenses(existing.staged_licenses || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existing, id, isEdit]);
+
   // Assign the next gap-filled IR number for new reports (matches the
   // Service Report running-number sequence behavior).
   useEffect(() => {
@@ -197,11 +308,20 @@ export default function InstallationReportForm() {
   const regionOptions = [...new Set(sites.map(s => s.region).filter(Boolean))].sort();
   const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
 
+  const isStagedClientId = String(form.client_id).startsWith('tmp_client_');
   const filteredSites = sites.filter(s =>
     (form.site_id && s.id === form.site_id) ||
     ((!form.client_id || s.client_id === form.client_id) &&
     (!siteRegionFilter || s.region === siteRegionFilter) &&
     (!siteStateFilter || s.state === siteStateFilter))
+  );
+  // Staged sites belong to the selected client (existing or staged).
+  const filteredStagedSites = stagedSites.filter(s => {
+    if (isStagedClientId) return s.staged_client_temp_id === form.client_id || s.client_id === form.client_id;
+    return s.client_id === form.client_id;
+  }).filter(s =>
+    (!siteRegionFilter || s.region === siteRegionFilter) &&
+    (!siteStateFilter || s.state === siteStateFilter)
   );
 
   const mutation = useMutation({
@@ -236,8 +356,11 @@ export default function InstallationReportForm() {
     set('equipment_sections', arr);
   };
 
-  const selectCommissionLicense = (si, name) => {
-    const selectedInventory = getInventoryByLicense(name);
+  const selectCommissionLicense = (si, invId) => {
+    // Staged license selected by temp_id; existing by inventory id.
+    const isStaged = String(invId).startsWith('tmp_license_');
+    const selected = isStaged ? getStagedLicenseById(invId) : getInventoryById(invId);
+    if (!selected) return;
 
     setForm(f => ({
       ...f,
@@ -245,11 +368,13 @@ export default function InstallationReportForm() {
         index === si
           ? {
               ...sec,
-              section_name: name,
-              license_key: selectedInventory?.license_number || '',
+              section_name: selected.license_name || '',
+              license_key: selected.license_number || '',
+              inventory_id: isStaged ? '' : selected.id,
+              staged_inventory_temp_id: isStaged ? selected.temp_id : '',
               items: (sec.items || []).map(item =>
                 item.device_name === 'PC'
-                  ? { ...item, anydesk: selectedInventory?.anydesk || '' }
+                  ? { ...item, anydesk: selected.anydesk || '' }
                   : item
               ),
             }
@@ -295,7 +420,7 @@ export default function InstallationReportForm() {
             serial_number: '',
             model: '',
             sku: '',
-            anydesk: device.name === 'PC' ? getAnydeskValue(sec.section_name) : '',
+            anydesk: device.name === 'PC' ? getAnydeskValue(sec) : '',
             length: '',
             quantity: '',
             num_ports: '',
@@ -309,11 +434,69 @@ export default function InstallationReportForm() {
     });
   };
   // Decommission sections helpers
+  // Phase 3: decommission_links + scope helpers. Links live in a parallel
+  // array keyed by (section_index, item_index); the existing decommission
+  // item shape is unchanged.
+  const isFullSite = (form.decommission_scope || 'partial') === 'full_site';
+  const setDecommissionScope = (scope) => {
+    setForm(f => ({ ...f, decommission_scope: scope, full_site_confirmed: scope === 'full_site' ? f.full_site_confirmed : false }));
+    if (scope === 'full_site') setShowFullSiteConfirm(true);
+  };
+  const confirmFullSite = () => setForm(f => ({ ...f, full_site_confirmed: true }));
+  const ensureLink = (si, ii) => {
+    setForm(f => {
+      const links = f.decommission_links || [];
+      if (links.some(l => l.section_index === si && l.item_index === ii)) return f;
+      return { ...f, decommission_links: [...links, { section_index: si, item_index: ii, equipment_id: '', is_unmatched_confirmed: false }] };
+    });
+  };
+  const linkEquipment = (si, ii, equipmentId) => {
+    setForm(f => {
+      const links = (f.decommission_links || []).filter(l => !(l.section_index === si && l.item_index === ii));
+      // When linking to a real Equipment record, prefill the item's descriptive
+      // fields from it so the report shows what was removed. Unlinking clears
+      // only the link, preserving the user's manually entered details.
+      const eq = equipmentId ? equipmentRecords.find(e => e.id === equipmentId) : null;
+      const sections = (f.decommission_sections || []).map((sec, s) => {
+        if (s !== si) return sec;
+        const items = (sec.items || []).map((item, i) => {
+          if (i !== ii) return item;
+          if (!eq) return item;
+          return {
+            ...item,
+            device_type: eq.device_type || item.device_type,
+            device_name: eq.device_name || item.device_name,
+            serial_number: eq.serial_number || item.serial_number,
+          };
+        });
+        return { ...sec, items };
+      });
+      return {
+        ...f,
+        decommission_sections: sections,
+        decommission_links: [...links, { section_index: si, item_index: ii, equipment_id: equipmentId || '', is_unmatched_confirmed: false }],
+      };
+    });
+  };
+  const confirmUnmatched = (si, ii) => {
+    setForm(f => {
+      const links = (f.decommission_links || []).filter(l => !(l.section_index === si && l.item_index === ii));
+      return { ...f, decommission_links: [...links, { section_index: si, item_index: ii, equipment_id: '', is_unmatched_confirmed: true }] };
+    });
+  };
+
   const addDecommSection = () => set('decommission_sections', [...(form.decommission_sections || []), blankDecommSection()]);
   const removeDecommSection = (si) => set('decommission_sections', (form.decommission_sections || []).filter((_, idx) => idx !== si));
   const updateDecommSectionName = (si, val) => {
     const arr = [...(form.decommission_sections || [])];
     arr[si] = { ...arr[si], section_name: val };
+    set('decommission_sections', arr);
+  };
+  const selectDecommissionLicense = (si, invId) => {
+    const selectedInventory = getInventoryById(invId);
+    if (!selectedInventory) return;
+    const arr = [...(form.decommission_sections || [])];
+    arr[si] = { ...arr[si], section_name: selectedInventory.license_name || '', inventory_id: selectedInventory.id };
     set('decommission_sections', arr);
   };
   const addDecommItemToSection = (si) => {
@@ -460,9 +643,7 @@ export default function InstallationReportForm() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddSite(true)} disabled={jobLocked}>
-                <Plus size={14} /> Add New Site
-              </Button>
+
             </div>
           </div>
           <fieldset disabled={jobLocked} className="space-y-4 m-0 p-0 border-0">
@@ -500,13 +681,28 @@ export default function InstallationReportForm() {
             <div className={rowClass}>
               <div className="space-y-1">
                 <Label>Client</Label>
-                <Select value={form.client_id} onValueChange={v => {
-                  const c = clients.find(x => x.id === v);
-                  setForm(f => ({ ...f, client_id: v, client_name: c?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
-                }}>
-                  <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-                  <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={form.client_id} onValueChange={v => {
+                    if (String(v).startsWith('tmp_client_')) {
+                      const staged = stagedClients.find(s => s.temp_id === v);
+                      setForm(f => ({ ...f, client_id: v, client_name: staged?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
+                      return;
+                    }
+                    const c = clients.find(x => x.id === v);
+                    setForm(f => ({ ...f, client_id: v, client_name: c?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
+                  }}>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="Select client" /></SelectTrigger>
+                    <SelectContent>
+                      {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+                      {stagedClients.map(c => <SelectItem key={c.temp_id} value={c.temp_id}>{c.company_name} (staged)</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {form.report_type === 'commissioning' && (
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => setShowAddClient(true)} disabled={jobLocked}>
+                    <Plus size={14} /> Add Client
+                  </Button>
+                  )}
+                </div>
               </div>
               <div className="space-y-1">
                 <Label>Region</Label>
@@ -529,13 +725,28 @@ export default function InstallationReportForm() {
                 {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
               </div>
               <div className="space-y-1">
-                <Label>Site / Outlet</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Site / Outlet</Label>
+                  {form.report_type === 'commissioning' && (
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowAddSite(true)} disabled={jobLocked}>
+                      <Plus size={14} /> Add Site
+                    </Button>
+                  )}
+                </div>
                 <Select value={form.site_id} onValueChange={v => {
+                  if (String(v).startsWith('tmp_site_')) {
+                    const staged = stagedSites.find(s => s.temp_id === v);
+                    setForm(f => ({ ...f, site_id: v, site_name: staged?.site_name || '', site_location: staged?.site_location || '', site_pic_name: staged?.pic_name || '' }));
+                    return;
+                  }
                   const s = sites.find(x => x.id === v);
                   setForm(f => ({ ...f, site_id: v, site_name: s?.site_name || '', site_location: s?.site_location || '', site_pic_name: s?.pic_name || '' }));
                 }}>
                   <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
-                <SelectContent>{filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}{s.state ? ` — ${s.state}` : ''}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}{s.state ? ` — ${s.state}` : ''}</SelectItem>)}
+                  {filteredStagedSites.map(s => <SelectItem key={s.temp_id} value={s.temp_id}>{s.site_name} (staged)</SelectItem>)}
+                </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
@@ -550,50 +761,39 @@ export default function InstallationReportForm() {
           </fieldset>
         </div>
 
-        <Dialog open={showAddSite} onOpenChange={setShowAddSite}>
-          <DialogContent className="sm:max-w-[520px]">
-            <DialogHeader>
-              <DialogTitle>Add New Site</DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-3 py-2">
-              <div className="space-y-1 col-span-2">
-                <Label>Client</Label>
-                <Select value={newSite.client_id} onValueChange={v => setNewSite(n => ({ ...n, client_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-                  <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1 col-span-2">
-                <Label>Site / Outlet Name</Label>
-                <Input value={newSite.site_name} onChange={e => setNewSite(n => ({ ...n, site_name: e.target.value }))} placeholder="Site name" />
-              </div>
-              <div className="space-y-1 col-span-2">
-                <Label>Site Location</Label>
-                <Input value={newSite.site_location} onChange={e => setNewSite(n => ({ ...n, site_location: e.target.value }))} placeholder="Address" />
-              </div>
-              <div className="space-y-1">
-                <Label>Region</Label>
-                <Input value={newSite.region} onChange={e => setNewSite(n => ({ ...n, region: e.target.value }))} placeholder="Region" />
-              </div>
-              <div className="space-y-1">
-                <Label>State</Label>
-                <Input value={newSite.state} onChange={e => setNewSite(n => ({ ...n, state: e.target.value }))} placeholder="State" />
-              </div>
-              <div className="space-y-1">
-                <Label>PIC Name</Label>
-                <Input value={newSite.pic_name} onChange={e => setNewSite(n => ({ ...n, pic_name: e.target.value }))} placeholder="Person in charge" />
-              </div>
-              <div className="space-y-1">
-                <Label>PIC Phone</Label>
-                <Input value={newSite.pic_phone} onChange={e => setNewSite(n => ({ ...n, pic_phone: e.target.value }))} placeholder="Phone" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowAddSite(false)}>Cancel</Button>
-              <Button type="button" onClick={handleAddSite} disabled={siteCreateMutation.isLoading}>{siteCreateMutation.isLoading ? 'Saving...' : 'Save Site'}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <AddClientDialog
+          open={showAddClient && form.report_type === 'commissioning' && !jobLocked}
+          onOpenChange={setShowAddClient}
+          clients={clients}
+          busy={addBusy}
+          onConfirm={(fields) => stageNewClient(fields)}
+        />
+        <AddSiteDialog
+          open={showAddSite && form.report_type === 'commissioning' && !jobLocked}
+          onOpenChange={setShowAddSite}
+          clients={clients}
+          stagedClients={stagedClients}
+          sites={sites}
+          busy={addBusy}
+          isAdmin={isAdmin}
+          linkedClientId={form.client_id}
+          linkedStagedClientTempId={isStagedClientId ? form.client_id : ''}
+          onConfirm={(fields) => stageNewSite(fields)}
+        />
+        <AddLicenseDialog
+          open={showAddLicense && form.report_type === 'commissioning' && !jobLocked}
+          onOpenChange={(o) => { setShowAddLicense(o); if (!o) setAddLicenseForSection(null); }}
+          inventoryItems={inventoryItems}
+          busy={addBusy}
+          stagedLicenses={stagedLicenses}
+          linkedClientId={form.client_id}
+          linkedClientName={form.client_name}
+          linkedStagedClientTempId={isStagedClientId ? form.client_id : ''}
+          linkedSiteId={form.site_id}
+          linkedSiteName={form.site_name}
+          linkedStagedSiteTempId={isStagedSiteId ? form.site_id : ''}
+          onConfirm={(fields) => stageNewLicense(fields, addLicenseForSection)}
+        />
 
         {/* Schedule & Attendance */}
         <div className={sectionClass}>
@@ -681,28 +881,43 @@ export default function InstallationReportForm() {
 
                   {commissionLicenseOpen[si] && (
                     <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                      {licenseNameOptions.filter(name =>
-                        name.toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase())
+                      <button
+                        type="button"
+                        disabled={jobLocked || form.report_type !== 'commissioning'}
+                        onClick={() => {
+                          setAddLicenseForSection(si);
+                          setShowAddLicense(true);
+                          setCommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
+                          setCommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs font-medium text-primary hover:bg-primary/10 border-b border-border sticky top-0 bg-popover"
+                      >
+                        + Add New License…
+                      </button>
+                      {licenseOptions.filter(inv =>
+                        String(inv.license_name || '').toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase())
                       ).length > 0 ? (
-                        licenseNameOptions
-                          .filter(name => name.toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase()))
-                          .map(name => (
+                        licenseOptions
+                          .filter(inv => String(inv.license_name || '').toLowerCase().includes((commissionLicenseSearch[si] || '').toLowerCase()))
+                          .map(inv => (
                             <button
-                              key={name}
+                              key={inv.id || inv.temp_id}
                               type="button"
                               onClick={() => {
-                                selectCommissionLicense(si, name);
+                                selectCommissionLicense(si, inv.id || inv.temp_id);
                                 setCommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
                                 setCommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
                               }}
                               className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
                             >
-                              {name}
+                              <span className="font-medium">{inv.license_name}</span>
+                              {inv.license_number && <span className="text-muted-foreground font-mono ml-2">{inv.license_number}</span>}
+                              {inv.temp_id && <span className="text-muted-foreground ml-1">(staged)</span>}
                             </button>
                           ))
                       ) : (
                         <div className="px-3 py-2 text-xs text-muted-foreground">
-                          No license found
+                          {form.site_id ? 'No license found for this site' : 'Select a site to choose a license'}
                         </div>
                       )}
                     </div>
@@ -782,7 +997,7 @@ export default function InstallationReportForm() {
 
                   {skuOpen[`${si}-${ii}`] && (
                     <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                      {getSkuOptions(sec.section_name)
+                      {getSkuOptions(sec)
                         .filter(sku => sku.toLowerCase().includes((skuSearch[`${si}-${ii}`] || '').toLowerCase()))
                         .map(sku => (
                           <button
@@ -835,7 +1050,7 @@ export default function InstallationReportForm() {
 
           {modelOpen[`${si}-${ii}`] && (
             <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-              {getProcessorOptions(sec.section_name)
+              {getProcessorOptions(sec)
                 .filter(model => model.toLowerCase().includes((modelSearch[`${si}-${ii}`] || '').toLowerCase()))
                 .map(model => (
                   <button
@@ -859,7 +1074,7 @@ export default function InstallationReportForm() {
                             <Label className="text-xs">Anydesk</Label>
                             <Input
                               className="h-8 text-xs bg-muted/40 cursor-not-allowed"
-                              value={item.anydesk || getAnydeskValue(sec.section_name)}
+                              value={item.anydesk || getAnydeskValue(sec)}
                               readOnly
                               placeholder="Autofilled from selected license"
                             />
@@ -905,7 +1120,7 @@ export default function InstallationReportForm() {
 
                             {skuOpen[`${si}-${ii}`] && (
                               <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                                {getSkuOptions(sec.section_name)
+                                {getSkuOptions(sec)
                                   .filter(sku => sku.toLowerCase().includes((skuSearch[`${si}-${ii}`] || '').toLowerCase()))
                                   .map(sku => (
                                     <button
@@ -1017,6 +1232,23 @@ export default function InstallationReportForm() {
                 <Plus size={14} className="mr-1" /> Add Section
               </Button>
             </div>
+            <DecommissionScopeBar
+              sections={form.decommission_sections || []}
+              links={form.decommission_links || []}
+              equipment={equipmentRecords}
+              decommissionScope={form.decommission_scope}
+              fullSiteConfirmed={form.full_site_confirmed}
+              isFullSite={isFullSite}
+              onScopeChange={setDecommissionScope}
+              onFullSiteConfirm={() => setShowFullSiteConfirm(true)}
+            />
+            <FullSiteConfirmDialog
+              open={showFullSiteConfirm}
+              onOpenChange={setShowFullSiteConfirm}
+              siteName={form.site_name}
+              activeEquipmentCount={getReliableEquipmentForContext({ equipment: equipmentRecords, clientId: form.client_id, siteId: form.site_id, inventoryId: '' }).length}
+              onConfirm={confirmFullSite}
+            />
             {(form.decommission_sections || []).map((sec, si) => (
               <div key={si} className="border border-primary/30 rounded-lg p-4 space-y-3 bg-muted/10">
                 {/* Section header */}
@@ -1049,22 +1281,28 @@ export default function InstallationReportForm() {
 
                     {decommissionLicenseOpen[si] && (
                       <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                        {licenseNameOptions
-                          .filter(name => name.toLowerCase().includes((decommissionLicenseSearch[si] || '').toLowerCase()))
-                          .map(name => (
+                        {siteLicenses
+                          .filter(inv => String(inv.license_name || '').toLowerCase().includes((decommissionLicenseSearch[si] || '').toLowerCase()))
+                          .map(inv => (
                             <button
-                              key={name}
+                              key={inv.id}
                               type="button"
                               onClick={() => {
-                                updateDecommSectionName(si, name);
+                                selectDecommissionLicense(si, inv.id);
                                 setDecommissionLicenseSearch(prev => ({ ...prev, [si]: undefined }));
                                 setDecommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
                               }}
                               className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
                             >
-                              {name}
+                              <span className="font-medium">{inv.license_name}</span>
+                              {inv.license_number && <span className="text-muted-foreground font-mono ml-2">{inv.license_number}</span>}
                             </button>
                           ))}
+                        {siteLicenses.length === 0 && (
+                          <div className="px-3 py-2 text-xs text-muted-foreground">
+                            {form.site_id ? 'No license found for this site' : 'Select a site to choose a license'}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1091,17 +1329,35 @@ export default function InstallationReportForm() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Device Name / Model</Label>
-                          <Input className="h-8 text-xs" value={item.device_name} onChange={e => updateDecommSectionItem(si, ii, 'device_name', e.target.value)} placeholder="Name / Model" />
+                          <Input className="h-8 text-xs" list={`decomm-device-${si}-${ii}`} value={item.device_name} onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }} placeholder="Select or enter Name / Model" />
+                          <datalist id={`decomm-device-${si}-${ii}`}>
+                            {[...new Set(getDecommissionEquipment(sec).filter(eq => !item.device_type || eq.device_type === item.device_type).map(eq => eq.device_name).filter(Boolean))].map(name => <option key={name} value={name} />)}
+                          </datalist>
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Serial Number</Label>
-                          <Input className="h-8 text-xs" value={item.serial_number} onChange={e => updateDecommSectionItem(si, ii, 'serial_number', e.target.value)} placeholder="S/N" />
+                          <Input className="h-8 text-xs" list={`decomm-serial-${si}-${ii}`} value={item.serial_number} onChange={e => { updateDecommSectionItem(si, ii, 'serial_number', e.target.value); ensureLink(si, ii); }} placeholder="Select or enter S/N" />
+                          <datalist id={`decomm-serial-${si}-${ii}`}>
+                            {[...new Set(getDecommissionEquipment(sec).filter(eq => (!item.device_type || eq.device_type === item.device_type) && (!item.device_name || norm(eq.device_name) === norm(item.device_name))).map(eq => eq.serial_number).filter(Boolean))].map(serial => <option key={serial} value={serial} />)}
+                          </datalist>
                         </div>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Reason for Decommission</Label>
                         <Input className="h-8 text-xs" value={item.reason_for_decommission} onChange={e => updateDecommSectionItem(si, ii, 'reason_for_decommission', e.target.value)} placeholder="Reason" />
                       </div>
+                      <EquipmentPicker
+                        sectionIndex={si}
+                        itemIndex={ii}
+                        item={item}
+                        links={form.decommission_links || []}
+                        equipment={equipmentRecords}
+                        clientId={form.client_id}
+                        siteId={form.site_id}
+                        inventoryId={sec.inventory_id || ''}
+                        onLinkEquipment={linkEquipment}
+                        onConfirmUnmatched={confirmUnmatched}
+                      />
                     </div>
                   ))}
                   <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => addDecommItemToSection(si)}>
@@ -1264,5 +1520,165 @@ export default function InstallationReportForm() {
         </div>
       </form>
     </div>
+  );
+}
+// Inline Add dialogs: no separate Add*.jsx component files required.
+const SLA_OPTIONS = ['subscribe', 'on-demand'];
+const CMS_OPTIONS = ['CS Play', 'CS Sign Hub', 'CS Deals', 'CS Context', 'OmniBuy', 'DOTS'];
+const HARDWARE_OPTIONS = ['PC', 'Cable', 'Controller', 'TV', 'LED', 'Network Device'];
+const blankClient = () => ({ company_name: '', contact_person: '', pic_designation: '', contact_email: '', contact_phone: '', company_website: '', sla: '', cms_subscriptions: [], hardware: [], address: '', notes: '' });
+function AddClientDialog({ open, onOpenChange, clients = [], onConfirm, busy }) {
+  const [draft, setDraft] = useState(blankClient());
+  const [conflicts, setConflicts] = useState([]);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const pendingRef = useRef(false);
+  useEffect(() => { if (!open) { setDraft(blankClient()); setConflicts([]); setError(''); } }, [open]);
+  const setField = (field, value) => setDraft(d => ({ ...d, [field]: value }));
+  const toggleArray = (field, value) => setDraft(d => {
+    const arr = d[field] || [];
+    return { ...d, [field]: arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value] };
+  });
+  const handleConfirm = async () => {
+    if (!draft.company_name.trim() || pendingRef.current || busy) return;
+    pendingRef.current = true; setSaving(true); setError('');
+    try {
+      const matches = findSimilarClients(draft.company_name, clients);
+      setConflicts(matches);
+      await onConfirm({ ...draft, company_name: draft.company_name.trim() }, matches);
+    } catch (err) { setError(err.message || 'Unable to save client.'); }
+    finally { pendingRef.current = false; setSaving(false); }
+  };
+  const locked = busy || saving;
+  const handleClose = (value) => {
+    if (locked) return;
+    if (!value) { setDraft(blankClient()); setConflicts([]); setError(''); }
+    onOpenChange(value);
+  };
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="bg-card border-border max-w-lg max-h-[95vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Add New Client</DialogTitle></DialogHeader>
+        <fieldset disabled={locked} className="space-y-3 mt-2 border-0 p-0 m-0">
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Company Name <span className="text-red-400">*</span></Label><Input value={draft.company_name} onChange={e => setField('company_name', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Contact Person</Label><Input value={draft.contact_person} onChange={e => setField('contact_person', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">PIC Designation</Label><Input value={draft.pic_designation} onChange={e => setField('pic_designation', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Contact Email</Label><Input type="email" value={draft.contact_email} onChange={e => setField('contact_email', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Contact Phone</Label><Input value={draft.contact_phone} onChange={e => setField('contact_phone', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Company Website</Label><Input value={draft.company_website} onChange={e => setField('company_website', e.target.value)} className="bg-background" /></div>
+          {conflicts.length > 0 && <p className="text-xs text-amber-500">A client with a similar name already exists.</p>}
+          <div className="space-y-1.5"><Label className="text-muted-foreground">SLA</Label><Select value={draft.sla || undefined} onValueChange={v => setField('sla', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select SLA type" /></SelectTrigger><SelectContent>{SLA_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">CMS Subscription</Label><div className="flex flex-wrap gap-1.5">{CMS_OPTIONS.map(o => <button key={o} type="button" aria-pressed={(draft.cms_subscriptions || []).includes(o)} onClick={() => toggleArray('cms_subscriptions', o)} className={`px-2 py-0.5 rounded-md text-sm border transition-colors ${(draft.cms_subscriptions || []).includes(o) ? 'bg-primary/15 text-primary border-primary/40' : 'border-border text-muted-foreground hover:border-primary/40'}`}>{o}</button>)}</div></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Hardware</Label><div className="flex flex-wrap gap-1.5">{HARDWARE_OPTIONS.map(o => <button key={o} type="button" aria-pressed={(draft.hardware || []).includes(o)} onClick={() => toggleArray('hardware', o)} className={`px-2 py-0.5 rounded-md text-sm border transition-colors ${(draft.hardware || []).includes(o) ? 'bg-primary/15 text-primary border-primary/40' : 'border-border text-muted-foreground hover:border-primary/40'}`}>{o}</button>)}</div></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Address</Label><Textarea value={draft.address} onChange={e => setField('address', e.target.value)} className="bg-background resize-none" rows={2} /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Notes</Label><Textarea value={draft.notes} onChange={e => setField('notes', e.target.value)} className="bg-background resize-none" rows={2} /></div>
+        </fieldset>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <DialogFooter className="mt-4"><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={handleConfirm} disabled={locked || !draft.company_name.trim()}>{locked ? 'Saving...' : 'Add Client'}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+const MY_STATES = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'];
+const REGIONS = ['Central', 'Northern', 'Southern', 'East Coast', 'East Malaysia'];
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' },
+  { value: 're-instating', label: 'Re-Instating' }, { value: 're-instated', label: 'Re-Instated' },
+];
+function AddSiteDialog({ open, onOpenChange, clients = [], sites = [], isAdmin = false, linkedClientId = '', onConfirm, busy }) {
+  const build = () => ({ client_id: linkedClientId || '', site_name: '', site_location: '', region: '', state: '', pic_name: '', pic_phone: '', notes: '', status: [] });
+  const [draft, setDraft] = useState(build);
+  const [conflicts, setConflicts] = useState([]);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const pendingRef = useRef(false);
+  useEffect(() => { if (open) { setDraft(d => ({ ...build(), client_id: linkedClientId || d.client_id })); setConflicts([]); setError(''); } }, [open, linkedClientId]);
+  const setField = (field, value) => setDraft(d => ({ ...d, [field]: value }));
+  const selectedClientName = clients.find(c => c.id === draft.client_id)?.company_name || '';
+  const handleConfirm = async () => {
+    if (!draft.client_id || !draft.site_name.trim() || pendingRef.current || busy) return;
+    pendingRef.current = true; setSaving(true); setError('');
+    try {
+      const matches = findSimilarSites(draft.site_name, draft.client_id, sites);
+      setConflicts(matches);
+      await onConfirm({ ...draft, site_name: draft.site_name.trim(), client_name: selectedClientName }, matches);
+    } catch (err) { setError(err.message || 'Unable to save site.'); }
+    finally { pendingRef.current = false; setSaving(false); }
+  };
+  const locked = busy || saving;
+  const handleClose = (value) => {
+    if (locked) return;
+    if (!value) { setDraft(build()); setConflicts([]); setError(''); }
+    onOpenChange(value);
+  };
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="bg-card border-border max-w-lg max-h-[95vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Add New Site</DialogTitle></DialogHeader>
+        <fieldset disabled={locked} className="space-y-3 mt-2 border-0 p-0 m-0">
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Client <span className="text-red-400">*</span></Label><Select value={draft.client_id || undefined} onValueChange={v => setField('client_id', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select client" /></SelectTrigger><SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}</SelectContent></Select></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label className="text-muted-foreground">State</Label><Select value={draft.state || undefined} onValueChange={v => setField('state', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select state..." /></SelectTrigger><SelectContent className="max-h-60">{MY_STATES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1.5"><Label className="text-muted-foreground">Region</Label><Select value={draft.region || undefined} onValueChange={v => setField('region', v)}><SelectTrigger className="bg-background"><SelectValue placeholder="Select region..." /></SelectTrigger><SelectContent>{REGIONS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+          </div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Site Status</Label><Select value={draft.status?.[0] || undefined} onValueChange={v => setField('status', [v])}><SelectTrigger className="bg-background"><SelectValue placeholder="Select status..." /></SelectTrigger><SelectContent>{STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Site Name <span className="text-red-400">*</span></Label><Input value={draft.site_name} onChange={e => setField('site_name', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Site Location</Label><Input value={draft.site_location} onChange={e => setField('site_location', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">PIC Name</Label><Input value={draft.pic_name} onChange={e => setField('pic_name', e.target.value)} className="bg-background" /></div>
+          <div className="space-y-1.5"><Label className="text-muted-foreground">PIC Phone</Label><Input value={draft.pic_phone} onChange={e => setField('pic_phone', e.target.value)} className="bg-background" /></div>
+          {conflicts.length > 0 && <p className="text-xs text-amber-500">A site with a similar name already exists under this client.</p>}
+          <div className="space-y-1.5"><Label className="text-muted-foreground">Notes</Label><Textarea value={draft.notes} onChange={e => setField('notes', e.target.value)} className="bg-background resize-none" rows={2} /></div>
+        </fieldset>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <DialogFooter className="mt-4"><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={handleConfirm} disabled={locked || !draft.client_id || !draft.site_name.trim()}>{locked ? 'Saving...' : 'Add Site'}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+function AddLicenseDialog({ open, onOpenChange, inventoryItems = [], stagedLicenses = [], linkedClientId = '', linkedClientName = '', linkedSiteId = '', linkedSiteName = '', outlet = '', onConfirm, busy }) {
+  const build = () => ({ license_name: '', license_number: '', pc_sku: '', tv_sku: '', processor: '', anydesk: '', outlet: outlet || '', client_id: linkedClientId || '', client_name: linkedClientName || '', site_id: linkedSiteId || '', site_name: linkedSiteName || '' });
+  const [draft, setDraft] = useState(build);
+  const [conflict, setConflict] = useState(null);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const pendingRef = useRef(false);
+  useEffect(() => { if (open) { setDraft(build()); setConflict(null); setError(''); } }, [open, linkedClientId, linkedClientName, linkedSiteId, linkedSiteName, outlet]);
+  const setField = (field, value) => setDraft(d => ({ ...d, [field]: value }));
+  const checkAndConfirm = async () => {
+    if (!draft.license_number.trim() || pendingRef.current || busy) return;
+    const found = findLicenseNumberConflict(draft.license_number, { inventoryItems, stagedLicenses });
+    setConflict(found);
+    if (found) return;
+    pendingRef.current = true; setSaving(true); setError('');
+    try { await onConfirm({ ...draft, license_number: draft.license_number.trim() }); }
+    catch (err) { setError(err.message || 'Unable to save license.'); }
+    finally { pendingRef.current = false; setSaving(false); }
+  };
+  const locked = busy || saving;
+  const handleClose = value => {
+    if (locked) return;
+    if (!value) { setDraft(build()); setConflict(null); setError(''); }
+    onOpenChange(value);
+  };
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[560px]" onKeyDown={e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); checkAndConfirm(); } }}>
+        <DialogHeader><DialogTitle>Add New License</DialogTitle></DialogHeader>
+        <fieldset disabled={locked} className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 max-h-[60vh] overflow-y-auto pr-1 border-0 m-0">
+          <div className="space-y-1 sm:col-span-2"><Label>License Name</Label><Input value={draft.license_name} onChange={e => setField('license_name', e.target.value)} placeholder="License / system name" /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>License Number *</Label><Input value={draft.license_number} onChange={e => { setField('license_number', e.target.value); setConflict(null); }} placeholder="Globally unique license number" />
+            {conflict && <p className="text-xs text-destructive">{conflict.kind === 'inventory' ? 'An existing inventory license' : 'A staged license'} already uses this number: {conflict.record.license_name || conflict.record.company_name}. Resolve the conflict before saving.</p>}
+          </div>
+          <div className="space-y-1"><Label>PC SKU</Label><Input value={draft.pc_sku} onChange={e => setField('pc_sku', e.target.value)} placeholder="PC SKU" /></div>
+          <div className="space-y-1"><Label>TV SKU</Label><Input value={draft.tv_sku} onChange={e => setField('tv_sku', e.target.value)} placeholder="TV SKU" /></div>
+          <div className="space-y-1"><Label>Processor</Label><Input value={draft.processor} onChange={e => setField('processor', e.target.value)} placeholder="Processor / model" /></div>
+          <div className="space-y-1"><Label>AnyDesk</Label><Input value={draft.anydesk} onChange={e => setField('anydesk', e.target.value)} placeholder="AnyDesk ID" /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Outlet</Label><Input value={draft.outlet} onChange={e => setField('outlet', e.target.value)} placeholder="Outlet (distinct from site name)" /></div>
+          <div className="space-y-1 sm:col-span-2 text-xs text-muted-foreground border-t border-border pt-2">Linked to {draft.client_name || '—'} · {draft.site_name || '—'}</div>
+        </fieldset>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <DialogFooter><Button type="button" variant="outline" disabled={locked} onClick={() => handleClose(false)}>Cancel</Button><Button type="button" onClick={checkAndConfirm} disabled={locked || !draft.license_number.trim() || !!conflict}>{locked ? 'Saving...' : 'Add License'}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
