@@ -496,7 +496,7 @@ export default function L1DraftEditor({ report }) {
                             htmlFor={`draft-affected-${si}-${type}`}
                             className="text-xs cursor-pointer"
                           >
-                            {type}{AFFECTED_INVENTORY_FIELDS[type] && getAffectedDeviceSlots(sec.section_name, type).length === 0 ? ' (No Record)' : ''}
+                            {type}
                           </label>
                         </div>
                       );
