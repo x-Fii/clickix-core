@@ -475,8 +475,8 @@ export default function InstallationReportForm() {
           if (!eq) return item;
           return {
             ...item,
-            device_type: eq.device_type || item.device_type,
-            device_name: eq.device_name || item.device_name,
+            device_type: item.device_type || eq.device_type,
+            device_name: item.device_name || eq.device_name,
             serial_number: eq.serial_number || item.serial_number,
           };
         });
@@ -503,31 +503,73 @@ export default function InstallationReportForm() {
     arr[si] = { ...arr[si], section_name: val };
     set('decommission_sections', arr);
   };
+  // SR-style inventory slots: identical SKU values remain separate selectable devices.
+  const getDecommSlots = (sec, type) => {
+    const field = { CMS: 'license_number', PC: 'pc_sku', TV: 'tv_sku' }[type];
+    if (!field || !sec.inventory_id) return [];
+    const inv = inventoryItems.find(record => record.id === sec.inventory_id);
+    if (!inv) return [];
+    const values = parseInventoryValues(inv[field]);
+    const counts = {};
+    values.forEach(name => { counts[name] = (counts[name] || 0) + 1; });
+    const seen = {};
+    return values.map((name, index) => {
+      seen[name] = (seen[name] || 0) + 1;
+      return {
+        id: `${inv.id}-${field}-${index}`,
+        name,
+        label: counts[name] > 1 ? `${name} (${seen[name]})` : name,
+      };
+    });
+  };
   const selectDecommissionLicense = (si, invId) => {
     const selectedInventory = getInventoryById(invId);
     if (!selectedInventory) return;
-    const arr = [...(form.decommission_sections || [])];
-    arr[si] = {
-      ...arr[si], section_name: selectedInventory.license_name || '', inventory_id: selectedInventory.id,
-      items: (arr[si].items || []).map(item => {
-        const field = item.device_type === 'CMS' ? 'license_number' : item.device_type === 'PC' ? 'pc_sku' : item.device_type === 'TV' ? 'tv_sku' : null;
-        if (!field || item.device_name) return item;
-        const value = parseInventoryValues(selectedInventory[field])[0];
-        return value ? { ...item, device_name: value } : item;
-      }),
-    };
-    set('decommission_sections', arr);
-  };
-  const getDecommSlots = (sec, type) => {
-    const inv = inventoryItems.find(record => record.id === sec.inventory_id);
-    if (!inv || !['CMS', 'PC', 'TV'].includes(type)) return [];
-    return parseInventoryValues(inv[type === 'CMS' ? 'license_number' : type === 'PC' ? 'pc_sku' : 'tv_sku']);
+    setForm(f => {
+      const original = f.decommission_sections?.[si];
+      if (!original) return f;
+      const changed = original.inventory_id !== selectedInventory.id;
+      const section = {
+        ...original,
+        section_name: selectedInventory.license_name || '',
+        inventory_id: selectedInventory.id,
+        items: (original.items || []).map(item => {
+          if (!changed) return item;
+          const field = { CMS: 'license_number', PC: 'pc_sku', TV: 'tv_sku' }[item.device_type];
+          if (!field) return item;
+          const values = parseInventoryValues(selectedInventory[field]);
+          return { ...item, device_name: values.length === 1 ? values[0] : '', device_slot_id: values.length === 1 ? `${selectedInventory.id}-${field}-0` : '' };
+        }),
+      };
+      return {
+        ...f,
+        decommission_sections: f.decommission_sections.map((sec, i) => i === si ? section : sec),
+        // Equipment links from a different license should not carry over.
+        decommission_links: changed ? (f.decommission_links || []).filter(link => link.section_index !== si) : f.decommission_links,
+      };
+    });
   };
   const makeDecommItem = (sec, type) => {
     const slots = getDecommSlots(sec, type);
-    const used = (sec.items || []).filter(item => decommCategory(item) === type).map(item => item.device_name);
-    const next = slots.find(slot => !used.includes(slot));
-    return { ...blankDecommItem(), device_type: type, device_name: next || '' };
+    const usedIds = new Set((sec.items || []).filter(item => decommCategory(item) === type).map(item => item.device_slot_id).filter(Boolean));
+    const available = slots.filter(slot => !usedIds.has(slot.id));
+    const autoSlot = available.length === 1 ? available[0] : null;
+    return { ...blankDecommItem(), device_type: type, device_name: autoSlot?.name || '', device_slot_id: autoSlot?.id || '' };
+  };
+  const selectDecommSlot = (si, ii, slotId) => {
+    setForm(f => ({
+      ...f,
+      decommission_sections: (f.decommission_sections || []).map((sec, index) => {
+        if (index !== si) return sec;
+        const item = sec.items?.[ii];
+        if (!item) return sec;
+        const slot = getDecommSlots(sec, item.device_type).find(s => s.id === slotId);
+        return { ...sec, items: sec.items.map((it, index) => index === ii ? {
+          ...it, device_slot_id: slot?.id || '', device_name: slot?.name || '',
+        } : it) };
+      }),
+      decommission_links: (f.decommission_links || []).filter(link => !(link.section_index === si && link.item_index === ii)),
+    }));
   };
   const updateDecommItems = (si, nextItems) => {
     // Keep Equipment Link indices in sync with the new item order.
@@ -558,7 +600,7 @@ export default function InstallationReportForm() {
     if (!sec) return;
     const slots = getDecommSlots(sec, type);
     const existing = (sec.items || []).filter(item => decommCategory(item) === type);
-    if (['CMS', 'PC', 'TV'].includes(type) && (slots.length === 0 || existing.length >= slots.length)) return;
+    if (['CMS', 'PC', 'TV'].includes(type) && slots.length > 0 && existing.length >= slots.length) return;
     updateDecommItems(si, [...(sec.items || []), makeDecommItem(sec, type)]);
   };
   const removeDecommItemFromSection = (si, ii) => {
@@ -1393,7 +1435,7 @@ export default function InstallationReportForm() {
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-sm">{type}</span>
                           <Button type="button" size="sm" variant="outline" className="gap-1 text-xs h-7"
-                            disabled={limited && (!slots.length || entries.length >= slots.length)}
+                            disabled={limited && slots.length > 0 && entries.length >= slots.length}
                             onClick={() => addDecommItemToSection(si, type)}>
                             <Plus size={12} /> Add Item
                           </Button>
@@ -1411,10 +1453,34 @@ export default function InstallationReportForm() {
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Device Name</Label>
-                          <Input className="h-8 text-xs" list={`decomm-device-${si}-${ii}`} value={item.device_name} readOnly={['CMS', 'PC', 'TV'].includes(type)} onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }} placeholder="Select or enter Name / Model" />
-                          <datalist id={`decomm-device-${si}-${ii}`}>
-                            {[...new Set(getDecommissionEquipment(sec).filter(eq => !item.device_type || eq.device_type === item.device_type).map(eq => eq.device_name).filter(Boolean))].map(name => <option key={name} value={name} />)}
-                          </datalist>
+                          {(() => {
+                            const inventoryType = ['CMS', 'PC', 'TV'].includes(type);
+                            const usedIds = new Set((sec.items || []).filter((other, index) => index !== ii && other.device_type === type).map(other => other.device_slot_id).filter(Boolean));
+                            const available = slots.filter(slot => !usedIds.has(slot.id));
+                            const selected = slots.find(slot => slot.id === item.device_slot_id);
+                            // As in SR: no Inventory value means user may key in a device name.
+                            if (!inventoryType || slots.length === 0) return (
+                              <Input className="h-8 text-xs" value={item.device_name || ''}
+                                onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }}
+                                placeholder={inventoryType ? 'No matching device - enter manually' : 'Enter Device Name'} />
+                            );
+                            // Keep historical manually recorded values visible, even if Inventory changed.
+                            if (item.device_name && !selected) return (
+                              <Input className="h-8 text-xs" value={item.device_name} readOnly title="Historical device name (not in current Inventory)" />
+                            );
+                            if (selected && available.length === 1) return (
+                              <Input className="h-8 text-xs bg-muted/40" value={selected.label} readOnly />
+                            );
+                            return (
+                              <Select value={available.some(slot => slot.id === item.device_slot_id) ? item.device_slot_id : undefined}
+                                onValueChange={slotId => selectDecommSlot(si, ii, slotId)}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select Device Name" /></SelectTrigger>
+                                <SelectContent>
+                                  {available.map(slot => <SelectItem key={slot.id} value={slot.id}>{slot.label}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            );
+                          })()}
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Serial Number</Label>
