@@ -1082,7 +1082,7 @@ export default function InstallationReportForm() {
                       <label key={type} className="flex items-center gap-1.5 text-xs cursor-pointer">
                         <Checkbox checked={(sec.items || []).some(item => item.device_type === type)}
                           onCheckedChange={value => toggleCommissionDevice(si, type, value === true)} />
-                        {type}{['CMS', 'PC', 'TV'].includes(type) && getCommissionSlots(sec, type).length === 0 ? ' (No Record)' : ''}
+                        {type}
                       </label>
                     ))}
                   </div>
@@ -1325,7 +1325,7 @@ export default function InstallationReportForm() {
                             checked={(sec.items || []).some(item => decommCategory(item) === type)}
                             onCheckedChange={checked => toggleDecommDevice(si, type, checked === true)}
                           />
-                          <label htmlFor={`decomm-related-${si}-${type}`} className="text-xs cursor-pointer">{type}{['CMS', 'PC', 'TV'].includes(type) && getDecommSlots(sec, type).length === 0 ? ' (No Record)' : ''}</label>
+                          <label htmlFor={`decomm-related-${si}-${type}`} className="text-xs cursor-pointer">{type}</label>
                         </div>
                       ))}
                     </div>
