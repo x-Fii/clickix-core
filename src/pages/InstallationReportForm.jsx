@@ -439,6 +439,8 @@ export default function InstallationReportForm() {
   // item shape is unchanged.
   const isFullSite = (form.decommission_scope || 'partial') === 'full_site';
   const setDecommissionScope = (scope) => {
+    return; // Temporarily disabled
+    
     setForm(f => ({ ...f, decommission_scope: scope, full_site_confirmed: scope === 'full_site' ? f.full_site_confirmed : false }));
     if (scope === 'full_site') setShowFullSiteConfirm(true);
   };
