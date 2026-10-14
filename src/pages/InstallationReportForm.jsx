@@ -22,15 +22,7 @@ import { getReliableEquipmentForContext, getLinkFor } from '@/lib/decommissionSt
 import { useAuth } from '@/lib/AuthContext';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
-const RELATED_DEVICES = [
-  { name: 'PC', type: 'PC' },
-  { name: 'HDMI Extender', type: 'Other' },
-  { name: 'HDMI', type: 'Other' },
-  { name: 'LAN', type: 'Network Device' },
-  { name: 'Network Switch', type: 'Network Device' },
-  { name: 'Power Extension', type: 'Other' },
-  { name: 'Other', type: 'Other', fillIn: true },
-];
+const COMM_DEVICE_TYPES = ['CMS', 'PC', 'TV', 'HDMI Extender', 'Cable', 'Others'];
 
 const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '' });
 const blankSection = () => ({ section_name: '', license_key: '', inventory_id: '', items: [] });
@@ -375,11 +367,17 @@ export default function InstallationReportForm() {
               license_key: selected.license_number || '',
               inventory_id: isStaged ? '' : selected.id,
               staged_inventory_temp_id: isStaged ? selected.temp_id : '',
-              items: (sec.items || []).map(item =>
-                item.device_name === 'PC'
-                  ? { ...item, anydesk: selected.anydesk || '' }
-                  : item
-              ),
+              items: (sec.items || []).map(item => {
+                const field = { CMS: 'license_number', PC: 'pc_sku', TV: 'tv_sku' }[item.device_type];
+                if (!field) return item;
+                if (sec.inventory_id === selected.id && !isStaged) return item;
+                const values = parseInventoryValues(selected[field]);
+                return { ...item,
+                  device_name: values.length === 1 ? values[0] : '',
+                  device_slot_id: values.length === 1 ? `${selected.id || selected.temp_id}-${field}-0` : '',
+                  ...(item.device_type === 'PC' ? { anydesk: selected.anydesk || '' } : {}),
+                };
+              }),
             }
           : sec
       ),
@@ -406,35 +404,72 @@ export default function InstallationReportForm() {
       return { ...f, equipment_sections: arr };
     });
   };
-  const toggleRelatedDevice = (si, device) => {
-    setForm(f => {
-      const arr = f.equipment_sections.map((sec, s) => {
-        if (s !== si) return sec;
-        const items = [...(sec.items || [])];
-        const existingIdx = device.fillIn
-          ? items.findIndex(it => it.device_type === device.type && it.device_name === '')
-          : items.findIndex(it => it.device_name === device.name);
-        if (existingIdx >= 0) {
-          items.splice(existingIdx, 1);
-        } else {
-          items.push({
-            device_type: device.type,
-            device_name: device.fillIn ? '' : device.name,
-            serial_number: '',
-            model: '',
-            sku: '',
-            anydesk: device.name === 'PC' ? getAnydeskValue(sec) : '',
-            length: '',
-            quantity: '',
-            num_ports: '',
-            num_gang: '',
-            notes: ''
-          });
-        }
-        return { ...sec, items };
-      });
-      return { ...f, equipment_sections: arr };
+  // Commissioning: use independent Inventory slots for duplicate SKU values.
+  // No Inventory stock or quantity fields are changed by these form actions.
+  const getCommissionSlots = (sec, type) => {
+    const field = { CMS: 'license_number', PC: 'pc_sku', TV: 'tv_sku' }[type];
+    if (!field) return [];
+    const inventory = getSectionInventory(sec);
+    if (!inventory) return [];
+    const values = parseInventoryValues(inventory[field]);
+    const count = {};
+    values.forEach(name => { count[name] = (count[name] || 0) + 1; });
+    const seen = {};
+    return values.map((name, index) => {
+      seen[name] = (seen[name] || 0) + 1;
+      return {
+        id: `${inventory.id || inventory.temp_id}-${field}-${index}`,
+        name,
+        label: count[name] > 1 ? `${name} (${seen[name]})` : name,
+      };
     });
+  };
+
+  const makeCommissionItem = (sec, type) => {
+    const slots = getCommissionSlots(sec, type);
+    const used = new Set((sec.items || []).filter(it => it.device_type === type).map(it => it.device_slot_id).filter(Boolean));
+    const remaining = slots.filter(slot => !used.has(slot.id));
+    const picked = remaining.length === 1 ? remaining[0] : null;
+    return {
+      ...blankItem(), device_type: type,
+      device_name: picked?.name || '', device_slot_id: picked?.id || '',
+      ...(type === 'PC' ? { anydesk: getAnydeskValue(sec) } : {}),
+    };
+  };
+
+  const toggleCommissionDevice = (si, type, checked) => {
+    setForm(f => ({ ...f, equipment_sections: (f.equipment_sections || []).map((sec, index) => {
+      if (index !== si) return sec;
+      const items = sec.items || [];
+      if (!checked) return { ...sec, items: items.filter(it => it.device_type !== type) };
+      if (items.some(it => it.device_type === type)) return sec;
+      return { ...sec, items: [...items, makeCommissionItem(sec, type)] };
+    }) }));
+  };
+
+  const addCommissionDevice = (si, type) => {
+    setForm(f => ({ ...f, equipment_sections: (f.equipment_sections || []).map((sec, index) => {
+      if (index !== si) return sec;
+      const slots = getCommissionSlots(sec, type);
+      const existing = (sec.items || []).filter(it => it.device_type === type);
+      // All Inventory slots must be used at most once. No records = manual unlimited.
+      if (slots.length && existing.length >= slots.length) return sec;
+      const item = makeCommissionItem(sec, type);
+      return { ...sec, items: [...(sec.items || []), item] };
+    }) }));
+  };
+
+  const selectCommissionDeviceSlot = (si, ii, slotId) => {
+    setForm(f => ({ ...f, equipment_sections: (f.equipment_sections || []).map((sec, index) => {
+      if (index !== si) return sec;
+      const item = sec.items?.[ii];
+      if (!item) return sec;
+      const slot = getCommissionSlots(sec, item.device_type).find(x => x.id === slotId);
+      if (!slot) return sec;
+      const used = (sec.items || []).some((other, j) => j !== ii && other.device_slot_id === slot.id);
+      if (used) return sec;
+      return { ...sec, items: sec.items.map((other, j) => j === ii ? { ...other, device_slot_id: slot.id, device_name: slot.name } : other) };
+    }) }));
   };
   // Decommission sections helpers
   // Phase 3: decommission_links + scope helpers. Links live in a parallel
@@ -1038,283 +1073,147 @@ export default function InstallationReportForm() {
                 </div>
                 {/* Items within section */}
                 <div className="space-y-3 pl-2 border-l-2 border-border">
-                  {/* Related devices quick select */}
+                  {/* SR-style Related Devices: individual license-linked choices */}
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <span className="text-xs text-muted-foreground">Related devices</span>
-                    {RELATED_DEVICES.map(dev => {
-                      const checked = dev.fillIn
-                        ? (sec.items || []).some(it => it.device_type === dev.type && it.device_name === '')
-                        : (sec.items || []).some(it => it.device_name === dev.name);
-                      return (
-                        <label key={dev.name} className="flex items-center gap-1.5 text-xs cursor-pointer hover:text-primary transition-colors">
-                          <input type="checkbox" checked={checked} onChange={() => toggleRelatedDevice(si, dev)} className="accent-primary" />
-                          {dev.fillIn ? `${dev.name} (fill in)` : dev.name}
-                        </label>
-                      );
-                    })}
+                    <span className="text-xs text-muted-foreground">RELATED DEVICES</span>
+                    {COMM_DEVICE_TYPES.map(type => (
+                      <label key={type} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <Checkbox checked={(sec.items || []).some(item => item.device_type === type)}
+                          onCheckedChange={value => toggleCommissionDevice(si, type, value === true)} />
+                        {type}
+                      </label>
+                    ))}
                   </div>
-                  {(sec.items || []).map((item, ii) => (
-                    <div key={ii} className="border border-border rounded-lg p-3 space-y-2 relative bg-card">
-                      <button type="button" onClick={() => removeItemFromSection(si, ii)}
-                        className="absolute top-2 right-2 text-muted-foreground hover:text-destructive">
-                        <Trash2 size={12} />
-                      </button>
-                      {item.device_name === 'PC' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <div className="space-y-1 relative">
-                  <Label className="text-xs">SKU</Label>
-
-                  <div className="relative">
-                    <Input
-                      className="h-8 text-xs pr-9"
-                      value={skuSearch[`${si}-${ii}`] ?? item.sku ?? ''}
-                      onClick={() => {
-                        const key = `${si}-${ii}`;
-                        setSkuOpen(prev => ({ ...prev, [key]: !prev[key] }));
-                        setSkuSearch(prev => ({ ...prev, [key]: prev[key] ?? '' }));
-                      }}
-                      onChange={e => {
-                        const key = `${si}-${ii}`;
-                        setSkuSearch(prev => ({ ...prev, [key]: e.target.value }));
-                        setSkuOpen(prev => ({ ...prev, [key]: true }));
-                        updateSectionItem(si, ii, 'sku', '');
-                      }}
-                      placeholder="Select SKU"
-
-                      onBlur={() => {
-                        const key = `${si}-${ii}`;
-                        setTimeout(() => {
-                          setSkuSearch(prev => ({ ...prev, [key]: undefined }));
-                          setSkuOpen(prev => ({ ...prev, [key]: false }));
-                        }, 150);
-                      }}
-                    />
-
-                    <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${skuOpen[`${si}-${ii}`] ? 'rotate-180' : ''}`} />
-                  </div>
-
-                  {skuOpen[`${si}-${ii}`] && (
-                    <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                      {getSkuOptions(sec)
-                        .filter(sku => sku.toLowerCase().includes((skuSearch[`${si}-${ii}`] || '').toLowerCase()))
-                        .map(sku => (
-                          <button
-                            key={sku}
-                            type="button"
-                            onClick={() => {
-                              const key = `${si}-${ii}`;
-                              updateSectionItem(si, ii, 'sku', sku);
-                              setSkuSearch(prev => ({ ...prev, [key]: undefined }));
-                              setSkuOpen(prev => ({ ...prev, [key]: false }));
-                            }}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
-                          >
-                            {sku}
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                </div>
-                          <div className="space-y-1 relative">
-          <Label className="text-xs">Model</Label>
-
-          <div className="relative">
-            <Input
-              className="h-8 text-xs pr-9"
-              value={modelSearch[`${si}-${ii}`] ?? item.model ?? ''}
-              onClick={() => {
-                const key = `${si}-${ii}`;
-                setModelOpen(prev => ({ ...prev, [key]: !prev[key] }));
-                setModelSearch(prev => ({ ...prev, [key]: prev[key] ?? item.model ?? '' }));
-              }}
-              onChange={e => {
-                const key = `${si}-${ii}`;
-                setModelSearch(prev => ({ ...prev, [key]: e.target.value }));
-                setModelOpen(prev => ({ ...prev, [key]: true }));
-                updateSectionItem(si, ii, 'model', e.target.value);
-              }}
-              onBlur={() => {
-                const key = `${si}-${ii}`;
-                setTimeout(() => {
-                  setModelSearch(prev => ({ ...prev, [key]: undefined }));
-                  setModelOpen(prev => ({ ...prev, [key]: false }));
-                }, 150);
-              }}
-              placeholder="Select or enter model"
-            />
-
-            <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${modelOpen[`${si}-${ii}`] ? 'rotate-180' : ''}`} />
-          </div>
-
-          {modelOpen[`${si}-${ii}`] && (
-            <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-              {getProcessorOptions(sec)
-                .filter(model => model.toLowerCase().includes((modelSearch[`${si}-${ii}`] || '').toLowerCase()))
-                .map(model => (
-                  <button
-                    key={model}
-                    type="button"
-                    onClick={() => {
-                      const key = `${si}-${ii}`;
-                      updateSectionItem(si, ii, 'model', model);
-                      setModelSearch(prev => ({ ...prev, [key]: undefined }));
-                      setModelOpen(prev => ({ ...prev, [key]: false }));
-                    }}
-                    className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
-                  >
-                    {model}
-                  </button>
-                ))}
-            </div>
-          )}
-        </div>
-                         <div className="space-y-1">
-                            <Label className="text-xs">Anydesk</Label>
-                            <Input
-                              className="h-8 text-xs bg-muted/40 cursor-not-allowed"
-                              value={item.anydesk || getAnydeskValue(sec)}
-                              readOnly
-                              placeholder="Autofilled from selected license"
-                            />
-                          </div>
-
+                  {COMM_DEVICE_TYPES.filter(type => (sec.items || []).some(item => item.device_type === type)).map(type => {
+                    const entries = (sec.items || []).map((item, actualIndex) => ({ item, actualIndex }))
+                      .filter(entry => entry.item.device_type === type);
+                    const slots = getCommissionSlots(sec, type);
+                    const canAdd = !slots.length || entries.length < slots.length;
+                    return (
+                      <div key={type} className="border border-border rounded-lg p-3 space-y-3 bg-muted/10">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-sm">{type}</span>
+                          <Button type="button" size="sm" variant="outline" disabled={!canAdd}
+                            onClick={() => addCommissionDevice(si, type)} className="text-xs gap-1">
+                            <Plus size={12}/> Add Item
+                          </Button>
                         </div>
-                      )}
-
-                      {item.device_name === 'HDMI Extender' && (
-                        <>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div className="space-y-1 relative">
-                            <Label className="text-xs">SKU</Label>
-
-                            <div className="relative">
-                              <Input
-                                className="h-8 text-xs pr-9"
-                                value={skuSearch[`${si}-${ii}`] ?? item.sku ?? ''}
-                                onClick={() => {
-                                  const key = `${si}-${ii}`;
-                                  setSkuOpen(prev => ({ ...prev, [key]: !prev[key] }));
-                                  setSkuSearch(prev => ({ ...prev, [key]: prev[key] ?? '' }));
-                                }}
-                                onChange={e => {
-                                  const key = `${si}-${ii}`;
-                                  setSkuSearch(prev => ({ ...prev, [key]: e.target.value }));
-                                  setSkuOpen(prev => ({ ...prev, [key]: true }));
-                                  updateSectionItem(si, ii, 'sku', '');
-                                }}
-                                placeholder="Select SKU"
-
-                                onBlur={() => {
-                                  const key = `${si}-${ii}`;
-                                  setTimeout(() => {
-                                    setSkuSearch(prev => ({ ...prev, [key]: undefined }));
-                                    setSkuOpen(prev => ({ ...prev, [key]: false }));
-                                  }, 150);
-                                }}
-                              />
-
-                              <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${skuOpen[`${si}-${ii}`] ? 'rotate-180' : ''}`} />
-                            </div>
-
-                            {skuOpen[`${si}-${ii}`] && (
-                              <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                                {getSkuOptions(sec)
-                                  .filter(sku => sku.toLowerCase().includes((skuSearch[`${si}-${ii}`] || '').toLowerCase()))
-                                  .map(sku => (
-                                    <button
-                                      key={sku}
-                                      type="button"
-                                      onClick={() => {
-                                        const key = `${si}-${ii}`;
-                                        updateSectionItem(si, ii, 'sku', sku);
-                                        setSkuSearch(prev => ({ ...prev, [key]: undefined }));
-                                        setSkuOpen(prev => ({ ...prev, [key]: false }));
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
-                                    >
-                                      {sku}
-                                    </button>
-                                  ))}
+                        {entries.map(({ item, actualIndex }, itemIndex) => {
+                          const usedIds = new Set((sec.items || [])
+                            .filter((other, index) => index !== actualIndex && other.device_type === type)
+                            .map(other => other.device_slot_id).filter(Boolean));
+                          const available = slots.filter(slot => !usedIds.has(slot.id));
+                          const selected = slots.find(slot => slot.id === item.device_slot_id);
+                          const legacyManual = item.device_name && !selected && slots.length > 0;
+                          return (
+                            <div key={actualIndex} className="border border-border rounded-lg p-3 space-y-3 bg-card">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground">Item {itemIndex + 1}</span>
+                                {entries.length > 1 && <button type="button" onClick={() => removeItemFromSection(si, actualIndex)}
+                                  className="text-muted-foreground hover:text-destructive"><Trash2 size={13}/></button>}
                               </div>
-                            )}
-                          </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Model</Label>
-                              <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-border">
-                            <div className="space-y-1.5">
-                              <label className="flex items-center gap-1.5 text-xs cursor-pointer hover:text-primary transition-colors">
-                                <input type="checkbox" checked={!!item.hdmi_rx} onChange={e => updateSectionItem(si, ii, 'hdmi_rx', e.target.checked)} className="accent-primary" />
-                                <span className="font-medium">RX HDMI</span>
-                              </label>
-                              {item.hdmi_rx && (
-                                <div className="pl-5">
-                                  <Label className="text-xs">Length</Label>
-                                  <Input className="h-8 text-xs" value={item.hdmi_rx_length || ''} onChange={e => updateSectionItem(si, ii, 'hdmi_rx_length', e.target.value)} placeholder="Length" />
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Device Type</Label>
+                                  <Input className="h-8 text-xs bg-muted/40" readOnly value={type}/>
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Device Name</Label>
+                                  {slots.length === 0 || legacyManual ? (
+                                    <Input className="h-8 text-xs" value={item.device_name || ''}
+                                      onChange={e => updateSectionItem(si, actualIndex, 'device_name', e.target.value)}
+                                      placeholder={slots.length ? 'Previously saved name' : 'No matching record — enter manually'} />
+                                  ) : selected && available.length === 1 ? (
+                                    <Input className="h-8 text-xs bg-muted/40" value={selected.label} readOnly />
+                                  ) : (
+                                    <Select value={available.some(slot => slot.id === item.device_slot_id) ? item.device_slot_id : undefined}
+                                      onValueChange={value => selectCommissionDeviceSlot(si, actualIndex, value)}>
+                                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select Device Name"/></SelectTrigger>
+                                      <SelectContent>{available.map(slot => (
+                                        <SelectItem key={slot.id} value={slot.id}>{slot.label}</SelectItem>
+                                      ))}</SelectContent>
+                                    </Select>
+                                  )}
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Serial Number</Label>
+                                  <Input className="h-8 text-xs" value={item.serial_number || ''}
+                                    onChange={e => updateSectionItem(si, actualIndex, 'serial_number', e.target.value)}
+                                    placeholder="Enter S/N"/>
+                                </div>
+                              </div>
+                              {type === 'PC' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Model</Label>
+                                    <Input className="h-8 text-xs" list={`comm-model-${si}-${actualIndex}`}
+                                      value={item.model || ''} onChange={e => updateSectionItem(si, actualIndex, 'model', e.target.value)}
+                                      placeholder="Select or enter model" />
+                                    <datalist id={`comm-model-${si}-${actualIndex}`}>
+                                      {getProcessorOptions(sec).map(model => <option key={model} value={model}/>)}
+                                    </datalist>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Anydesk</Label>
+                                    <Input className="h-8 text-xs bg-muted/40" value={item.anydesk || getAnydeskValue(sec)} readOnly/>
+                                  </div>
                                 </div>
                               )}
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="flex items-center gap-1.5 text-xs cursor-pointer hover:text-primary transition-colors">
-                                <input type="checkbox" checked={!!item.hdmi_tx} onChange={e => updateSectionItem(si, ii, 'hdmi_tx', e.target.checked)} className="accent-primary" />
-                                <span className="font-medium">TX HDMI</span>
-                              </label>
-                              {item.hdmi_tx && (
-                                <div className="pl-5">
-                                  <Label className="text-xs">Length</Label>
-                                  <Input className="h-8 text-xs" value={item.hdmi_tx_length || ''} onChange={e => updateSectionItem(si, ii, 'hdmi_tx_length', e.target.value)} placeholder="Length" />
+                              {type === 'HDMI Extender' && (
+                                <div className="space-y-2">
+                                  <div className="space-y-1"><Label className="text-xs">Model</Label>
+                                    <Input className="h-8 text-xs" value={item.model || ''}
+                                      onChange={e => updateSectionItem(si, actualIndex, 'model', e.target.value)}/></div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {['rx', 'tx'].map(side => (
+                                      <div key={side} className="space-y-1">
+                                        <label className="flex items-center gap-2 text-xs">
+                                          <Checkbox checked={!!item[`hdmi_${side}`]}
+                                            onCheckedChange={checked => updateSectionItem(si, actualIndex, `hdmi_${side}`, checked === true)}/>
+                                          {side.toUpperCase()} HDMI
+                                        </label>
+                                        {item[`hdmi_${side}`] && <Input className="h-8 text-xs" placeholder="Length"
+                                          value={item[`hdmi_${side}_length`] || ''}
+                                          onChange={e => updateSectionItem(si, actualIndex, `hdmi_${side}_length`, e.target.value)}/>}
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
                               )}
+                              <div className="space-y-1">
+                                <Label className="text-xs">Remarks</Label>
+                                <Input className="h-8 text-xs" value={item.notes || ''}
+                                  onChange={e => updateSectionItem(si, actualIndex, 'notes', e.target.value)} placeholder="Remarks"/>
+                              </div>
                             </div>
-                          </div>
-                        </>
-                      )}
-                      {(item.device_name === 'HDMI' || item.device_name === 'LAN') && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Length</Label>
-                            <Input className="h-8 text-xs" value={item.length || ''} onChange={e => updateSectionItem(si, ii, 'length', e.target.value)} placeholder="Length" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Quantity</Label>
-                            <Input type="number" className="h-8 text-xs" value={item.quantity || ''} onChange={e => updateSectionItem(si, ii, 'quantity', e.target.value)} placeholder="Quantity" />
-                          </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                  {/* Keep historic equipment types editable instead of dropping saved data. */}
+                  {(sec.items || []).map((item, ii) => ({ item, ii }))
+                    .filter(({ item }) => !COMM_DEVICE_TYPES.includes(item.device_type))
+                    .map(({ item, ii }) => (
+                      <div key={`legacy-${ii}`} className="border border-border rounded-lg p-3 space-y-2 bg-card">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold">Previously saved equipment</span>
+                          <button type="button" onClick={() => removeItemFromSection(si, ii)}
+                            className="text-muted-foreground hover:text-destructive"><Trash2 size={12}/></button>
                         </div>
-                      )}
-                      {item.device_name === 'Network Switch' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Model</Label>
-                            <Input className="h-8 text-xs" value={item.model || ''} onChange={e => updateSectionItem(si, ii, 'model', e.target.value)} placeholder="Model" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Number of Ports</Label>
-                            <Input type="number" className="h-8 text-xs" value={item.num_ports || ''} onChange={e => updateSectionItem(si, ii, 'num_ports', e.target.value)} placeholder="Ports" />
-                          </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div><Label className="text-xs">Device Type</Label><Input className="h-8 text-xs" value={item.device_type || ''}
+                            onChange={e => updateSectionItem(si, ii, 'device_type', e.target.value)}/></div>
+                          <div><Label className="text-xs">Device Name</Label><Input className="h-8 text-xs" value={item.device_name || ''}
+                            onChange={e => updateSectionItem(si, ii, 'device_name', e.target.value)}/></div>
+                          <div><Label className="text-xs">Serial Number</Label><Input className="h-8 text-xs" value={item.serial_number || ''}
+                            onChange={e => updateSectionItem(si, ii, 'serial_number', e.target.value)}/></div>
                         </div>
-                      )}
-                      {item.device_name === 'Power Extension' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Number of Gang</Label>
-                            <Input type="number" className="h-8 text-xs" value={item.num_gang || ''} onChange={e => updateSectionItem(si, ii, 'num_gang', e.target.value)} placeholder="Gang" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Quantity</Label>
-                            <Input type="number" className="h-8 text-xs" value={item.quantity || ''} onChange={e => updateSectionItem(si, ii, 'quantity', e.target.value)} placeholder="Quantity" />
-                          </div>
-                        </div>
-                      )}
-                      {!['HDMI Extender', 'HDMI', 'LAN', 'Power Extension', 'Network Switch'].includes(item.device_name) && (
-                        <div className="space-y-1">
-                          <Label className="text-xs">Remarks</Label>
-                          <Input className="h-8 text-xs" value={item.notes} onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)} placeholder="Remarks" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        <Label className="text-xs">Remarks</Label>
+                        <Input className="h-8 text-xs" value={item.notes || ''}
+                          onChange={e => updateSectionItem(si, ii, 'notes', e.target.value)}/>
+                      </div>
+                    ))}
                 </div>
               </div>
             ))}
