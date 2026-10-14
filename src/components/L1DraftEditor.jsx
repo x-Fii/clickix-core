@@ -133,6 +133,9 @@ export default function L1DraftEditor({ report }) {
             section.section_name,
             deviceType
           );
+          // A missing Inventory value shows a read-only No Record row.
+          // Never treat this placeholder as an actual device on save.
+          const noRecord = !!AFFECTED_INVENTORY_FIELDS[deviceType] && slots.length === 0;
           // Automatically select when only one device exists
           const autoSlot = slots.length === 1 ? slots[0] : null;
           return {
@@ -141,6 +144,7 @@ export default function L1DraftEditor({ report }) {
               ...items,
               {
                 device_type: deviceType,
+                __no_record_placeholder: noRecord,
                 device_name: autoSlot?.name || '',
                 device_slot_id: autoSlot?.id || '',
                 issue_description: ''
@@ -280,7 +284,7 @@ export default function L1DraftEditor({ report }) {
     return sections.map(section => ({
       ...section,
       items: (section.items || [])
-        .filter(item => item.device_type)
+        .filter(item => item.device_type && !item.__no_record_placeholder)
         .map(item => {
           const slots = getAffectedDeviceSlots(
             section.section_name,
@@ -484,7 +488,6 @@ export default function L1DraftEditor({ report }) {
                           <Checkbox
                             id={`draft-affected-${si}-${type}`}
                             checked={checked}
-                            disabled={!!AFFECTED_INVENTORY_FIELDS[type] && getAffectedDeviceSlots(sec.section_name, type).length === 0 && !checked}
                             onCheckedChange={value =>
                               toggleAffectedDevice(si, type, value === true)
                             }
@@ -594,7 +597,7 @@ export default function L1DraftEditor({ report }) {
                                   slot => slot.id === item.device_slot_id
                                 );
                                 if (inventoryField && slots.length === 0) {
-                                  return <Input value={item.device_name || 'No Record'} readOnly className="bg-muted text-xs h-8" />;
+                                  return <Input value={item.__no_record_placeholder ? 'No Record' : (item.device_name || 'No Record')} readOnly className="bg-muted text-xs h-8 cursor-not-allowed" />;
                                 }
                                 if (!inventoryField) {
                                   return (
@@ -609,9 +612,7 @@ export default function L1DraftEditor({ report }) {
                                         )
                                       }
                                       placeholder={
-                                        inventoryField
-                                          ? "No matching device - enter manually"
-                                          : "Enter Device Name"
+                                        "Enter Device Name"
                                       }
                                       className="bg-background text-xs h-8"
                                     />
