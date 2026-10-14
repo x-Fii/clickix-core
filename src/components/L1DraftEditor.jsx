@@ -177,7 +177,8 @@ export default function L1DraftEditor({ report }) {
           slot => !usedIds.has(slot.id)
         );
         // Do not exceed the available Inventory quantity
-        if (slots.length > 0 && availableSlots.length === 0) {
+        if (AFFECTED_INVENTORY_FIELDS[deviceType] &&
+            (slots.length === 0 || (section.items || []).filter(item => item.device_type === deviceType).length >= slots.length)) {
           return section;
         }
         // Automatically select the last remaining device
@@ -483,6 +484,7 @@ export default function L1DraftEditor({ report }) {
                           <Checkbox
                             id={`draft-affected-${si}-${type}`}
                             checked={checked}
+                            disabled={!!AFFECTED_INVENTORY_FIELDS[type] && getAffectedDeviceSlots(sec.section_name, type).length === 0 && !checked}
                             onCheckedChange={value =>
                               toggleAffectedDevice(si, type, value === true)
                             }
@@ -491,7 +493,7 @@ export default function L1DraftEditor({ report }) {
                             htmlFor={`draft-affected-${si}-${type}`}
                             className="text-xs cursor-pointer"
                           >
-                            {type}
+                            {type}{AFFECTED_INVENTORY_FIELDS[type] && getAffectedDeviceSlots(sec.section_name, type).length === 0 ? ' (No Record)' : ''}
                           </label>
                         </div>
                       );
@@ -528,6 +530,7 @@ export default function L1DraftEditor({ report }) {
                           variant="outline"
                           size="sm"
                           className="gap-1 text-xs h-7 px-2.5"
+                          disabled={!!inventoryField && (getAffectedDeviceSlots(sec.section_name, type).length === 0 || deviceItems.length >= getAffectedDeviceSlots(sec.section_name, type).length)}
                           onClick={() => addAffectedDeviceItem(si, type)}
                         >
                           <Plus size={12} />
@@ -590,7 +593,10 @@ export default function L1DraftEditor({ report }) {
                                 const selectedSlot = slots.find(
                                   slot => slot.id === item.device_slot_id
                                 );
-                                if (!inventoryField || slots.length === 0) {
+                                if (inventoryField && slots.length === 0) {
+                                  return <Input value={item.device_name || 'No Record'} readOnly className="bg-muted text-xs h-8" />;
+                                }
+                                if (!inventoryField) {
                                   return (
                                     <Input
                                       value={item.device_name || ''}
