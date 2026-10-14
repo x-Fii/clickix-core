@@ -26,6 +26,7 @@ export default function DecommissionScopeBar({
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
               type="radio"
+              disabled
               className="accent-primary"
               checked={!isFullSite}
               onChange={() => onScopeChange('partial')}
@@ -35,6 +36,7 @@ export default function DecommissionScopeBar({
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
               type="radio"
+               disabled
               className="accent-primary"
               checked={isFullSite}
               onChange={() => onScopeChange('full_site')}
