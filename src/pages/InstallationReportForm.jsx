@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,8 +34,10 @@ const RELATED_DEVICES = [
 
 const blankItem = () => ({ device_type: '', device_name: '', serial_number: '', notes: '' });
 const blankSection = () => ({ section_name: '', license_key: '', inventory_id: '', items: [] });
+const DECOMM_DEVICE_TYPES = ['CMS', 'PC', 'TV', 'HDMI Extender', 'Cable', 'Others'];
+const decommCategory = (item) => DECOMM_DEVICE_TYPES.includes(item.device_type) ? item.device_type : 'Others';
 const blankDecommItem = () => ({ device_type: '', device_name: '', serial_number: '', reason_for_decommission: '' });
-const blankDecommSection = () => ({ section_name: '', inventory_id: '', items: [blankDecommItem()] });
+const blankDecommSection = () => ({ section_name: '', inventory_id: '', items: [] });
 
 const parseInventoryValues = (value) => {
   if (!value) return [];
@@ -439,17 +442,18 @@ export default function InstallationReportForm() {
   // item shape is unchanged.
   const isFullSite = (form.decommission_scope || 'partial') === 'full_site';
   const setDecommissionScope = (scope) => {
-    return; // Temporarily disabled
-
-    setForm(f => ({ ...f, decommission_scope: scope, full_site_confirmed: scope === 'full_site' ? f.full_site_confirmed : false }));
-    if (scope === 'full_site') setShowFullSiteConfirm(true);
+    // Temporarily disabled: preserve the original implementation below for reactivation.
+    return;
+    // Original implementation retained for later reactivation:
+    // setForm(f => ({ ...f, decommission_scope: scope, full_site_confirmed: scope === 'full_site' ? f.full_site_confirmed : false }));
+    // if (scope === 'full_site') setShowFullSiteConfirm(true);
   };
   const confirmFullSite = () => {
-    return; // Temporarily disabled
-    // Original code:
+    // Temporarily disabled: no full-site confirmation can be executed.
+    return;
+    // Original implementation (kept for future reactivation):
     // setForm(f => ({ ...f, full_site_confirmed: true }));
   };
-
   const ensureLink = (si, ii) => {
     setForm(f => {
       const links = f.decommission_links || [];
@@ -503,18 +507,63 @@ export default function InstallationReportForm() {
     const selectedInventory = getInventoryById(invId);
     if (!selectedInventory) return;
     const arr = [...(form.decommission_sections || [])];
-    arr[si] = { ...arr[si], section_name: selectedInventory.license_name || '', inventory_id: selectedInventory.id };
+    arr[si] = {
+      ...arr[si], section_name: selectedInventory.license_name || '', inventory_id: selectedInventory.id,
+      items: (arr[si].items || []).map(item => {
+        const field = item.device_type === 'CMS' ? 'license_number' : item.device_type === 'PC' ? 'pc_sku' : item.device_type === 'TV' ? 'tv_sku' : null;
+        if (!field || item.device_name) return item;
+        const value = parseInventoryValues(selectedInventory[field])[0];
+        return value ? { ...item, device_name: value } : item;
+      }),
+    };
     set('decommission_sections', arr);
   };
-  const addDecommItemToSection = (si) => {
-    const arr = [...(form.decommission_sections || [])];
-    arr[si] = { ...arr[si], items: [...(arr[si].items || []), blankDecommItem()] };
-    set('decommission_sections', arr);
+  const getDecommSlots = (sec, type) => {
+    const inv = inventoryItems.find(record => record.id === sec.inventory_id);
+    if (!inv || !['CMS', 'PC', 'TV'].includes(type)) return [];
+    return parseInventoryValues(inv[type === 'CMS' ? 'license_number' : type === 'PC' ? 'pc_sku' : 'tv_sku']);
+  };
+  const makeDecommItem = (sec, type) => {
+    const slots = getDecommSlots(sec, type);
+    const used = (sec.items || []).filter(item => decommCategory(item) === type).map(item => item.device_name);
+    const next = slots.find(slot => !used.includes(slot));
+    return { ...blankDecommItem(), device_type: type, device_name: next || '' };
+  };
+  const updateDecommItems = (si, nextItems) => {
+    // Keep Equipment Link indices in sync with the new item order.
+    setForm(f => {
+      const sections = (f.decommission_sections || []).map((sec, i) => i === si ? { ...sec, items: nextItems } : sec);
+      const oldItems = f.decommission_sections?.[si]?.items || [];
+      const links = (f.decommission_links || []).flatMap(link => {
+        if (link.section_index !== si) return [link];
+        const newIndex = nextItems.indexOf(oldItems[link.item_index]);
+        return newIndex < 0 ? [] : [{ ...link, item_index: newIndex }];
+      });
+      return { ...f, decommission_sections: sections, decommission_links: links };
+    });
+  };
+  const toggleDecommDevice = (si, type, checked) => {
+    const sec = form.decommission_sections?.[si];
+    if (!sec) return;
+    const items = sec.items || [];
+    if (checked) {
+      if (items.some(item => decommCategory(item) === type)) return;
+      updateDecommItems(si, [...items, makeDecommItem(sec, type)]);
+    } else {
+      updateDecommItems(si, items.filter(item => decommCategory(item) !== type));
+    }
+  };
+  const addDecommItemToSection = (si, type) => {
+    const sec = form.decommission_sections?.[si];
+    if (!sec) return;
+    const slots = getDecommSlots(sec, type);
+    const existing = (sec.items || []).filter(item => decommCategory(item) === type);
+    if (['CMS', 'PC', 'TV'].includes(type) && (slots.length === 0 || existing.length >= slots.length)) return;
+    updateDecommItems(si, [...(sec.items || []), makeDecommItem(sec, type)]);
   };
   const removeDecommItemFromSection = (si, ii) => {
-    const arr = [...(form.decommission_sections || [])];
-    arr[si] = { ...arr[si], items: arr[si].items.filter((_, idx) => idx !== ii) };
-    set('decommission_sections', arr);
+    const sec = form.decommission_sections?.[si];
+    if (sec) updateDecommItems(si, (sec.items || []).filter((_, i) => i !== ii));
   };
   const updateDecommSectionItem = (si, ii, field, val) => {
     setForm(f => {
@@ -1251,7 +1300,6 @@ export default function InstallationReportForm() {
             />
             <FullSiteConfirmDialog
               open={false}
-              // open={showFullSiteConfirm}
               onOpenChange={setShowFullSiteConfirm}
               siteName={form.site_name}
               activeEquipmentCount={getReliableEquipmentForContext({ equipment: equipmentRecords, clientId: form.client_id, siteId: form.site_id, inventoryId: '' }).length}
@@ -1319,9 +1367,38 @@ export default function InstallationReportForm() {
                     <Trash2 size={14} />
                   </button>
                 </div>
-                {/* Items within section */}
+                {/* Related Devices: SR-style checkbox selection, existing IR item fields preserved. */}
                 <div className="space-y-3 pl-2 border-l-2 border-border">
-                  {(sec.items || []).map((item, ii) => (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <Label className="text-xs text-muted-foreground shrink-0">Related Devices</Label>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      {DECOMM_DEVICE_TYPES.map(type => (
+                        <div key={type} className="flex items-center gap-1.5">
+                          <Checkbox
+                            id={`decomm-related-${si}-${type}`}
+                            checked={(sec.items || []).some(item => decommCategory(item) === type)}
+                            onCheckedChange={checked => toggleDecommDevice(si, type, checked === true)}
+                          />
+                          <label htmlFor={`decomm-related-${si}-${type}`} className="text-xs cursor-pointer">{type}</label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {DECOMM_DEVICE_TYPES.filter(type => (sec.items || []).some(item => decommCategory(item) === type)).map(type => {
+                    const entries = (sec.items || []).map((item, ii) => ({ item, ii })).filter(({ item }) => decommCategory(item) === type);
+                    const slots = getDecommSlots(sec, type);
+                    const limited = ['CMS', 'PC', 'TV'].includes(type);
+                    return (
+                      <div key={type} className="border border-border rounded-md p-2.5 space-y-3 bg-muted/10">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-sm">{type}</span>
+                          <Button type="button" size="sm" variant="outline" className="gap-1 text-xs h-7"
+                            disabled={limited && (!slots.length || entries.length >= slots.length)}
+                            onClick={() => addDecommItemToSection(si, type)}>
+                            <Plus size={12} /> Add Item
+                          </Button>
+                        </div>
+                        {entries.map(({ item, ii }) => (
                     <div key={ii} className="border border-border rounded-lg p-3 space-y-2 relative bg-card">
                       <button type="button" onClick={() => removeDecommItemFromSection(si, ii)}
                         className="absolute top-2 right-2 text-muted-foreground hover:text-destructive">
@@ -1330,14 +1407,11 @@ export default function InstallationReportForm() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div className="space-y-1">
                           <Label className="text-xs">Device Type</Label>
-                          <Select value={item.device_type || undefined} onValueChange={v => updateDecommSectionItem(si, ii, 'device_type', v)}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
-                            <SelectContent>{DEVICE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                          </Select>
+                          <Input className="h-8 text-xs" value={item.device_type} readOnly />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Device Name / Model</Label>
-                          <Input className="h-8 text-xs" list={`decomm-device-${si}-${ii}`} value={item.device_name} onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }} placeholder="Select or enter Name / Model" />
+                          <Label className="text-xs">Device Name</Label>
+                          <Input className="h-8 text-xs" list={`decomm-device-${si}-${ii}`} value={item.device_name} readOnly={['CMS', 'PC', 'TV'].includes(type)} onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }} placeholder="Select or enter Name / Model" />
                           <datalist id={`decomm-device-${si}-${ii}`}>
                             {[...new Set(getDecommissionEquipment(sec).filter(eq => !item.device_type || eq.device_type === item.device_type).map(eq => eq.device_name).filter(Boolean))].map(name => <option key={name} value={name} />)}
                           </datalist>
@@ -1367,10 +1441,10 @@ export default function InstallationReportForm() {
                         onConfirmUnmatched={confirmUnmatched}
                       />
                     </div>
-                  ))}
-                  <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => addDecommItemToSection(si)}>
-                    <Plus size={12} className="mr-1" /> Add Item
-                  </Button>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
