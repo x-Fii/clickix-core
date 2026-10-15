@@ -387,8 +387,11 @@ export default function InstallationReportForm() {
   });
 
   const set = (field, value) => setForm(f => ({ ...f, [field]: value }));
-  // Carry Commissioning equipment into Decommissioning without erasing either
-  // set of existing details. Run only on a change from Commissioning to Decommissioning.
+  // Switching Report Type only changes which equipment section is displayed.
+  // Keep BOTH complete sets in form state so switching back is lossless.
+  // For the first Com -> Dec switch, initialise an empty Dec section from Com;
+  // subsequently edited Dec data always takes precedence and is never overwritten.
+  // Save Changes persists both section arrays together (see sanitize/handleSubmit).
   const changeReportType = (nextType) => {
     setForm(previous => {
       if (previous.report_type !== 'commissioning' || nextType !== 'decommissioning') {
@@ -425,7 +428,7 @@ export default function InstallationReportForm() {
           reason_for_decommission: '',
         })),
       }));
-      return { ...previous, report_type: nextType, decommission_sections: copied, decommission_links: [] };
+      return { ...previous, report_type: nextType, decommission_sections: copied };
     });
   };
 
@@ -445,35 +448,45 @@ export default function InstallationReportForm() {
     set('equipment_sections', arr);
   };
 
+  // Changing a License updates Inventory-linked values immediately, but keeps
+  // all user-entered report fields (device_name, notes, model, etc.) intact.
+  const refreshItemsForLicense = (items, inventory) => {
+    const used = { CMS: new Set(), PC: new Set(), TV: new Set() };
+    return (items || []).map(item => {
+      const field = { CMS: 'license_number', PC: 'pc_sku', TV: 'tv_sku' }[item.device_type];
+      if (!field) return item; // manual-only device categories are unchanged
+      const values = parseInventoryValues(inventory?.[field]);
+      // Each Inventory slot may be used once, even when its value is duplicated.
+      const nextIndex = values.findIndex((_, index) => !used[item.device_type].has(index));
+      if (nextIndex >= 0) used[item.device_type].add(nextIndex);
+      const id = inventory?.id || inventory?.temp_id;
+      return {
+        ...item,
+        serial_number: nextIndex >= 0 ? values[nextIndex] : '',
+        device_slot_id: nextIndex >= 0 && id ? `${id}-${field}-${nextIndex}` : '',
+        ...(item.device_type === 'PC' ? { anydesk: inventory?.anydesk || '' } : {}),
+      };
+    });
+  };
+
   const selectCommissionLicense = (si, invId) => {
-    // Staged license selected by temp_id; existing by inventory id.
     const isStaged = String(invId).startsWith('tmp_license_');
     const selected = isStaged ? getStagedLicenseById(invId) : getInventoryById(invId);
     if (!selected) return;
-
     setForm(f => ({
       ...f,
       equipment_sections: (f.equipment_sections || []).map((sec, index) =>
-        index === si
-          ? {
-              ...sec,
-              section_name: selected.license_name || '',
-              license_key: selected.license_number || '',
-              inventory_id: isStaged ? '' : selected.id,
-              staged_inventory_temp_id: isStaged ? selected.temp_id : '',
-              items: (sec.items || []).map(item => {
-                const field = { CMS: 'license_number', PC: 'pc_sku', TV: 'tv_sku' }[item.device_type];
-                if (!field) return item;
-                if (sec.inventory_id === selected.id && !isStaged) return item;
-                const values = parseInventoryValues(selected[field]);
-                return { ...item,
-                  serial_number: values.length === 1 ? values[0] : '',
-                  device_slot_id: values.length === 1 ? `${selected.id || selected.temp_id}-${field}-0` : '',
-                  ...(item.device_type === 'PC' ? { anydesk: selected.anydesk || '' } : {}),
-                };
-              }),
-            }
-          : sec
+        index !== si ? sec : {
+          ...sec,
+          section_name: selected.license_name || '',
+          license_key: selected.license_number || '',
+          inventory_id: isStaged ? '' : selected.id,
+          staged_inventory_temp_id: isStaged ? selected.temp_id : '',
+          items: (sec.inventory_id === selected.id && !isStaged) ||
+            (isStaged && sec.staged_inventory_temp_id === selected.temp_id)
+              ? sec.items || []
+              : refreshItemsForLicense(sec.items, selected),
+        }
       ),
     }));
   };
@@ -659,26 +672,24 @@ export default function InstallationReportForm() {
       const original = f.decommission_sections?.[si];
       if (!original) return f;
       const changed = original.inventory_id !== selectedInventory.id;
-      const section = {
-        ...original,
-        section_name: selectedInventory.license_name || '',
-        inventory_id: selectedInventory.id,
-        items: (original.items || []).map(item => {
-          if (!changed) return item;
-          const field = { CMS: 'license_number', PC: 'pc_sku', TV: 'tv_sku' }[item.device_type];
-          if (!field) return item;
-          const values = parseInventoryValues(selectedInventory[field]);
-          return { ...item, serial_number: values.length === 1 ? values[0] : '', device_slot_id: values.length === 1 ? `${selectedInventory.id}-${field}-0` : '' };
-        }),
-      };
       return {
         ...f,
-        decommission_sections: f.decommission_sections.map((sec, i) => i === si ? section : sec),
-        // Equipment links from a different license should not carry over.
-        decommission_links: changed ? (f.decommission_links || []).filter(link => link.section_index !== si) : f.decommission_links,
+        decommission_sections: (f.decommission_sections || []).map((sec, i) =>
+          i !== si ? sec : {
+            ...sec,
+            section_name: selectedInventory.license_name || '',
+            inventory_id: selectedInventory.id,
+            items: changed ? refreshItemsForLicense(sec.items, selectedInventory) : sec.items,
+          }
+        ),
+        // Equipment links refer to the OLD license; clear only those links.
+        decommission_links: changed
+          ? (f.decommission_links || []).filter(link => link.section_index !== si)
+          : f.decommission_links,
       };
     });
   };
+
   const makeDecommItem = (sec, type) => {
     const slots = getDecommSlots(sec, type);
     const usedIds = new Set((sec.items || []).filter(item => decommCategory(item) === type).map(item => item.device_slot_id).filter(Boolean));
@@ -1098,10 +1109,9 @@ export default function InstallationReportForm() {
                         setForm(f => ({ ...f, equipment_sections: (f.equipment_sections || []).map((section, index) =>
                           index !== si ? section : {
                             ...section, section_name: value, inventory_id: '', staged_inventory_temp_id: '', license_key: '',
-                            items: (section.items || []).map(item => ({ ...item,
-                              ...(item.device_type === 'CMS' || item.device_type === 'PC' || item.device_type === 'TV'
-                                ? { device_name: '', device_slot_id: '' } : {})
-                            }))
+                            // Preserve existing device details while manually editing the license name.
+                            // Only the Inventory association is removed, not report-specific entries.
+                            items: section.items || []
                           }
                         ) }));
                       }}
@@ -1375,13 +1385,12 @@ export default function InstallationReportForm() {
                           // Preserve free-text name in report, without linking a different Inventory record.
                           setForm(f => ({ ...f,
                             decommission_sections: (f.decommission_sections || []).map((section, index) =>
-                              index !== si ? section : { ...section, section_name: value, inventory_id: '',
-                                items: (section.items || []).map(item => ({ ...item,
-                                  ...(item.device_type === 'CMS' || item.device_type === 'PC' || item.device_type === 'TV'
-                                    ? { device_name: '', device_slot_id: '' } : {})
-                                }))
-                              }),
-                            decommission_links: (f.decommission_links || []).filter(link => link.section_index !== si)
+                              index !== si ? section : {
+                                ...section, section_name: value, inventory_id: '',
+                                // Editing a license label must not erase entered equipment details.
+                                items: section.items || []
+                              }
+                            // Keep existing report-specific equipment links while editing the label.
                           }));
                         }}
                         onBlur={() => {
