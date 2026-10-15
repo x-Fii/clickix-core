@@ -1069,7 +1069,7 @@ export default function InstallationReportForm() {
                           setCommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
                         }, 150);
                       }}
-                      placeholder="Select or type license name"
+                      placeholder="Select license name"
                     />
 
                     <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${commissionLicenseOpen[si] ? 'rotate-180' : ''}`} />
