@@ -119,6 +119,29 @@ export default function InstallationReportForm() {
   const [siteStateFilter, setSiteStateFilter] = useState('');
   const [showAddSite, setShowAddSite] = useState(false);
 
+  const [dropdownSearch, setDropdownSearch] = useState({});
+
+  const searchValue = (key) =>
+    (dropdownSearch[key] || '').trim().toLowerCase();
+
+  const searchInput = (key, placeholder) => (
+    <div className="p-2">
+      <Input
+        placeholder={placeholder}
+        value={dropdownSearch[key] || ''}
+        onChange={(e) =>
+          setDropdownSearch(prev => ({
+            ...prev,
+            [key]: e.target.value
+          }))
+        }
+        onKeyDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="h-8"
+      />
+    </div>
+  );
+
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
@@ -828,8 +851,27 @@ export default function InstallationReportForm() {
                   }}>
                     <SelectTrigger className="flex-1"><SelectValue placeholder="Select client" /></SelectTrigger>
                     <SelectContent>
-                      {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
-                      {stagedClients.map(c => <SelectItem key={c.temp_id} value={c.temp_id}>{c.company_name} (staged)</SelectItem>)}
+                      {searchInput('client', 'Search client...')}
+
+                      {clients
+                        .filter(c =>
+                          (c.company_name || '').toLowerCase().includes(searchValue('client'))
+                        )
+                        .map(c => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.company_name}
+                          </SelectItem>
+                        ))}
+
+                      {stagedClients
+                        .filter(c =>
+                          (c.company_name || '').toLowerCase().includes(searchValue('client'))
+                        )
+                        .map(c => (
+                          <SelectItem key={c.temp_id} value={c.temp_id}>
+                            {c.company_name} (staged)
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   {form.report_type === 'commissioning' && (
@@ -844,7 +886,17 @@ export default function InstallationReportForm() {
                 <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); }}>
                   <SelectTrigger><SelectValue placeholder="All regions" /></SelectTrigger>
                   <SelectContent>
-                    {regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                     {searchInput('region', 'Search region...')}
+
+                      {regionOptions
+                        .filter(r =>
+                          r.toLowerCase().includes(searchValue('region'))
+                        )
+                        .map(r => (
+                          <SelectItem key={r} value={r}>
+                            {r}
+                          </SelectItem>
+                        ))}
                   </SelectContent>
                 </Select>
                 {siteRegionFilter && <button type="button" onClick={() => { setSiteRegionFilter(''); setSiteStateFilter(''); }} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
@@ -854,7 +906,17 @@ export default function InstallationReportForm() {
                 <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); }}>
                   <SelectTrigger><SelectValue placeholder="All states" /></SelectTrigger>
                   <SelectContent>
-                    {stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {searchInput('state', 'Search state...')}
+
+                    {stateOptions
+                      .filter(s =>
+                        s.toLowerCase().includes(searchValue('state'))
+                      )
+                      .map(s => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
@@ -879,8 +941,29 @@ export default function InstallationReportForm() {
                 }}>
                   <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
                 <SelectContent>
-                  {filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}{s.state ? ` — ${s.state}` : ''}</SelectItem>)}
-                  {filteredStagedSites.map(s => <SelectItem key={s.temp_id} value={s.temp_id}>{s.site_name} (staged)</SelectItem>)}
+                   {searchInput('site', 'Search site name...')}
+
+                    {filteredSites
+                      .filter(s =>
+                        `${s.site_name || ''} ${s.state || ''}`
+                          .toLowerCase()
+                          .includes(searchValue('site'))
+                      )
+                      .map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.site_name}{s.state ? ` — ${s.state}` : ''}
+                        </SelectItem>
+                      ))}
+
+                    {filteredStagedSites
+                      .filter(s =>
+                        (s.site_name || '').toLowerCase().includes(searchValue('site'))
+                      )
+                      .map(s => (
+                        <SelectItem key={s.temp_id} value={s.temp_id}>
+                          {s.site_name} (staged)
+                        </SelectItem>
+                      ))}
                 </SelectContent>
                 </Select>
               </div>
