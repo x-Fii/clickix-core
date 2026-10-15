@@ -461,7 +461,7 @@ export default function L1DraftEditor({ report }) {
                   list={`sr-license-options-${si}`}
                   value={sec.section_name || ''}
                   onChange={(e) => updateSectionName(si, e.target.value)}
-                  placeholder="Select or type license name"
+                  placeholder="Select license name"
                   className="bg-background text-xs h-8 font-semibold flex-1"
                 />
                 <datalist id={`sr-license-options-${si}`}>
