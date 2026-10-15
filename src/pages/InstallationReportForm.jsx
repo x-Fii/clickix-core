@@ -387,6 +387,48 @@ export default function InstallationReportForm() {
   });
 
   const set = (field, value) => setForm(f => ({ ...f, [field]: value }));
+  // Carry Commissioning equipment into Decommissioning without erasing either
+  // set of existing details. Run only on a change from Commissioning to Decommissioning.
+  const changeReportType = (nextType) => {
+    setForm(previous => {
+      if (previous.report_type !== 'commissioning' || nextType !== 'decommissioning') {
+        return { ...previous, report_type: nextType };
+      }
+
+      const sourceSections = (previous.equipment_sections || []).filter(section =>
+        section.section_name || section.inventory_id || (section.items || []).some(item =>
+          item.device_type || item.device_name || item.serial_number || item.notes
+        )
+      );
+      if (!sourceSections.length) return { ...previous, report_type: nextType };
+
+      // Existing Decommissioning entries must take precedence. Only fill an
+      // untouched/blank destination; never replace user-entered Decommissioning data.
+      const current = previous.decommission_sections || [];
+      const hasDecommissionDetails = current.some(section =>
+        section.section_name || section.inventory_id || (section.items || []).some(item =>
+          item.device_type || item.device_name || item.serial_number || item.reason_for_decommission
+        )
+      );
+      if (hasDecommissionDetails) return { ...previous, report_type: nextType };
+
+      const copied = sourceSections.map(section => ({
+        ...blankDecommSection(),
+        section_name: section.section_name || '',
+        inventory_id: section.inventory_id || '',
+        items: (section.items || []).filter(item => !item.__no_record_placeholder).map(item => ({
+          ...item,
+          device_type: item.device_type || '',
+          device_name: item.device_name || '',
+          serial_number: item.serial_number || '',
+          // The reason is decommission-specific, not a Commissioning note.
+          reason_for_decommission: '',
+        })),
+      }));
+      return { ...previous, report_type: nextType, decommission_sections: copied, decommission_links: [] };
+    });
+  };
+
   const toDatetimeLocal = (v) => v ? (v.length === 10 ? `${v}T00:00` : v) : '';
 
   // Equipment sections helpers (commissioning)
@@ -837,7 +879,7 @@ export default function InstallationReportForm() {
             <div className={rowClass}>
               <div className="space-y-1">
                 <Label>Report Type</Label>
-                <Select value={form.report_type} onValueChange={v => set('report_type', v)}>
+                <Select value={form.report_type} onValueChange={changeReportType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="commissioning">Commissioning</SelectItem>
