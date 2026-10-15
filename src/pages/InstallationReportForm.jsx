@@ -1049,8 +1049,19 @@ export default function InstallationReportForm() {
                         setCommissionLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }));
                       }}
                       onChange={e => {
-                        setCommissionLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
+                        const value = e.target.value;
+                        setCommissionLicenseSearch(prev => ({ ...prev, [si]: value }));
                         setCommissionLicenseOpen(prev => ({ ...prev, [si]: true }));
+                        // Manual names belong to this report only; do not create/update Inventory.
+                        setForm(f => ({ ...f, equipment_sections: (f.equipment_sections || []).map((section, index) =>
+                          index !== si ? section : {
+                            ...section, section_name: value, inventory_id: '', staged_inventory_temp_id: '', license_key: '',
+                            items: (section.items || []).map(item => ({ ...item,
+                              ...(item.device_type === 'CMS' || item.device_type === 'PC' || item.device_type === 'TV'
+                                ? { device_name: '', device_slot_id: '' } : {})
+                            }))
+                          }
+                        ) }));
                       }}
                       onBlur={() => {
                         setTimeout(() => {
@@ -1058,7 +1069,7 @@ export default function InstallationReportForm() {
                           setCommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
                         }, 150);
                       }}
-                      placeholder="Select license"
+                      placeholder="Select or type license name"
                     />
 
                     <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${commissionLicenseOpen[si] ? 'rotate-180' : ''}`} />
@@ -1316,8 +1327,20 @@ export default function InstallationReportForm() {
                           setDecommissionLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }));
                         }}
                         onChange={e => {
-                          setDecommissionLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
+                          const value = e.target.value;
+                          setDecommissionLicenseSearch(prev => ({ ...prev, [si]: value }));
                           setDecommissionLicenseOpen(prev => ({ ...prev, [si]: true }));
+                          // Preserve free-text name in report, without linking a different Inventory record.
+                          setForm(f => ({ ...f,
+                            decommission_sections: (f.decommission_sections || []).map((section, index) =>
+                              index !== si ? section : { ...section, section_name: value, inventory_id: '',
+                                items: (section.items || []).map(item => ({ ...item,
+                                  ...(item.device_type === 'CMS' || item.device_type === 'PC' || item.device_type === 'TV'
+                                    ? { device_name: '', device_slot_id: '' } : {})
+                                }))
+                              }),
+                            decommission_links: (f.decommission_links || []).filter(link => link.section_index !== si)
+                          }));
                         }}
                         onBlur={() => {
                           setTimeout(() => {
@@ -1325,7 +1348,7 @@ export default function InstallationReportForm() {
                             setDecommissionLicenseOpen(prev => ({ ...prev, [si]: false }));
                           }, 150);
                         }}
-                        placeholder="Select license"
+                        placeholder="Select or type license name"
                       />
 
                       <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${decommissionLicenseOpen[si] ? 'rotate-180' : ''}`} />
