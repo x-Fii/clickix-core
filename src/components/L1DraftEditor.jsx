@@ -457,14 +457,16 @@ export default function L1DraftEditor({ report }) {
           {sections.map((sec, si) => (
             <div key={si} className="border border-primary/30 rounded-lg p-2.5 space-y-2 bg-muted/10">
               <div className="flex items-center gap-2">
-                <Select value={sec.section_name || undefined} onValueChange={(v) => updateSectionName(si, v)}>
-                  <SelectTrigger className="bg-background text-xs h-8 font-semibold flex-1">
-                    <SelectValue placeholder="Select license name" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {licenseNameOptions.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Input
+                  list={`sr-license-options-${si}`}
+                  value={sec.section_name || ''}
+                  onChange={(e) => updateSectionName(si, e.target.value)}
+                  placeholder="Select or type license name"
+                  className="bg-background text-xs h-8 font-semibold flex-1"
+                />
+                <datalist id={`sr-license-options-${si}`}>
+                  {licenseNameOptions.map(name => <option key={name} value={name} />)}
+                </datalist>
                 {sections.length > 1 && (
                   <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                     <X size={14} />
