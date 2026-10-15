@@ -425,7 +425,7 @@ export default function InstallationReportForm() {
                 if (sec.inventory_id === selected.id && !isStaged) return item;
                 const values = parseInventoryValues(selected[field]);
                 return { ...item,
-                  device_name: values.length === 1 ? values[0] : '',
+                  serial_number: values.length === 1 ? values[0] : '',
                   device_slot_id: values.length === 1 ? `${selected.id || selected.temp_id}-${field}-0` : '',
                   ...(item.device_type === 'PC' ? { anydesk: selected.anydesk || '' } : {}),
                 };
@@ -484,7 +484,7 @@ export default function InstallationReportForm() {
     const picked = remaining.length === 1 ? remaining[0] : null;
     return {
       ...blankItem(), device_type: type,
-      device_name: picked?.name || '', device_slot_id: picked?.id || '',
+      serial_number: picked?.name || '', device_slot_id: picked?.id || '',
       ...(type === 'PC' ? { anydesk: getAnydeskValue(sec) } : {}),
     };
   };
@@ -496,7 +496,7 @@ export default function InstallationReportForm() {
       if (!checked) return { ...sec, items: items.filter(it => it.device_type !== type) };
       if (items.some(it => it.device_type === type)) return sec;
       const noRecord = ['CMS', 'PC', 'TV'].includes(type) && getCommissionSlots(sec, type).length === 0;
-      return { ...sec, items: [...items, { ...makeCommissionItem(sec, type), __no_record_placeholder: noRecord }] };
+      return { ...sec, items: [...items, makeCommissionItem(sec, type)] };
     }) }));
   };
 
@@ -521,7 +521,7 @@ export default function InstallationReportForm() {
       if (!slot) return sec;
       const used = (sec.items || []).some((other, j) => j !== ii && other.device_slot_id === slot.id);
       if (used) return sec;
-      return { ...sec, items: sec.items.map((other, j) => j === ii ? { ...other, device_slot_id: slot.id, device_name: slot.name } : other) };
+      return { ...sec, items: sec.items.map((other, j) => j === ii ? { ...other, device_slot_id: slot.id, serial_number: slot.name } : other) };
     }) }));
   };
   // Decommission sections helpers
@@ -626,7 +626,7 @@ export default function InstallationReportForm() {
           const field = { CMS: 'license_number', PC: 'pc_sku', TV: 'tv_sku' }[item.device_type];
           if (!field) return item;
           const values = parseInventoryValues(selectedInventory[field]);
-          return { ...item, device_name: values.length === 1 ? values[0] : '', device_slot_id: values.length === 1 ? `${selectedInventory.id}-${field}-0` : '' };
+          return { ...item, serial_number: values.length === 1 ? values[0] : '', device_slot_id: values.length === 1 ? `${selectedInventory.id}-${field}-0` : '' };
         }),
       };
       return {
@@ -642,7 +642,7 @@ export default function InstallationReportForm() {
     const usedIds = new Set((sec.items || []).filter(item => decommCategory(item) === type).map(item => item.device_slot_id).filter(Boolean));
     const available = slots.filter(slot => !usedIds.has(slot.id));
     const autoSlot = available.length === 1 ? available[0] : null;
-    return { ...blankDecommItem(), device_type: type, device_name: autoSlot?.name || '', device_slot_id: autoSlot?.id || '' };
+    return { ...blankDecommItem(), device_type: type, serial_number: autoSlot?.name || '', device_slot_id: autoSlot?.id || '' };
   };
   const selectDecommSlot = (si, ii, slotId) => {
     setForm(f => ({
@@ -653,7 +653,7 @@ export default function InstallationReportForm() {
         if (!item) return sec;
         const slot = getDecommSlots(sec, item.device_type).find(s => s.id === slotId);
         return { ...sec, items: sec.items.map((it, index) => index === ii ? {
-          ...it, device_slot_id: slot?.id || '', device_name: slot?.name || '',
+          ...it, device_slot_id: slot?.id || '', serial_number: slot?.name || '',
         } : it) };
       }),
       decommission_links: (f.decommission_links || []).filter(link => !(link.section_index === si && link.item_index === ii)),
@@ -679,7 +679,7 @@ export default function InstallationReportForm() {
     if (checked) {
       if (items.some(item => decommCategory(item) === type)) return;
       const noRecord = ['CMS', 'PC', 'TV'].includes(type) && getDecommSlots(sec, type).length === 0;
-      updateDecommItems(si, [...items, { ...makeDecommItem(sec, type), __no_record_placeholder: noRecord }]);
+      updateDecommItems(si, [...items, makeDecommItem(sec, type)]);
     } else {
       updateDecommItems(si, items.filter(item => decommCategory(item) !== type));
     }
@@ -1181,31 +1181,29 @@ export default function InstallationReportForm() {
                                   <Input className="h-8 text-xs bg-muted/40" readOnly value={type}/>
                                 </div>
                                 <div className="space-y-1">
-                                  <Label className="text-xs">Device Name</Label>
+                                  <Label className="text-xs">Device Name / Model</Label>
+                                  <Input className="h-8 text-xs" value={item.device_name || ''}
+                                    onChange={e => updateSectionItem(si, actualIndex, 'device_name', e.target.value)}
+                                    placeholder="Enter Device Name / Model" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Serial Number</Label>
                                   {['CMS', 'PC', 'TV'].includes(type) && slots.length === 0 ? (
-                                    <Input className="h-8 text-xs bg-muted/40" value={item.__no_record_placeholder ? 'No Record' : (item.device_name || 'No Record')} readOnly />
-                                  ) : legacyManual ? (
-                                    <Input className="h-8 text-xs bg-muted/40" value={item.device_name} readOnly title="Historical device name" />
+                                    <Input className="h-8 text-xs bg-muted/40" value="No Record" readOnly />
                                   ) : !['CMS', 'PC', 'TV'].includes(type) ? (
-                                    <Input className="h-8 text-xs" value={item.device_name || ''}
-                                      onChange={e => updateSectionItem(si, actualIndex, 'device_name', e.target.value)} placeholder="Enter Device Name" />
+                                    <Input className="h-8 text-xs" value={item.serial_number || ''}
+                                      onChange={e => updateSectionItem(si, actualIndex, 'serial_number', e.target.value)} placeholder="Enter S/N" />
                                   ) : selected && available.length === 1 ? (
                                     <Input className="h-8 text-xs bg-muted/40" value={selected.label} readOnly />
                                   ) : (
                                     <Select value={available.some(slot => slot.id === item.device_slot_id) ? item.device_slot_id : undefined}
                                       onValueChange={value => selectCommissionDeviceSlot(si, actualIndex, value)}>
-                                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select Device Name"/></SelectTrigger>
+                                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select Serial Number"/></SelectTrigger>
                                       <SelectContent>{available.map(slot => (
                                         <SelectItem key={slot.id} value={slot.id}>{slot.label}</SelectItem>
                                       ))}</SelectContent>
                                     </Select>
                                   )}
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Serial Number</Label>
-                                  <Input className="h-8 text-xs" value={item.serial_number || ''}
-                                    onChange={e => updateSectionItem(si, actualIndex, 'serial_number', e.target.value)}
-                                    placeholder="Enter S/N"/>
                                 </div>
                               </div>
                               {type === 'PC' && (
@@ -1429,45 +1427,32 @@ export default function InstallationReportForm() {
                           <Input className="h-8 text-xs" value={item.device_type} readOnly />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Device Name</Label>
+                          <Label className="text-xs">Device Name / Model</Label>
+                          <Input className="h-8 text-xs" value={item.device_name || ''}
+                            onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }}
+                            placeholder="Enter Device Name / Model" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Serial Number</Label>
                           {(() => {
                             const inventoryType = ['CMS', 'PC', 'TV'].includes(type);
                             const usedIds = new Set((sec.items || []).filter((other, index) => index !== ii && other.device_type === type).map(other => other.device_slot_id).filter(Boolean));
                             const available = slots.filter(slot => !usedIds.has(slot.id));
                             const selected = slots.find(slot => slot.id === item.device_slot_id);
-                            // As in SR: no Inventory value means user may key in a device name.
-                            if (inventoryType && slots.length === 0) return (
-                              <Input className="h-8 text-xs bg-muted/40" value={item.__no_record_placeholder ? 'No Record' : (item.device_name || 'No Record')} readOnly />
-                            );
+                            if (inventoryType && slots.length === 0) return <Input className="h-8 text-xs bg-muted/40" value="No Record" readOnly />;
                             if (!inventoryType) return (
-                              <Input className="h-8 text-xs" value={item.device_name || ''}
-                                onChange={e => { updateDecommSectionItem(si, ii, 'device_name', e.target.value); ensureLink(si, ii); }}
-                                placeholder="Enter Device Name" />
+                              <Input className="h-8 text-xs" value={item.serial_number || ''}
+                                onChange={e => { updateDecommSectionItem(si, ii, 'serial_number', e.target.value); ensureLink(si, ii); }} placeholder="Enter S/N" />
                             );
-                            // Keep historical manually recorded values visible, even if Inventory changed.
-                            if (item.device_name && !selected) return (
-                              <Input className="h-8 text-xs" value={item.device_name} readOnly title="Historical device name (not in current Inventory)" />
-                            );
-                            if (selected && available.length === 1) return (
-                              <Input className="h-8 text-xs bg-muted/40" value={selected.label} readOnly />
-                            );
+                            if (selected && available.length === 1) return <Input className="h-8 text-xs bg-muted/40" value={selected.label} readOnly />;
                             return (
                               <Select value={available.some(slot => slot.id === item.device_slot_id) ? item.device_slot_id : undefined}
                                 onValueChange={slotId => selectDecommSlot(si, ii, slotId)}>
-                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select Device Name" /></SelectTrigger>
-                                <SelectContent>
-                                  {available.map(slot => <SelectItem key={slot.id} value={slot.id}>{slot.label}</SelectItem>)}
-                                </SelectContent>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select Serial Number" /></SelectTrigger>
+                                <SelectContent>{available.map(slot => <SelectItem key={slot.id} value={slot.id}>{slot.label}</SelectItem>)}</SelectContent>
                               </Select>
                             );
                           })()}
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Serial Number</Label>
-                          <Input className="h-8 text-xs" list={`decomm-serial-${si}-${ii}`} value={item.serial_number} onChange={e => { updateDecommSectionItem(si, ii, 'serial_number', e.target.value); ensureLink(si, ii); }} placeholder="Select or enter S/N" />
-                          <datalist id={`decomm-serial-${si}-${ii}`}>
-                            {[...new Set(getDecommissionEquipment(sec).filter(eq => (!item.device_type || eq.device_type === item.device_type) && (!item.device_name || norm(eq.device_name) === norm(item.device_name))).map(eq => eq.serial_number).filter(Boolean))].map(serial => <option key={serial} value={serial} />)}
-                          </datalist>
                         </div>
                       </div>
                       <div className="space-y-1">
