@@ -110,6 +110,30 @@ export default function NewReport() {
   ].sort();
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
+
+  const [dropdownSearch, setDropdownSearch] = useState({});
+
+  const searchValue = (key) =>
+    (dropdownSearch[key] || '').trim().toLowerCase();
+
+  const searchInput = (key, placeholder) => (
+    <div className="p-2">
+      <Input
+        placeholder={placeholder}
+        value={dropdownSearch[key] || ''}
+        onChange={(e) =>
+          setDropdownSearch(prev => ({
+            ...prev,
+            [key]: e.target.value
+          }))
+        }
+        onKeyDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="h-8"
+      />
+    </div>
+  );
+
   const regionOptions = [...new Set(sites.map(s => s.region).filter(Boolean))].sort();
   const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
   const filteredSites = sites.filter(s =>
@@ -447,21 +471,46 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
               <Select value={form.client_id} onValueChange={handleClientChange}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Select client" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+                  {searchInput('client', 'Search client...')}
+
+                  {clients
+                    .filter(c =>
+                      (c.company_name || '').toLowerCase().includes(searchValue('client'))
+                    )
+                    .map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.company_name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </Field>
             <Field label="Region">
               <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="All regions" /></SelectTrigger>
-                <SelectContent>{regionOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {searchInput('region', 'Search region...')}
+                  {regionOptions
+                    .filter(r => r.toLowerCase().includes(searchValue('region')))
+                    .map(r => (
+                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    ))}
+                </SelectContent>
               </Select>
               {siteRegionFilter && <button type="button" onClick={() => { setSiteRegionFilter(''); setSiteStateFilter(''); }} className="text-xs text-muted-foreground hover:text-foreground mt-1">✕ Clear</button>}
             </Field>
             <Field label="State">
               <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="All states" /></SelectTrigger>
-                <SelectContent>{stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                {searchInput('state', 'Search state...')}
+
+                {stateOptions
+                  .filter(s => s.toLowerCase().includes(searchValue('state')))
+                  .map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
               {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground mt-1">✕ Clear</button>}
             </Field>
@@ -469,7 +518,19 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
               <Select value={form.site_id} onValueChange={handleSiteChange}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Select site" /></SelectTrigger>
                 <SelectContent>
-                  {filteredSites.map(s => <SelectItem key={s.id} value={s.id}>{s.site_name}{s.state ? ` — ${s.state}` : ''}</SelectItem>)}
+                   {searchInput('site', 'Search site name...')}
+
+                    {filteredSites
+                      .filter(s =>
+                        `${s.site_name || ''} ${s.state || ''}`
+                          .toLowerCase()
+                          .includes(searchValue('site'))
+                      )
+                      .map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.site_name}{s.state ? ` — ${s.state}` : ''}
+                        </SelectItem>
+                      ))}
                 </SelectContent>
               </Select>
             </Field>
