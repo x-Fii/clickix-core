@@ -629,7 +629,7 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                           onChange={e => {
                             setLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
                             setLicenseOpen(prev => ({ ...prev, [si]: true }));
-                            updateSectionName(si, '');
+                            updateSectionName(si, e.target.value);
                           }}
                           onBlur={() => {
                             setTimeout(() => {
@@ -637,7 +637,7 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                               setLicenseOpen(prev => ({ ...prev, [si]: false }));
                             }, 150);
                           }}
-                          placeholder="Select license"
+                          placeholder="Select or type license name"
                           className="bg-background text-xs h-8 font-semibold pr-9"
                         />
                         <ChevronDown
