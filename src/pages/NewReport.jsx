@@ -65,6 +65,75 @@ const Field = ({ label, required, children }) => (
   </div>
 );
 
+
+function SearchableDropdown({
+  value,
+  options,
+  onValueChange,
+  placeholder
+}) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const selected = options.find(o => o.value === value);
+
+  const filtered = options.filter(o =>
+    o.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <Input
+          value={open ? search : (selected?.label || '')}
+          placeholder={placeholder}
+          onFocus={() => {
+            setSearch('');
+            setOpen(true);
+          }}
+          onChange={e => {
+            setSearch(e.target.value);
+            setOpen(true);
+          }}
+          onBlur={() => setOpen(false)}
+          className="pr-9"
+          autoComplete="off"
+        />
+        <ChevronDown
+          size={16}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+        />
+      </div>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+          {filtered.length > 0 ? (
+            filtered.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => {
+                  onValueChange(option.value);
+                  setSearch('');
+                  setOpen(false);
+                }}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-muted"
+              >
+                {option.label}
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-sm text-muted-foreground">
+              No matching record found
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function NewReport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
