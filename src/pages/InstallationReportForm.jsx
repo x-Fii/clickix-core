@@ -1390,7 +1390,7 @@ export default function InstallationReportForm() {
                                 // Editing a license label must not erase entered equipment details.
                                 items: section.items || []
                               }
-                            // Keep existing report-specific equipment links while editing the label.
+                            )
                           }));
                         }}
                         onBlur={() => {
