@@ -1189,7 +1189,9 @@ export default function InstallationReportForm() {
                                 <div className="space-y-1">
                                   <Label className="text-xs">Serial Number</Label>
                                   {['CMS', 'PC', 'TV'].includes(type) && slots.length === 0 ? (
-                                    <Input className="h-8 text-xs bg-muted/40" value="No Record" readOnly />
+                                    <Input className="h-8 text-xs" value={item.serial_number || ''}
+                                      onChange={e => updateSectionItem(si, actualIndex, 'serial_number', e.target.value)}
+                                      placeholder="Enter S/N (No Record)" />
                                   ) : !['CMS', 'PC', 'TV'].includes(type) ? (
                                     <Input className="h-8 text-xs" value={item.serial_number || ''}
                                       onChange={e => updateSectionItem(si, actualIndex, 'serial_number', e.target.value)} placeholder="Enter S/N" />
@@ -1439,7 +1441,11 @@ export default function InstallationReportForm() {
                             const usedIds = new Set((sec.items || []).filter((other, index) => index !== ii && other.device_type === type).map(other => other.device_slot_id).filter(Boolean));
                             const available = slots.filter(slot => !usedIds.has(slot.id));
                             const selected = slots.find(slot => slot.id === item.device_slot_id);
-                            if (inventoryType && slots.length === 0) return <Input className="h-8 text-xs bg-muted/40" value="No Record" readOnly />;
+                            if (inventoryType && slots.length === 0) return (
+                              <Input className="h-8 text-xs" value={item.serial_number || ''}
+                                onChange={e => { updateDecommSectionItem(si, ii, 'serial_number', e.target.value); ensureLink(si, ii); }}
+                                placeholder="Enter S/N (No Record)" />
+                            );
                             if (!inventoryType) return (
                               <Input className="h-8 text-xs" value={item.serial_number || ''}
                                 onChange={e => { updateDecommSectionItem(si, ii, 'serial_number', e.target.value); ensureLink(si, ii); }} placeholder="Enter S/N" />
