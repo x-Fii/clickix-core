@@ -637,7 +637,7 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                               setLicenseOpen(prev => ({ ...prev, [si]: false }));
                             }, 150);
                           }}
-                          placeholder="Select or type license name"
+                          placeholder="Select license name"
                           className="bg-background text-xs h-8 font-semibold pr-9"
                         />
                         <ChevronDown
