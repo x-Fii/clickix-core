@@ -65,69 +65,52 @@ const Field = ({ label, required, children }) => (
   </div>
 );
 
-
-function SearchableDropdown({
-  value,
-  options,
-  onValueChange,
-  placeholder
-}) {
+// Search directly in the selected field; keep selection IDs and existing handlers unchanged.
+function SearchableDropdown({ value, options, onValueChange, placeholder, disabled = false }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-
-  const selected = options.find(o => o.value === value);
-
-  const filtered = options.filter(o =>
-    o.label.toLowerCase().includes(search.toLowerCase())
+  const selected = options.find(option => option.value === value);
+  const filtered = options.filter(option =>
+    String(option.label || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <div className="relative">
         <Input
           value={open ? search : (selected?.label || '')}
           placeholder={placeholder}
-          onFocus={() => {
-            setSearch('');
-            setOpen(true);
-          }}
-          onChange={e => {
-            setSearch(e.target.value);
-            setOpen(true);
-          }}
-          onBlur={() => setOpen(false)}
-          className="pr-9"
+          disabled={disabled}
           autoComplete="off"
+          className="pr-9 bg-background"
+          onFocus={() => { setSearch(''); setOpen(true); }}
+          onChange={event => { setSearch(event.target.value); setOpen(true); }}
+          onBlur={() => { setOpen(false); setSearch(''); }}
+          onKeyDown={event => {
+            if (event.key === 'Escape') { setOpen(false); event.currentTarget.blur(); }
+            if (event.key === 'Enter' && open) {
+              event.preventDefault();
+              if (filtered.length === 1) {
+                onValueChange(filtered[0].value);
+                setOpen(false);
+                event.currentTarget.blur();
+              }
+            }
+          }}
         />
-        <ChevronDown
-          size={16}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-        />
+        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
       </div>
-
-      {open && (
+      {open && !disabled && (
         <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-          {filtered.length > 0 ? (
-            filtered.map(option => (
-              <button
-                key={option.value}
-                type="button"
-                onMouseDown={e => e.preventDefault()}
-                onClick={() => {
-                  onValueChange(option.value);
-                  setSearch('');
-                  setOpen(false);
-                }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted"
-              >
-                {option.label}
-              </button>
-            ))
-          ) : (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              No matching record found
-            </div>
-          )}
+          {filtered.length ? filtered.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onMouseDown={event => event.preventDefault()}
+              onClick={() => { onValueChange(option.value); setSearch(''); setOpen(false); }}
+              className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+            >{option.label}</button>
+          )) : <div className="px-3 py-2 text-sm text-muted-foreground">No matching record found</div>}
         </div>
       )}
     </div>
@@ -179,30 +162,6 @@ export default function NewReport() {
   ].sort();
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
-
-  const [dropdownSearch, setDropdownSearch] = useState({});
-
-  const searchValue = (key) =>
-    (dropdownSearch[key] || '').trim().toLowerCase();
-
-  const searchInput = (key, placeholder) => (
-    <div className="p-2">
-      <Input
-        placeholder={placeholder}
-        value={dropdownSearch[key] || ''}
-        onChange={(e) =>
-          setDropdownSearch(prev => ({
-            ...prev,
-            [key]: e.target.value
-          }))
-        }
-        onKeyDown={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="h-8"
-      />
-    </div>
-  );
-
   const regionOptions = [...new Set(sites.map(s => s.region).filter(Boolean))].sort();
   const stateOptions = [...new Set(sites.filter(s => !siteRegionFilter || s.region === siteRegionFilter).map(s => s.state).filter(Boolean))].sort();
   const filteredSites = sites.filter(s =>
@@ -537,71 +496,24 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
           <SectionHeader title="Job Information" subtitle="Client and site details" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Company / Client" required>
-              <Select value={form.client_id} onValueChange={handleClientChange}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Select client" /></SelectTrigger>
-                <SelectContent>
-                  {searchInput('client', 'Search client...')}
-
-                  {clients
-                    .filter(c =>
-                      (c.company_name || '').toLowerCase().includes(searchValue('client'))
-                    )
-                    .map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.company_name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <SearchableDropdown value={form.client_id} options={clients.map(c => ({ value: c.id, label: c.company_name }))}
+                onValueChange={handleClientChange} placeholder="Select client" />
             </Field>
             <Field label="Region">
-              <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="All regions" /></SelectTrigger>
-                <SelectContent>
-                  {searchInput('region', 'Search region...')}
-                  {regionOptions
-                    .filter(r => r.toLowerCase().includes(searchValue('region')))
-                    .map(r => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <SearchableDropdown value={siteRegionFilter} options={regionOptions.map(r => ({ value: r, label: r }))}
+                onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}
+                placeholder="All regions" />
               {siteRegionFilter && <button type="button" onClick={() => { setSiteRegionFilter(''); setSiteStateFilter(''); }} className="text-xs text-muted-foreground hover:text-foreground mt-1">✕ Clear</button>}
             </Field>
             <Field label="State">
-              <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="All states" /></SelectTrigger>
-                <SelectContent>
-                {searchInput('state', 'Search state...')}
-
-                {stateOptions
-                  .filter(s => s.toLowerCase().includes(searchValue('state')))
-                  .map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableDropdown value={siteStateFilter} options={stateOptions.map(state => ({ value: state, label: state }))}
+                onValueChange={v => { setSiteStateFilter(v); setForm(f => ({ ...f, site_id: '', site_name: '', site_location: '' })); }}
+                placeholder="All states" />
               {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground mt-1">✕ Clear</button>}
             </Field>
             <Field label="Site Name" required>
-              <Select value={form.site_id} onValueChange={handleSiteChange}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Select site" /></SelectTrigger>
-                <SelectContent>
-                   {searchInput('site', 'Search site name...')}
-
-                    {filteredSites
-                      .filter(s =>
-                        `${s.site_name || ''} ${s.state || ''}`
-                          .toLowerCase()
-                          .includes(searchValue('site'))
-                      )
-                      .map(s => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.site_name}{s.state ? ` — ${s.state}` : ''}
-                        </SelectItem>
-                      ))}
-                </SelectContent>
-              </Select>
+              <SearchableDropdown value={form.site_id} options={filteredSites.map(site => ({ value: site.id, label: `${site.site_name}${site.state ? ` — ${site.state}` : ''}` }))}
+                onValueChange={handleSiteChange} placeholder="Select site" />
             </Field>
             <Field label="Site Location">
               <Input value={form.site_location} onChange={e => setF('site_location', e.target.value)} placeholder="Address / location" className="bg-background" />
