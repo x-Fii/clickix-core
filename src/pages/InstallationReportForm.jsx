@@ -38,6 +38,58 @@ const parseInventoryValues = (value) => {
 
 const norm = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
+// Search directly in the selected field; keep selection IDs and existing handlers unchanged.
+function SearchableDropdown({ value, options, onValueChange, placeholder, disabled = false }) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const selected = options.find(option => option.value === value);
+  const filtered = options.filter(option =>
+    String(option.label || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="relative min-w-0">
+      <div className="relative">
+        <Input
+          value={open ? search : (selected?.label || '')}
+          placeholder={placeholder}
+          disabled={disabled}
+          autoComplete="off"
+          className="pr-9 bg-background"
+          onFocus={() => { setSearch(''); setOpen(true); }}
+          onChange={event => { setSearch(event.target.value); setOpen(true); }}
+          onBlur={() => { setOpen(false); setSearch(''); }}
+          onKeyDown={event => {
+            if (event.key === 'Escape') { setOpen(false); event.currentTarget.blur(); }
+            if (event.key === 'Enter' && open) {
+              event.preventDefault();
+              if (filtered.length === 1) {
+                onValueChange(filtered[0].value);
+                setOpen(false);
+                event.currentTarget.blur();
+              }
+            }
+          }}
+        />
+        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+      </div>
+      {open && !disabled && (
+        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+          {filtered.length ? filtered.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onMouseDown={event => event.preventDefault()}
+              onClick={() => { onValueChange(option.value); setSearch(''); setOpen(false); }}
+              className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+            >{option.label}</button>
+          )) : <div className="px-3 py-2 text-sm text-muted-foreground">No matching record found</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function InstallationReportForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -118,29 +170,6 @@ export default function InstallationReportForm() {
   const [siteRegionFilter, setSiteRegionFilter] = useState('');
   const [siteStateFilter, setSiteStateFilter] = useState('');
   const [showAddSite, setShowAddSite] = useState(false);
-
-  const [dropdownSearch, setDropdownSearch] = useState({});
-
-  const searchValue = (key) =>
-    (dropdownSearch[key] || '').trim().toLowerCase();
-
-  const searchInput = (key, placeholder) => (
-    <div className="p-2">
-      <Input
-        placeholder={placeholder}
-        value={dropdownSearch[key] || ''}
-        onChange={(e) =>
-          setDropdownSearch(prev => ({
-            ...prev,
-            [key]: e.target.value
-          }))
-        }
-        onKeyDown={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="h-8"
-      />
-    </div>
-  );
 
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
@@ -840,85 +869,45 @@ export default function InstallationReportForm() {
               <div className="space-y-1">
                 <Label>Client</Label>
                 <div className="flex gap-2">
-                  <Select value={form.client_id} onValueChange={v => {
-                    if (String(v).startsWith('tmp_client_')) {
-                      const staged = stagedClients.find(s => s.temp_id === v);
-                      setForm(f => ({ ...f, client_id: v, client_name: staged?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
-                      return;
-                    }
-                    const c = clients.find(x => x.id === v);
-                    setForm(f => ({ ...f, client_id: v, client_name: c?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
-                  }}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Select client" /></SelectTrigger>
-                    <SelectContent>
-                      {searchInput('client', 'Search client...')}
-
-                      {clients
-                        .filter(c =>
-                          (c.company_name || '').toLowerCase().includes(searchValue('client'))
-                        )
-                        .map(c => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.company_name}
-                          </SelectItem>
-                        ))}
-
-                      {stagedClients
-                        .filter(c =>
-                          (c.company_name || '').toLowerCase().includes(searchValue('client'))
-                        )
-                        .map(c => (
-                          <SelectItem key={c.temp_id} value={c.temp_id}>
-                            {c.company_name} (staged)
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex-1 min-w-0">
+                    <SearchableDropdown
+                      value={form.client_id}
+                      disabled={jobLocked}
+                      options={[
+                        ...clients.map(c => ({ value: c.id, label: c.company_name })),
+                        ...stagedClients.map(c => ({ value: c.temp_id, label: `${c.company_name} (staged)` }))
+                      ]}
+                      onValueChange={v => {
+                        if (String(v).startsWith('tmp_client_')) {
+                          const staged = stagedClients.find(s => s.temp_id === v);
+                          setForm(f => ({ ...f, client_id: v, client_name: staged?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
+                          return;
+                        }
+                        const c = clients.find(x => x.id === v);
+                        setForm(f => ({ ...f, client_id: v, client_name: c?.company_name || '', site_id: '', site_name: '', site_location: '', site_pic_name: '' }));
+                      }}
+                      placeholder="Select client"
+                    />
+                  </div>
                   {form.report_type === 'commissioning' && (
-                  <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => setShowAddClient(true)} disabled={jobLocked}>
-                    <Plus size={14} /> Add Client
-                  </Button>
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => setShowAddClient(true)} disabled={jobLocked}>
+                      <Plus size={14} /> Add Client
+                    </Button>
                   )}
                 </div>
               </div>
               <div className="space-y-1">
                 <Label>Region</Label>
-                <Select value={siteRegionFilter || undefined} onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); }}>
-                  <SelectTrigger><SelectValue placeholder="All regions" /></SelectTrigger>
-                  <SelectContent>
-                     {searchInput('region', 'Search region...')}
-
-                      {regionOptions
-                        .filter(r =>
-                          r.toLowerCase().includes(searchValue('region'))
-                        )
-                        .map(r => (
-                          <SelectItem key={r} value={r}>
-                            {r}
-                          </SelectItem>
-                        ))}
-                  </SelectContent>
-                </Select>
+                <SearchableDropdown value={siteRegionFilter} disabled={jobLocked}
+                  options={regionOptions.map(r => ({ value: r, label: r }))}
+                  onValueChange={v => { setSiteRegionFilter(v); setSiteStateFilter(''); }} placeholder="All regions" />
                 {siteRegionFilter && <button type="button" onClick={() => { setSiteRegionFilter(''); setSiteStateFilter(''); }} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
               </div>
               <div className="space-y-1">
                 <Label>State</Label>
-                <Select value={siteStateFilter || undefined} onValueChange={v => { setSiteStateFilter(v); }}>
-                  <SelectTrigger><SelectValue placeholder="All states" /></SelectTrigger>
-                  <SelectContent>
-                    {searchInput('state', 'Search state...')}
-
-                    {stateOptions
-                      .filter(s =>
-                        s.toLowerCase().includes(searchValue('state'))
-                      )
-                      .map(s => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <SearchableDropdown value={siteStateFilter} disabled={jobLocked}
+                  options={stateOptions.map(state => ({ value: state, label: state }))}
+                  onValueChange={v => { setSiteStateFilter(v); }} placeholder="All states" />
                 {siteStateFilter && <button type="button" onClick={() => setSiteStateFilter('')} className="text-xs text-muted-foreground hover:text-foreground">✕ Clear</button>}
               </div>
               <div className="space-y-1">
@@ -930,42 +919,20 @@ export default function InstallationReportForm() {
                     </Button>
                   )}
                 </div>
-                <Select value={form.site_id} onValueChange={v => {
-                  if (String(v).startsWith('tmp_site_')) {
-                    const staged = stagedSites.find(s => s.temp_id === v);
-                    setForm(f => ({ ...f, site_id: v, site_name: staged?.site_name || '', site_location: staged?.site_location || '', site_pic_name: staged?.pic_name || '' }));
-                    return;
-                  }
-                  const s = sites.find(x => x.id === v);
-                  setForm(f => ({ ...f, site_id: v, site_name: s?.site_name || '', site_location: s?.site_location || '', site_pic_name: s?.pic_name || '' }));
-                }}>
-                  <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
-                <SelectContent>
-                   {searchInput('site', 'Search site name...')}
-
-                    {filteredSites
-                      .filter(s =>
-                        `${s.site_name || ''} ${s.state || ''}`
-                          .toLowerCase()
-                          .includes(searchValue('site'))
-                      )
-                      .map(s => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.site_name}{s.state ? ` — ${s.state}` : ''}
-                        </SelectItem>
-                      ))}
-
-                    {filteredStagedSites
-                      .filter(s =>
-                        (s.site_name || '').toLowerCase().includes(searchValue('site'))
-                      )
-                      .map(s => (
-                        <SelectItem key={s.temp_id} value={s.temp_id}>
-                          {s.site_name} (staged)
-                        </SelectItem>
-                      ))}
-                </SelectContent>
-                </Select>
+                <SearchableDropdown value={form.site_id} disabled={jobLocked}
+                  options={[
+                    ...filteredSites.map(site => ({ value: site.id, label: `${site.site_name}${site.state ? ` — ${site.state}` : ''}` })),
+                    ...filteredStagedSites.map(site => ({ value: site.temp_id, label: `${site.site_name} (staged)` }))
+                  ]}
+                  onValueChange={v => {
+                    if (String(v).startsWith('tmp_site_')) {
+                      const staged = stagedSites.find(s => s.temp_id === v);
+                      setForm(f => ({ ...f, site_id: v, site_name: staged?.site_name || '', site_location: staged?.site_location || '', site_pic_name: staged?.pic_name || '' }));
+                      return;
+                    }
+                    const site = sites.find(x => x.id === v);
+                    setForm(f => ({ ...f, site_id: v, site_name: site?.site_name || '', site_location: site?.site_location || '', site_pic_name: site?.pic_name || '' }));
+                  }} placeholder="Select site" />
               </div>
               <div className="space-y-1">
                 <Label>Site Location <span className="text-muted-foreground/60 normal-case font-normal lowercase tracking-normal">(autofill)</span></Label>
