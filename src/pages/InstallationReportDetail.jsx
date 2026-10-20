@@ -1055,7 +1055,7 @@ export default function InstallationReportDetail() {
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Job Information</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-              {[['CLIENT', report.client_name], ['STORE', report.site_name], ['LOCATION', report.site_location], ['REPORT TYPE', tc.label], ['QUOTATION NUMBER', report.quotation_number || report.work_order_number], ['DO NUMBER', report.do_number], ['TECHNICIAN', report.attended_staff_name], ['TECHNICIAN EMAIL', report.attended_staff_email]].filter(([,v]) => v).map(([k, v]) => (
+              {[['CLIENT', report.client_name], ['STORE', report.site_name], ['LOCATION', report.site_location], ['REPORT TYPE', tc.label], ['QUOTATION NUMBER', report.quotation_number || report.work_order_number], ['DO NUMBER', report.do_number], ['TECHNICIAN', report.attended_staff_name], ['TECHNICIAN EMAIL', report.attended_staff_email], ['SITE PIC', report.site_pic_name], ['REPORTED BY', report.reported_by]].filter(([,v]) => v).map(([k, v]) => (
                 <div key={k}>
                   <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                   <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>
@@ -1070,7 +1070,7 @@ export default function InstallationReportDetail() {
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Schedule & Attendance</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-              {[['SCHEDULED DATE', report.scheduled_date], ['SCHEDULED END DATE', report.scheduled_end_date], ['INSTALLATION DATE', report.installation_date], ['INSTALLATION FINISH DATE', report.installation_finish_date], ['ATTEND TIME', report.attend_time]].filter(([,v]) => v).map(([k, v]) => (
+              {[['SCHEDULED DATE', report.scheduled_date], ['SCHEDULED END DATE', report.scheduled_end_date], ['INSTALLATION DATE', report.installation_date], ['INSTALLATION FINISH DATE', report.installation_finish_date], ['ATTEND TIME', report.attend_time], ['COMPLETED AT', report.ack_timestamp ? new Date(report.ack_timestamp).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null]].filter(([,v]) => v).map(([k, v]) => (
                 <div key={k}>
                   <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                   <div style={{ fontSize: '12px', color: '#111827' }}>{v}</div>
@@ -1098,6 +1098,7 @@ export default function InstallationReportDetail() {
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>#</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Type</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Device Name</th>
+                        <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Serial Number</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Specifications</th>
                         <th style={{ padding: '7px', textAlign: 'left', border: '1px solid #e5e7eb' }}>Notes</th>
                       </tr>
@@ -1120,6 +1121,7 @@ export default function InstallationReportDetail() {
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{ii + 1}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.device_type}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.device_name}</td>
+                          <td style={{ padding: '7px', border: '1px solid #e5e7eb', fontFamily: 'monospace' }}>{item.serial_number || '—'}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb', whiteSpace: 'pre-line', fontSize: '10px', color: '#374151' }}>{specs || '—'}</td>
                           <td style={{ padding: '7px', border: '1px solid #e5e7eb' }}>{item.notes}</td>
                         </tr>
