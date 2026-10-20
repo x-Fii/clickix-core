@@ -7,9 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge, FileEdit, CheckCircle, XCircle, FileDown } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge, FileEdit, CheckCircle, XCircle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
@@ -38,16 +37,6 @@ export default function PRForm() {
     requester_department: '',
     requester_email: '',
     requester_phone: '',
-    quotation_id: '',
-    quotation_number: '',
-    sr_id: '',
-    sr_number: '',
-    sr_ids: [],
-    sr_numbers: [],
-    ir_id: '',
-    ir_number: '',
-    ir_ids: [],
-    ir_numbers: [],
     client_name: '',
     site_name: '',
     purpose_of_purchase: [],
@@ -61,10 +50,8 @@ export default function PRForm() {
     disburse_reference: '',
   });
   const [items, setItems] = useState([
-    { item_no: 1, description: '', category: '', quantity: 1, unit_cost: '', total: 0 }
+    { item_no: 1, description: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: '', total: 0 }
   ]);
-  const [importModal, setImportModal] = useState(false);
-  const [importTypeFilter, setImportTypeFilter] = useState([]);
   const loadedRef = useRef(false);
 
   // Assign the next gap-filled PR number for new requisitions.
@@ -85,7 +72,7 @@ export default function PRForm() {
       if (loadedRef.current) return pr;
       loadedRef.current = true;
       setForm({ ...pr, approved_amount: pr.approved_amount != null ? pr.approved_amount.toString() : '', disburse_amount: pr.disburse_amount != null ? pr.disburse_amount.toString() : '', disburse_date: pr.disburse_date || '', disburse_reference: pr.disburse_reference || '', sr_ids: Array.isArray(pr.sr_ids) ? pr.sr_ids : (pr.sr_id ? [pr.sr_id] : []), sr_numbers: Array.isArray(pr.sr_numbers) ? pr.sr_numbers : (pr.sr_number ? [pr.sr_number] : []), ir_ids: Array.isArray(pr.ir_ids) ? pr.ir_ids : (pr.ir_id ? [pr.ir_id] : []), ir_numbers: Array.isArray(pr.ir_numbers) ? pr.ir_numbers : (pr.ir_number ? [pr.ir_number] : []), purpose_of_purchase: Array.isArray(pr.purpose_of_purchase) ? pr.purpose_of_purchase : (pr.purpose_of_purchase ? [pr.purpose_of_purchase] : []) });
-      setItems(pr.items?.length ? pr.items.map(it => ({ ...it, unit_cost: it.unit_cost?.toString() ?? '', quantity: it.quantity?.toString() ?? '1' })) : [{ item_no: 1, description: '', category: '', quantity: '1', unit_cost: '', total: 0 }]);
+      setItems(pr.items?.length ? pr.items.map(it => ({ ...it, unit_cost: it.unit_cost?.toString() ?? '', quantity: it.quantity?.toString() ?? '1' })) : [{ item_no: 1, description: '', quotation_id: '', quotation_number: '', quantity: '1', unit_cost: '', total: 0 }]);
       return pr;
     },
     enabled: isEdit,
@@ -101,16 +88,6 @@ export default function PRForm() {
     queryFn: () => base44.entities.Quotation.list('-created_date', 100),
   });
 
-  const { data: reports = [] } = useQuery({
-    queryKey: ['service-reports'],
-    queryFn: () => base44.entities.ServiceReport.list('-created_date', 100),
-  });
-
-  const { data: installationReports = [] } = useQuery({
-    queryKey: ['installation-reports'],
-    queryFn: () => base44.entities.InstallationReport.list('-created_date', 100),
-  });
-
   const saveMutation = useMutation({
     mutationFn: (data) => isEdit
       ? base44.entities.PurchaseRequisition.update(id, data)
@@ -123,69 +100,6 @@ export default function PRForm() {
   });
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleQuotationSelect = (qId) => {
-    const q = quotations.find(x => x.id === qId);
-    if (q) {
-      setForm(f => ({
-        ...f,
-        quotation_id: q.id,
-        quotation_number: q.quotation_number,
-        sr_id: q.sr_id || '',
-        sr_number: q.sr_number || '',
-        sr_ids: Array.isArray(q.sr_ids) && q.sr_ids.length ? q.sr_ids : (q.sr_id ? [q.sr_id] : []),
-        sr_numbers: Array.isArray(q.sr_numbers) && q.sr_numbers.length ? q.sr_numbers : (q.sr_number ? [q.sr_number] : []),
-        ir_id: q.ir_id || '',
-        ir_number: q.ir_number || '',
-        ir_ids: Array.isArray(q.ir_ids) && q.ir_ids.length ? q.ir_ids : (q.ir_id ? [q.ir_id] : []),
-        ir_numbers: Array.isArray(q.ir_numbers) && q.ir_numbers.length ? q.ir_numbers : (q.ir_number ? [q.ir_number] : []),
-        client_name: q.client_name || '',
-        site_name: q.site_name || '',
-      }));
-      // Pre-fill items from quotation if no items yet
-      if (q.items?.length) {
-        setItems(q.items.map((it, i) => ({
-          item_no: i + 1,
-          description: it.description || '',
-          quotation_id: q.id,
-          quotation_number: q.quotation_number,
-          quantity: it.quantity || 1,
-          unit_cost: it.unit_cost || 0,
-          total: it.total || 0,
-        })));
-      }
-    }
-  };
-
-  const handleCreateDraftQuotation = async () => {
-    const genQNum = () => `QT-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 900 + 100)}`;
-    const newQ = await base44.entities.Quotation.create({
-      quotation_number: genQNum(),
-      quotation_date: format(new Date(), 'yyyy-MM-dd'),
-      status: 'draft',
-      sr_id: form.sr_id || '',
-      sr_number: form.sr_number || '',
-      sr_ids: form.sr_ids || [],
-      sr_numbers: form.sr_numbers || [],
-      ir_id: form.ir_id || '',
-      ir_number: form.ir_number || '',
-      ir_ids: form.ir_ids || [],
-      ir_numbers: form.ir_numbers || [],
-      client_name: form.client_name || '',
-      site_name: form.site_name || '',
-      items: items.filter(it => it.description).map(it => ({
-        description: it.description,
-        quantity: parseFloat(it.quantity) || 1,
-        unit_cost: parseFloat(it.unit_cost) || 0,
-        total: (parseFloat(it.quantity) || 0) * (parseFloat(it.unit_cost) || 0),
-      })),
-      subtotal: grandTotal,
-      grand_total: grandTotal,
-    });
-    setForm(f => ({ ...f, quotation_id: newQ.id, quotation_number: newQ.quotation_number }));
-    queryClient.invalidateQueries({ queryKey: ['quotations'] });
-    toast.success(`Draft quotation ${newQ.quotation_number} created`);
-  };
 
   // Draft an empty quotation for a single item row, then link it to that item.
   const handleCreateDraftQuotationForItem = async (i) => {
@@ -212,30 +126,6 @@ export default function PRForm() {
       : it));
   };
 
-  const toggleDoc = (val) => {
-    const sr = reports.find(r => r.id === val);
-    if (sr) {
-      setForm(f => {
-        const exists = (f.sr_ids || []).includes(val);
-        const sr_ids = exists ? (f.sr_ids || []).filter(x => x !== val) : [...(f.sr_ids || []), val];
-        const sr_numbers = sr_ids.map(id => reports.find(r => r.id === id)?.running_number).filter(Boolean);
-        const first = sr_ids.length ? reports.find(r => r.id === sr_ids[0]) : null;
-        return { ...f, sr_ids, sr_numbers, sr_id: sr_ids[0] || '', sr_number: sr_numbers[0] || '', client_name: first?.client_name || f.client_name, site_name: first?.site_name || f.site_name };
-      });
-      return;
-    }
-    const ir = installationReports.find(r => r.id === val);
-    if (ir) {
-      setForm(f => {
-        const exists = (f.ir_ids || []).includes(val);
-        const ir_ids = exists ? (f.ir_ids || []).filter(x => x !== val) : [...(f.ir_ids || []), val];
-        const ir_numbers = ir_ids.map(id => installationReports.find(r => r.id === id)?.report_number).filter(Boolean);
-        const first = ir_ids.length ? installationReports.find(r => r.id === ir_ids[0]) : null;
-        return { ...f, ir_ids, ir_numbers, ir_id: ir_ids[0] || '', ir_number: ir_numbers[0] || '', client_name: first?.client_name || f.client_name, site_name: first?.site_name || f.site_name };
-      });
-    }
-  };
-
   const updateItem = (i, field, val) => {
     setItems(prev => prev.map((item, idx) => {
       if (idx !== i) return item;
@@ -248,36 +138,6 @@ export default function PRForm() {
   };
 
   const addItem = () => setItems(p => [...p, { item_no: p.length + 1, description: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: '', total: 0 }]);
-
-  const openImportModal = () => {
-    setImportTypeFilter([]);
-    setImportModal(true);
-  };
-
-  const handleImportFromQuotation = () => {
-    const linked = quotations.find(q => q.id === form.quotation_id);
-    if (!linked?.items?.length) { toast.error('No quotation linked or quotation has no items'); return; }
-    let toImport = linked.items;
-    if (importTypeFilter.length > 0) {
-      toImport = toImport.filter(it => importTypeFilter.includes(it.item_type || ''));
-    }
-    if (!toImport.length) { toast.error('No items match the selected types'); return; }
-    setItems(prev => {
-      const base = prev.filter(it => it.description); // keep existing non-empty
-      const newItems = toImport.map((it, i) => ({
-        item_no: base.length + i + 1,
-        description: it.description || '',
-        quotation_id: linked.id,
-        quotation_number: linked.quotation_number,
-        quantity: it.quantity || 1,
-        unit_cost: it.unit_cost?.toString() || '',
-        total: it.total || 0,
-      }));
-      return [...base, ...newItems].map((it, i) => ({ ...it, item_no: i + 1 }));
-    });
-    setImportModal(false);
-    toast.success(`Imported ${toImport.length} item(s) from quotation`);
-  };
 
   const grandTotal = items.reduce((s, it) => s + (parseFloat(it.unit_cost) || 0) * (parseFloat(it.quantity) || 0), 0);
 
@@ -319,7 +179,7 @@ export default function PRForm() {
     await base44.integrations.Core.SendEmail({
       to: adminEmail,
       subject: `Purchase Requisition ${form.pr_number} — ${form.status?.toUpperCase()}`,
-      body: `Purchase Requisition Submission\n\nPR No: ${form.pr_number}\nDate: ${form.pr_date}\nRequester: ${form.requester_name} (${form.requester_department})\nClient: ${form.client_name}\nSite: ${form.site_name}\nQuotation: ${form.quotation_number || '—'}\nSR No: ${form.sr_number || '—'}\nGrand Total: MYR ${grandTotal.toFixed(2)}\nPayment Term: ${form.payment_term}\n\nPurpose: ${form.purpose_of_purchase}\n\nPlease log in to the system to review this PR.`,
+      body: `Purchase Requisition Submission\n\nPR No: ${form.pr_number}\nDate: ${form.pr_date}\nRequester: ${form.requester_name} (${form.requester_department})\nClient: ${form.client_name}\nSite: ${form.site_name}\nQuotations: ${[...new Set(items.map(it => it.quotation_number).filter(Boolean))].join(', ') || '—'}\nGrand Total: MYR ${grandTotal.toFixed(2)}\nPayment Term: ${form.payment_term}\n\nPurpose: ${form.purpose_of_purchase}\n\nPlease log in to the system to review this PR.`,
     });
     toast.success(`PR submitted to ${adminEmail}`);
   };
@@ -405,61 +265,6 @@ export default function PRForm() {
           </div>
         </div>
 
-        {/* Linked Documents */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Linked Documents</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Quotation">
-              <div className="flex gap-2">
-                <Select value={form.quotation_id || undefined} onValueChange={handleQuotationSelect}>
-                  <SelectTrigger className="bg-background text-sm flex-1"><SelectValue placeholder="Select existing quotation..." /></SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    {quotations.slice(0, 100).map(q => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" size="sm" onClick={handleCreateDraftQuotation} className="gap-1 text-xs whitespace-nowrap text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">
-                  <FileEdit size={12} /> New Draft
-                </Button>
-              </div>
-              {form.quotation_number && (
-                <p className="text-xs text-muted-foreground mt-1 font-mono">Linked: {form.quotation_number}</p>
-              )}
-            </Field>
-            <Field label="Service / Installation Report(s)">
-              <div className="flex flex-wrap gap-1.5 min-h-9 items-center rounded-md border border-input bg-background px-2 py-1.5">
-                {(form.sr_ids || []).map(id => {
-                  const r = reports.find(x => x.id === id);
-                  return (
-                    <span key={`sr-${id}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-primary/15 text-primary border border-primary/25">
-                      {r?.running_number || id}
-                      <button type="button" onClick={() => toggleDoc(id)} className="hover:text-destructive"><X size={11} /></button>
-                    </span>
-                  );
-                })}
-                {(form.ir_ids || []).map(id => {
-                  const r = installationReports.find(x => x.id === id);
-                  return (
-                    <span key={`ir-${id}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                      {r?.report_number || id}
-                      <button type="button" onClick={() => toggleDoc(id)} className="hover:text-destructive"><X size={11} /></button>
-                    </span>
-                  );
-                })}
-                <select
-                  value=""
-                  onChange={e => { if (e.target.value) toggleDoc(e.target.value); }}
-                  className="text-xs bg-transparent text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
-                  <option value="">{(form.sr_ids || []).length + (form.ir_ids || []).length ? '+ Add document' : 'Select SR or IR...'}</option>
-                  {reports.length > 0 && <optgroup label="— Service Reports —">{reports.filter(r => !(form.sr_ids || []).includes(r.id)).slice(0, 100).map(r => <option key={r.id} value={r.id}>{r.running_number} — {r.site_name}</option>)}</optgroup>}
-                  {installationReports.length > 0 && <optgroup label="— Installation Reports —">{installationReports.filter(r => !(form.ir_ids || []).includes(r.id)).slice(0, 100).map(r => <option key={r.id} value={r.id}>{r.report_number} — {r.site_name}</option>)}</optgroup>}
-                </select>
-              </div>
-            </Field>
-            <Field label="Client Name"><Input value={form.client_name} onChange={e => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
-            <Field label="Site Name"><Input value={form.site_name} onChange={e => setF('site_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
-          </div>
-        </div>
-
         {/* Purchase Details */}
         <div className="bg-card border border-border rounded-xl p-6">
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Purchase Details</h3>
@@ -512,6 +317,8 @@ export default function PRForm() {
                 </SelectContent>
               </Select>
             </Field>
+            <Field label="Client Name"><Input value={form.client_name} onChange={e => setF('client_name', e.target.value)} className="bg-background" placeholder="Client name" /></Field>
+            <Field label="Site Name"><Input value={form.site_name} onChange={e => setF('site_name', e.target.value)} className="bg-background" placeholder="Site name" /></Field>
           </div>
         </div>
 
@@ -523,11 +330,6 @@ export default function PRForm() {
               <p className="text-xs text-muted-foreground mt-0.5">List of items to be purchased</p>
             </div>
             <div className="flex gap-2">
-              {form.quotation_id && (
-                <Button variant="outline" size="sm" className="gap-1 text-xs text-blue-400 border-blue-500/30 hover:bg-blue-500/10" onClick={openImportModal}>
-                  <FileDown size={12} /> Import from Quotation
-                </Button>
-              )}
               <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addItem}>
                 <Plus size={12} /> Add Item
               </Button>
@@ -648,53 +450,6 @@ export default function PRForm() {
         </div>
       </div>
 
-      {/* Import from Quotation Modal */}
-      <Dialog open={importModal} onOpenChange={setImportModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Import Items from Quotation</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <p className="text-sm text-muted-foreground">
-              Select item types to import, or leave all unchecked to import everything.
-            </p>
-            {(() => {
-              const linked = quotations.find(q => q.id === form.quotation_id);
-              const types = [...new Set((linked?.items || []).map(it => it.item_type || '').filter(Boolean))];
-              return types.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Filter by Type</p>
-                  {types.map(t => (
-                    <div key={t} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`type-${t}`}
-                        checked={importTypeFilter.includes(t)}
-                        onCheckedChange={checked => setImportTypeFilter(prev =>
-                          checked ? [...prev, t] : prev.filter(x => x !== t)
-                        )}
-                      />
-                      <label htmlFor={`type-${t}`} className="text-sm cursor-pointer">{t}</label>
-                    </div>
-                  ))}
-                  {importTypeFilter.length > 0 && (
-                    <p className="text-xs text-muted-foreground">Will import only: {importTypeFilter.join(', ')}</p>
-                  )}
-                  {importTypeFilter.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No filter — all items will be imported</p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">Items in this quotation have no type assigned — all will be imported.</p>
-              );
-            })()}
-            <div className="flex justify-end gap-2 pt-2 border-t border-border">
-              <Button variant="outline" size="sm" onClick={() => setImportModal(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleImportFromQuotation}>Import</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Hidden PDF Template */}
       <div id="pr-pdf-area" style={{ display: 'none', position: 'absolute', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#111827' }}>
         <div id="pr-pdf-content" style={{ width: '794px', background: 'white' }}>
@@ -726,13 +481,13 @@ export default function PRForm() {
               </div>
             </div>
 
-            {/* Linked Documents */}
+            {/* Client & Site */}
             <div style={{ marginBottom: '20px' }}>
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Linked Documents</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Client & Site</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['QUOTATION NO.', form.quotation_number], ['SR/IR NUMBER', [...(form.sr_numbers || []), ...(form.ir_numbers || [])].join(', ') || form.sr_number || form.ir_number], ['CLIENT', form.client_name], ['SITE', form.site_name]].map(([k, v]) => (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px 24px' }}>
+                {[['CLIENT', form.client_name], ['SITE', form.site_name], ['QUOTATIONS', [...new Set(items.map(it => it.quotation_number).filter(Boolean))].join(', ')]].map(([k, v]) => (
                   <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
@@ -783,7 +538,7 @@ export default function PRForm() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                 <thead>
                   <tr style={{ background: '#f3f4f6' }}>
-                    {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total'].map((h, i) => (
+                    {['#', 'Description', 'Quotation', 'Qty', 'Unit Cost', 'Total'].map((h, i) => (
                       <th key={h} style={{ padding: '7px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
                     ))}
                   </tr>
@@ -793,7 +548,7 @@ export default function PRForm() {
                     <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                       <td style={{ padding: '7px 10px', textAlign: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
                       <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.description || '—'}</td>
-                      <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.category || '—'}</td>
+                      <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.quotation_number || '—'}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.quantity}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)).toFixed(2)}</td>
