@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
 
-const CATEGORIES = ['Hardware', 'Software', 'Consumables', 'Services', 'Mileage', 'Accommodation', 'Others'];
 const PAYMENT_TERMS = ['30 Days', '60 Days', '90 Days', 'COD', 'Advance Payment', 'Upon Delivery'];
 
 const Field = ({ label, children }) => (
@@ -148,7 +147,8 @@ export default function PRForm() {
         setItems(q.items.map((it, i) => ({
           item_no: i + 1,
           description: it.description || '',
-          category: '',
+          quotation_id: q.id,
+          quotation_number: q.quotation_number,
           quantity: it.quantity || 1,
           unit_cost: it.unit_cost || 0,
           total: it.total || 0,
@@ -187,6 +187,31 @@ export default function PRForm() {
     toast.success(`Draft quotation ${newQ.quotation_number} created`);
   };
 
+  // Draft an empty quotation for a single item row, then link it to that item.
+  const handleCreateDraftQuotationForItem = async (i) => {
+    const genQNum = () => `QT-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 900 + 100)}`;
+    const newQ = await base44.entities.Quotation.create({
+      quotation_number: genQNum(),
+      quotation_date: format(new Date(), 'yyyy-MM-dd'),
+      status: 'draft',
+      client_name: form.client_name || '',
+      site_name: form.site_name || '',
+      items: [],
+    });
+    setItems(prev => prev.map((it, idx) => idx === i
+      ? { ...it, quotation_id: newQ.id, quotation_number: newQ.quotation_number }
+      : it));
+    queryClient.invalidateQueries({ queryKey: ['quotations'] });
+    toast.success(`Draft quotation ${newQ.quotation_number} created — fill it up in the Quotations section`);
+  };
+
+  const handleItemQuotationSelect = (i, qId) => {
+    const q = quotations.find(x => x.id === qId);
+    setItems(prev => prev.map((it, idx) => idx === i
+      ? { ...it, quotation_id: qId, quotation_number: q?.quotation_number || '' }
+      : it));
+  };
+
   const toggleDoc = (val) => {
     const sr = reports.find(r => r.id === val);
     if (sr) {
@@ -222,7 +247,7 @@ export default function PRForm() {
     }));
   };
 
-  const addItem = () => setItems(p => [...p, { item_no: p.length + 1, description: '', category: '', quantity: 1, unit_cost: '', total: 0 }]);
+  const addItem = () => setItems(p => [...p, { item_no: p.length + 1, description: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: '', total: 0 }]);
 
   const openImportModal = () => {
     setImportTypeFilter([]);
@@ -242,7 +267,8 @@ export default function PRForm() {
       const newItems = toImport.map((it, i) => ({
         item_no: base.length + i + 1,
         description: it.description || '',
-        category: it.item_type || it.category || '',
+        quotation_id: linked.id,
+        quotation_number: linked.quotation_number,
         quantity: it.quantity || 1,
         unit_cost: it.unit_cost?.toString() || '',
         total: it.total || 0,
@@ -513,7 +539,7 @@ export default function PRForm() {
                 <tr className="border-b border-border">
                   <th className="text-center pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-10 pr-2">#</th>
                   <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider pr-2">Description</th>
-                  <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-32 pr-2">Category</th>
+                  <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-56 pr-2">Quotation</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20 pr-2">Qty</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-2">Unit Cost</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28">Total</th>
@@ -526,18 +552,18 @@ export default function PRForm() {
                     <td className="py-2 pr-2 text-center text-xs text-muted-foreground font-mono">{i + 1}</td>
                     <td className="py-2 pr-2"><Input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8" placeholder="Item description" /></td>
                     <td className="py-2 pr-2">
-                     {item.category === 'Others' || (item.category && !CATEGORIES.includes(item.category)) ? (
-                       <div className="flex gap-1">
-                         <Input value={item.category === 'Others' ? '' : item.category} onChange={e => updateItem(i, 'category', e.target.value || 'Others')} className="bg-background text-xs h-8" placeholder="Specify category..." autoFocus />
-                         <button onClick={() => updateItem(i, 'category', '')} className="text-muted-foreground hover:text-foreground text-xs px-1">✕</button>
-                       </div>
-                     ) : (
-                       <Select value={item.category || undefined} onValueChange={v => updateItem(i, 'category', v)}>
-                         <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Category" /></SelectTrigger>
-                         <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                       </Select>
-                     )}
-                    </td>
+                      <div className="flex gap-1 items-center">
+                        <Select value={item.quotation_id || undefined} onValueChange={v => handleItemQuotationSelect(i, v)}>
+                          <SelectTrigger className="bg-background text-xs h-8 flex-1"><SelectValue placeholder="Select quotation" /></SelectTrigger>
+                          <SelectContent className="max-h-60 overflow-y-auto">
+                            {quotations.slice(0, 100).map(q => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 h-8 px-2" onClick={() => handleCreateDraftQuotationForItem(i)}>
+                          <FileEdit size={12} /> Add
+                        </Button>
+                      </div>
+                     </td>
                     <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" /></td>
                     <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.unit_cost} onChange={e => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" placeholder="0.00" /></td>
                     <td className="py-2 text-right font-mono text-xs">{((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0)).toFixed(2)}</td>
