@@ -1272,8 +1272,8 @@ export default function InstallationReportForm() {
                                     </datalist>
                                   </div>
                                   <div className="space-y-1">
-                                    <Label className="text-xs">Anydesk</Label>
-                                    <Input className="h-8 text-xs bg-muted/40" value={item.anydesk || getAnydeskValue(sec)} readOnly/>
+                                    <Label className="text-xs">Anydesk <span className="text-muted-foreground/60 font-normal">(autofill from license, editable)</span></Label>
+                                    <Input className="h-8 text-xs" value={item.anydesk || getAnydeskValue(sec)} onChange={e => updateSectionItem(si, actualIndex, 'anydesk', e.target.value)} placeholder="AnyDesk ID"/>
                                   </div>
                                 </div>
                               )}
