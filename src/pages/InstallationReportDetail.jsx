@@ -23,6 +23,18 @@ const TYPE_CONFIG = {
   decommissioning:  { label: 'Decommission', className: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
 };
 
+// Matches the order the form displays device types: CMS, PC, TV, HDMI Extender, Cable, Others.
+const DEVICE_TYPE_ORDER = ['CMS', 'PC', 'TV', 'HDMI Extender', 'Cable', 'Others'];
+const deviceTypeRank = (type) => {
+  const index = DEVICE_TYPE_ORDER.indexOf(type);
+  return index === -1 ? DEVICE_TYPE_ORDER.length : index;
+};
+const sortEquipmentItems = (items) =>
+  (items || [])
+    .map((item, idx) => ({ item, idx }))
+    .sort((a, b) => deviceTypeRank(a.item.device_type) - deviceTypeRank(b.item.device_type) || a.idx - b.idx)
+    .map((entry) => entry.item);
+
 function Field({ label, value }) {
   if (!value) return null;
   return (
@@ -1104,7 +1116,7 @@ export default function InstallationReportDetail() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(sec.items || []).map((item, ii) => {
+                      {sortEquipmentItems(sec.items).map((item, ii) => {
                         const specs = [
                           item.model && `Model: ${item.model}`,
                           item.sku && `SKU: ${item.sku}`,
