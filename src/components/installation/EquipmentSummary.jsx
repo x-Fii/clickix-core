@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { Copy, Check, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 function num(v) {
   const n = Number(v);
@@ -9,6 +11,8 @@ function num(v) {
 
 export default function EquipmentSummary({ sections = [] }) {
   const [copied, setCopied] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const textRef = useRef(null);
 
   const { byType, totalQty, totalItems, text } = useMemo(() => {
     const flat = [];
@@ -73,8 +77,18 @@ export default function EquipmentSummary({ sections = [] }) {
         ok = false;
       }
     }
+    if (!ok) setShowManual(true);
     setCopied(ok);
     if (ok) setTimeout(() => setCopied(false), 1500);
+  };
+
+  const selectManualText = () => {
+    const el = textRef.current;
+    if (el) {
+      el.focus();
+      el.select();
+      el.setSelectionRange(0, el.value.length);
+    }
   };
 
   return (
@@ -88,6 +102,17 @@ export default function EquipmentSummary({ sections = [] }) {
           {copied ? <><Check size={14} className="text-emerald-400" /> Copied</> : <><Copy size={14} /> Copy Summary</>}
         </Button>
       </div>
+
+      <Dialog open={showManual} onOpenChange={setShowManual}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Copy Summary</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">Automatic copy was blocked by the browser. The text below is selected - press Ctrl+C (or Cmd+C) to copy it.</p>
+          <Textarea ref={textRef} readOnly autoFocus value={text} rows={10} className="font-mono text-xs" onFocus={selectManualText} />
+          <Button size="sm" variant="outline" onClick={selectManualText}>Select All</Button>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-lg p-3">
