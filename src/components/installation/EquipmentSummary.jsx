@@ -34,7 +34,7 @@ export default function EquipmentSummary({ sections = [] }) {
     lines.push(`LICENSE & PC SUMMARY`);
     lines.push('');
     sections.forEach((sec) => {
-      const items = (sec.items || []).filter((it) => it.device_name === 'PC');
+      const items = (sec.items || []).filter((it) => it.device_type === 'PC');
       if (!sec.license_key && !items.length) return;
       lines.push(`[${sec.section_name || 'Section'}]`);
       if (sec.license_key) lines.push(`  License Key: ${sec.license_key}`);
@@ -55,13 +55,26 @@ export default function EquipmentSummary({ sections = [] }) {
   if (!totalItems) return null;
 
   const handleCopy = async () => {
+    let ok = false;
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      ok = true;
     } catch {
-      setCopied(false);
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch {
+        ok = false;
+      }
     }
+    setCopied(ok);
+    if (ok) setTimeout(() => setCopied(false), 1500);
   };
 
   return (
