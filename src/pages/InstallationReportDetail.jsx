@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import EquipmentSummary from '@/components/installation/EquipmentSummary';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { drawEquipmentBlock, sortEquipmentItems } from '@/lib/installationPdfNative';
 
 const STATUS_CONFIG = {
   pending:    { label: 'Pending',    className: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
@@ -22,18 +23,6 @@ const TYPE_CONFIG = {
   commissioning:    { label: 'Commission',   className: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
   decommissioning:  { label: 'Decommission', className: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
 };
-
-// Matches the order the form displays device types: CMS, PC, TV, HDMI Extender, Cable, Others.
-const DEVICE_TYPE_ORDER = ['CMS', 'PC', 'TV', 'HDMI Extender', 'Cable', 'Others'];
-const deviceTypeRank = (type) => {
-  const index = DEVICE_TYPE_ORDER.indexOf(type);
-  return index === -1 ? DEVICE_TYPE_ORDER.length : index;
-};
-const sortEquipmentItems = (items) =>
-  (items || [])
-    .map((item, idx) => ({ item, idx }))
-    .sort((a, b) => deviceTypeRank(a.item.device_type) - deviceTypeRank(b.item.device_type) || a.idx - b.idx)
-    .map((entry) => entry.item);
 
 function Field({ label, value }) {
   if (!value) return null;
@@ -695,8 +684,45 @@ export default function InstallationReportDetail() {
 
       /*
       * Add every IR section in its original order.
+      *
+      * The equipment tables are drawn natively instead of being
+      * captured from the template, so their details always render.
       */
       for (const block of contentBlocks) {
+        const nativeMode = block.dataset.pdfNative;
+
+        if (
+          nativeMode === 'equipment-installed' ||
+          nativeMode === 'equipment-decommissioned'
+        ) {
+          const result = drawEquipmentBlock(pdf, {
+            sections:
+              nativeMode === 'equipment-installed'
+                ? equipmentSections
+                : decommissionSections,
+            mode:
+              nativeMode === 'equipment-installed'
+                ? 'installed'
+                : 'decommissioned',
+            startY: currentY,
+            pageHasContent,
+            metrics: {
+              contentTop,
+              contentBottom,
+              sideMargin,
+              contentWidth,
+              blockGap,
+              paginationSafetyGap
+            },
+            startNewPage
+          });
+
+          currentY = result.y;
+          pageHasContent = result.pageHasContent;
+
+          continue;
+        }
+
         await addElementWithPagination(block);
       }
 
@@ -1094,7 +1120,7 @@ export default function InstallationReportDetail() {
 /**/ 
           {/* Equipment Installed — sectioned (commissioning) */}
           {equipmentSections.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
+            <div data-pdf-native="equipment-installed" style={{ marginBottom: '20px' }}>
               <div data-pdf-heading="section" style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Equipment Installed</span>
               </div>
@@ -1149,7 +1175,7 @@ export default function InstallationReportDetail() {
 
           {/* Equipment Decommissioned — section-based */}
           {decommissionSections.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
+            <div data-pdf-native="equipment-decommissioned" style={{ marginBottom: '20px' }}>
               <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Equipment Decommissioned</span>
               </div>
