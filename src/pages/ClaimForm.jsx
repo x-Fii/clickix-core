@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
@@ -307,6 +307,23 @@ export default function ClaimForm() {
     saveMutation.mutate({ ...form, items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal, status: status || form.status });
   };
 
+  const handleApprove = () => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    setForm((f) => ({ ...f, status: 'approved', approved_date: f.approved_date || today }));
+    saveMutation.mutate({ ...form, status: 'approved', approved_date: form.approved_date || today, items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal });
+  };
+
+  const handleReject = () => {
+    setF('status', 'rejected');
+    saveMutation.mutate({ ...form, status: 'rejected', items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal });
+  };
+
+  const handleMarkPaid = () => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    setForm((f) => ({ ...f, status: 'paid', paid_date: f.paid_date || today }));
+    saveMutation.mutate({ ...form, status: 'paid', paid_date: form.paid_date || today, items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal });
+  };
+
   const handleExportPDF = async () => {
     toast.info('Generating PDF...');
     const { default: jsPDF } = await import('jspdf');
@@ -392,22 +409,9 @@ export default function ClaimForm() {
         {/* Document Header */}
         <div className="bg-card border border-border rounded-xl p-6">
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Document Header</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <Field label="Claim Number"><Input value={form.claim_number} onChange={(e) => setF('claim_number', e.target.value)} className="bg-background font-mono" /></Field>
             <Field label="Claim Date"><Input type="date" value={form.claim_date} onChange={(e) => setF('claim_date', e.target.value)} className="bg-background" /></Field>
-            <Field label="Claim Type">
-              {form.claim_type && !CLAIM_TYPES.includes(form.claim_type) ?
-              <div className="flex gap-1">
-                  <Input value={form.claim_type} onChange={(e) => setF('claim_type', e.target.value)} className="bg-background text-sm" placeholder="Enter type..." />
-                  <button onClick={() => setF('claim_type', '')} className="text-muted-foreground hover:text-foreground px-1"><X size={14} /></button>
-                </div> :
-
-              <Select value={form.claim_type || undefined} onValueChange={(v) => setF('claim_type', v === 'Other' ? ' ' : v)}>
-                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select type..." /></SelectTrigger>
-                  <SelectContent>{CLAIM_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
-              }
-            </Field>
             <Field label="Status">
               <Select value={form.status} onValueChange={(v) => setF('status', v)}>
                 <SelectTrigger className="bg-background text-sm"><SelectValue /></SelectTrigger>
@@ -424,7 +428,7 @@ export default function ClaimForm() {
         {/* Claimant Details */}
         <div className="bg-card border border-border rounded-xl p-6">
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Claimant Details</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <Field label="Claimant Name">
               <Select value={form.claimant_name || undefined} onValueChange={(v) => {
                 const s = staff.find((m) => m.name === v);
@@ -439,6 +443,39 @@ export default function ClaimForm() {
             <Field label="Department"><Input value={form.claimant_department} onChange={(e) => setF('claimant_department', e.target.value)} className="bg-background" /></Field>
             <Field label="Email"><Input type="email" value={form.claimant_email} onChange={(e) => setF('claimant_email', e.target.value)} className="bg-background" /></Field>
             <Field label="Phone"><Input value={form.claimant_phone} onChange={(e) => setF('claimant_phone', e.target.value)} className="bg-background" /></Field>
+          </div>
+        </div>
+
+        {/* Claim Details */}
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Claim Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Claim Type">
+              {form.claim_type && !CLAIM_TYPES.includes(form.claim_type) ? (
+                <div className="flex gap-1">
+                  <Input value={form.claim_type} onChange={(e) => setF('claim_type', e.target.value)} className="bg-background text-sm" placeholder="Enter type..." />
+                  <button onClick={() => setF('claim_type', '')} className="text-muted-foreground hover:text-foreground px-1"><X size={14} /></button>
+                </div>
+              ) : (
+                <Select value={form.claim_type || undefined} onValueChange={(v) => setF('claim_type', v === 'Other' ? ' ' : v)}>
+                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select type..." /></SelectTrigger>
+                  <SelectContent>{CLAIM_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              )}
+            </Field>
+            <Field label="Payment Term">
+              <Select value={form.payment_term} onValueChange={(v) => setF('payment_term', v)}>
+                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select payment term..." /></SelectTrigger>
+                <SelectContent>{PAYMENT_TERMS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Client Name"><Input value={form.client_name} onChange={(e) => setF('client_name', e.target.value)} className="bg-background" placeholder="Client name" /></Field>
+            <Field label="Site Name"><Input value={form.site_name} onChange={(e) => setF('site_name', e.target.value)} className="bg-background" placeholder="Site name" /></Field>
+            <div className="md:col-span-2">
+              <Field label="Purpose / Justification">
+                <Textarea value={form.purpose} onChange={(e) => setF('purpose', e.target.value)} className="bg-background resize-none" rows={2} placeholder="Describe the purpose of this claim..." />
+              </Field>
+            </div>
           </div>
         </div>
 
@@ -526,19 +563,6 @@ export default function ClaimForm() {
                 </div>
               </div>
             </Field>
-            <Field label="Client"><Input value={form.client_name} onChange={(e) => setF('client_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
-            <Field label="Site"><Input value={form.site_name} onChange={(e) => setF('site_name', e.target.value)} className="bg-background" placeholder="Auto-filled" /></Field>
-            <Field label="Payment Term">
-              <Select value={form.payment_term} onValueChange={(v) => setF('payment_term', v)}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-                <SelectContent>{PAYMENT_TERMS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
-            </Field>
-          </div>
-          <div className="mt-4">
-            <Field label="Purpose / Justification">
-              <Textarea value={form.purpose} onChange={(e) => setF('purpose', e.target.value)} className="bg-background resize-none" rows={2} placeholder="Describe the purpose of this claim..." />
-            </Field>
           </div>
         </div>
 
@@ -571,7 +595,6 @@ export default function ClaimForm() {
                 <tr className="border-b border-border">
                   <th className="text-center pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-10 pr-2">#</th>
                   <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider pr-2">Description</th>
-                  <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-32 pr-2">Category</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20 pr-2">Qty</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-2">Unit Cost</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-2">Total</th>
@@ -583,15 +606,17 @@ export default function ClaimForm() {
                 {items.map((item, i) =>
                 <tr key={i}>
                     <td className="py-2 pr-2 text-center text-xs text-muted-foreground font-mono">{i + 1}</td>
-                    <td className="py-2 pr-2"><Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8" placeholder="Item description" /></td>
                     <td className="py-2 pr-2">
-                      <Select value={item.category} onValueChange={(v) => updateItem(i, 'category', v)}>
-                        <SelectTrigger className="bg-background text-xs h-8"><SelectValue placeholder="Category" /></SelectTrigger>
-                        <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <div className="flex gap-1 items-center">
+                        <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8 flex-1" placeholder="Item description" />
+                        <Select value={CATEGORIES.includes(item.category) ? item.category : undefined} onValueChange={(v) => updateItem(i, 'category', v)}>
+                          <SelectTrigger className="bg-background text-xs h-8 w-32"><SelectValue placeholder="Type" /></SelectTrigger>
+                          <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
                     </td>
-                    <td className="py-2 pr-2"><Input type="number" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" min="1" /></td>
-                    <td className="py-2 pr-2"><Input type="number" value={item.unit_cost} onChange={(e) => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" min="0" step="0.01" /></td>
+                    <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" /></td>
+                    <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.unit_cost} onChange={(e) => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" placeholder="0.00" /></td>
                     <td className="py-2 pr-2 text-right font-mono text-xs">{(item.total || 0).toFixed(2)}</td>
                     <td className="py-2 text-right font-mono text-xs text-primary">{(docCount > 0 ? (item.total || 0) / docCount : (item.total || 0)).toFixed(2)}</td>
                     <td className="py-2 pl-2">
@@ -728,8 +753,37 @@ export default function ClaimForm() {
 
         {/* Approval & Payment */}
         <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Approval & Payment</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="flex items-center justify-between pb-3 mb-5 border-b border-border">
+            <h3 className="font-semibold text-sm">Approval & Payment</h3>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-red-400 border-red-500/30 hover:bg-red-500/10"
+                disabled={form.status === 'rejected' || saveMutation.isPending}
+                onClick={handleReject}>
+                <XCircle size={13} /> Reject
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={['approved', 'paid', 'rejected'].includes(form.status) || saveMutation.isPending}
+                onClick={handleApprove}>
+                <CheckCircle size={13} /> Approve
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5 bg-teal-600 hover:bg-teal-700 text-white"
+                disabled={!['approved', 'paid'].includes(form.status) || saveMutation.isPending}
+                onClick={handleMarkPaid}>
+                <CheckCircle size={13} /> Mark Paid
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Approved By"><Input value={form.approved_by} onChange={(e) => setF('approved_by', e.target.value)} className="bg-background" /></Field>
             <Field label="Approved Date"><Input type="date" value={form.approved_date} onChange={(e) => setF('approved_date', e.target.value)} className="bg-background" /></Field>
             <Field label="Paid Date"><Input type="date" value={form.paid_date} onChange={(e) => setF('paid_date', e.target.value)} className="bg-background" /></Field>
