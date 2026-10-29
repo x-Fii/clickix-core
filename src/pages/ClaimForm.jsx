@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle, FileEdit } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
@@ -72,7 +72,7 @@ export default function ClaimForm() {
     remarks: ''
   });
   const [items, setItems] = useState([
-  { item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]
+  { item_no: 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0 }]
   );
   const [offDayClaims, setOffDayClaims] = useState([
   { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]
@@ -282,7 +282,30 @@ export default function ClaimForm() {
     }));
   };
 
-  const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
+  const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0 }]);
+
+  const handleItemQuotationSelect = (i, qId) => {
+    const q = quotations.find((x) => x.id === qId);
+    setItems((prev) => prev.map((it, idx) => idx === i ? { ...it, quotation_id: qId, quotation_number: q?.quotation_number || '' } : it));
+  };
+
+  // Draft an empty quotation for a single item row, then link it to that item.
+  const handleCreateDraftQuotationForItem = async (i) => {
+    const genQNum = () => `QT-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 900 + 100)}`;
+    const newQ = await base44.entities.Quotation.create({
+      quotation_number: genQNum(),
+      quotation_date: format(new Date(), 'yyyy-MM-dd'),
+      status: 'draft',
+      client_name: form.client_name || '',
+      site_name: form.site_name || '',
+      items: []
+    });
+    setItems((prev) => prev.map((it, idx) => idx === i
+      ? { ...it, quotation_id: newQ.id, quotation_number: newQ.quotation_number }
+      : it));
+    queryClient.invalidateQueries({ queryKey: ['quotations'] });
+    toast.success(`Draft quotation ${newQ.quotation_number} created — fill it up in the Quotations section`);
+  };
 
   const updateOffDay = (i, field, val) => {
     setOffDayClaims((prev) => prev.map((item, idx) => idx !== i ? item : { ...item, [field]: val }));
@@ -595,6 +618,7 @@ export default function ClaimForm() {
                 <tr className="border-b border-border">
                   <th className="text-center pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-10 pr-2">#</th>
                   <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider pr-2">Description</th>
+                  <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-56 pr-2">Quotation</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20 pr-2">Qty</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-2">Unit Cost</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-2">Total</th>
@@ -613,6 +637,19 @@ export default function ClaimForm() {
                           <SelectTrigger className="bg-background text-xs h-8 w-32"><SelectValue placeholder="Type" /></SelectTrigger>
                           <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                         </Select>
+                      </div>
+                    </td>
+                    <td className="py-2 pr-2">
+                      <div className="flex gap-1 items-center">
+                        <Select value={item.quotation_id || undefined} onValueChange={(v) => handleItemQuotationSelect(i, v)}>
+                          <SelectTrigger className="bg-background text-xs h-8 flex-1"><SelectValue placeholder="Select quotation" /></SelectTrigger>
+                          <SelectContent className="max-h-60 overflow-y-auto">
+                            {quotations.slice(0, 100).map((q) => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 h-8 px-2" onClick={() => handleCreateDraftQuotationForItem(i)}>
+                          <FileEdit size={12} /> Add
+                        </Button>
                       </div>
                     </td>
                     <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" /></td>
@@ -895,7 +932,7 @@ export default function ClaimForm() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
                 <thead>
                   <tr style={{ background: '#f3f4f6' }}>
-                    {['#', 'Description', 'Category', 'Qty', 'Unit Cost', 'Total', 'Avg Total'].map((h, i) =>
+                    {['#', 'Description', 'Quotation', 'Qty', 'Unit Cost', 'Total', 'Avg Total'].map((h, i) =>
                     <th key={h} style={{ padding: '7px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
                     )}
                   </tr>
@@ -905,7 +942,7 @@ export default function ClaimForm() {
                   <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                       <td style={{ padding: '7px 10px', textAlign: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
                       <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.description || '—'}</td>
-                      <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.category || '—'}</td>
+                      <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.quotation_number || '—'}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.quantity}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.unit_cost) || 0).toFixed(2)}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: '700', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{(parseFloat(item.total) || 0).toFixed(2)}</td>
