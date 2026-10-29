@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, X, Save, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import SectionNamePicker from '@/components/SectionNamePicker';
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const AFFECTED_DEVICE_TYPES = [
   'CMS', 'PC', 'TV', 'HDMI Extender', 'Cable', 'Others'
@@ -457,16 +458,11 @@ export default function L1DraftEditor({ report }) {
           {sections.map((sec, si) => (
             <div key={si} className="border border-primary/30 rounded-lg p-2.5 space-y-2 bg-muted/10">
               <div className="flex items-center gap-2">
-                <Input
-                  list={`sr-license-options-${si}`}
-                  value={sec.section_name || ''}
-                  onChange={(e) => updateSectionName(si, e.target.value)}
-                  placeholder="Select license name"
-                  className="bg-background text-xs h-8 font-semibold flex-1"
+                <SectionNamePicker
+                  value={sec.section_name}
+                  options={licenseNameOptions}
+                  onChange={(name) => updateSectionName(si, name)}
                 />
-                <datalist id={`sr-license-options-${si}`}>
-                  {licenseNameOptions.map(name => <option key={name} value={name} />)}
-                </datalist>
                 {sections.length > 1 && (
                   <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                     <X size={14} />

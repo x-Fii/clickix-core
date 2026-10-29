@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, X, CheckCircle, AlertTriangle, Clock, Save, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import SectionNamePicker from '@/components/SectionNamePicker';
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 
 const AFFECTED_DEVICE_TYPES = [
@@ -120,8 +121,6 @@ function SearchableDropdown({ value, options, onValueChange, placeholder, disabl
 export default function NewReport() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [licenseSearch, setLicenseSearch] = useState({});
-  const [licenseOpen, setLicenseOpen] = useState({});
   const [form, setForm] = useState({
     running_number: '',
     l1_date: new Date().toISOString().split('T')[0],
@@ -618,62 +617,11 @@ const addAffectedDeviceItem = (sectionIndex, deviceType) => {
                 <div key={si} className="border border-primary/30 rounded-lg p-2.5 space-y-2 bg-muted/10">
                   {/* Section header */}
                   <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <div className="relative">
-                        <Input
-                          value={licenseSearch[si] ?? sec.section_name ?? ''}
-                          onClick={() => {
-                            setLicenseOpen(prev => ({ ...prev, [si]: !prev[si] }));
-                            setLicenseSearch(prev => ({ ...prev, [si]: prev[si] ?? '' }));
-                          }}
-                          onChange={e => {
-                            setLicenseSearch(prev => ({ ...prev, [si]: e.target.value }));
-                            setLicenseOpen(prev => ({ ...prev, [si]: true }));
-                            updateSectionName(si, e.target.value);
-                          }}
-                          onBlur={() => {
-                            setTimeout(() => {
-                              setLicenseSearch(prev => ({ ...prev, [si]: undefined }));
-                              setLicenseOpen(prev => ({ ...prev, [si]: false }));
-                            }, 150);
-                          }}
-                          placeholder="Select license name"
-                          className="bg-background text-xs h-8 font-semibold pr-9"
-                        />
-                        <ChevronDown
-                          size={16}
-                          className={`absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none transition-transform ${licenseOpen[si] ? 'rotate-180' : ''}`}
-                        />
-                      </div>
-                      {licenseOpen[si] && (
-                        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
-                          {licenseNameOptions.filter(name =>
-                            name.toLowerCase().includes((licenseSearch[si] || '').toLowerCase())
-                          ).length > 0 ? (
-                            licenseNameOptions
-                              .filter(name => name.toLowerCase().includes((licenseSearch[si] || '').toLowerCase()))
-                              .map(name => (
-                                <button
-                                  key={name}
-                                  type="button"
-                                  onClick={() => {
-                                    updateSectionName(si, name);
-                                    setLicenseSearch(prev => ({ ...prev, [si]: undefined }));
-                                    setLicenseOpen(prev => ({ ...prev, [si]: false }));
-                                  }}
-                                  className="w-full px-3 py-2 text-left text-xs hover:bg-muted"
-                                >
-                                  {name}
-                                </button>
-                              ))
-                          ) : (
-                            <div className="px-3 py-2 text-xs text-muted-foreground">
-                              No license found
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    <SectionNamePicker
+                      value={sec.section_name}
+                      options={licenseNameOptions}
+                      onChange={(name) => updateSectionName(si, name)}
+                    />
                     {affectedSections.length > 1 && (
                       <button type="button" onClick={() => removeSection(si)} className="text-muted-foreground hover:text-destructive shrink-0">
                         <X size={14} />
