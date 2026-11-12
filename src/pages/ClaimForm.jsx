@@ -594,7 +594,7 @@ export default function ClaimForm() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-center pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-10 pr-2">#</th>
-                  <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider pr-2">Description</th>
+                  <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider pr-2 w-[44%] min-w-[420px]">Description</th>
                   <th className="text-left pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-56 pr-2">Project Reference</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-20 pr-2">Qty</th>
                   <th className="text-right pb-2 text-xs font-mono text-muted-foreground uppercase tracking-wider w-28 pr-2">Unit Cost</th>
@@ -609,7 +609,7 @@ export default function ClaimForm() {
                     <td className="py-2 pr-2 text-center text-xs text-muted-foreground font-mono">{i + 1}</td>
                     <td className="py-2 pr-2">
                       <div className="flex gap-1 items-center">
-                        <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8 flex-1" placeholder="Item description" />
+                        <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8 flex-1 min-w-[240px]" placeholder="Item description" />
                         <Select value={CATEGORIES.includes(item.category) ? item.category : undefined} onValueChange={(v) => updateItem(i, 'category', v)}>
                           <SelectTrigger className="bg-background text-xs h-8 w-32"><SelectValue placeholder="Type" /></SelectTrigger>
                           <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
