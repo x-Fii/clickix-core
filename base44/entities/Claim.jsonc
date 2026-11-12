@@ -115,6 +115,12 @@
           "category": {
             "type": "string"
           },
+          "quotation_id": {
+            "type": "string"
+          },
+          "quotation_number": {
+            "type": "string"
+          },
           "quantity": {
             "type": "number"
           },
