@@ -32,42 +32,106 @@ function buildPDF(title, data, columns) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 32;
-  let y = 40;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text(title, margin, y);
-  y += 18;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text(`Generated ${new Date().toLocaleString()} · ${data.length} records`, margin, y);
-  y += 16;
-
   const tableW = pageW - margin * 2;
-  const colW = tableW / columns.length;
-  const rowH = 18;
+  const rowH = 20;
+  const cellPad = 5;
 
-  doc.setFillColor(230, 232, 236);
-  doc.rect(margin, y, tableW, rowH, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  columns.forEach((c, i) => {
-    doc.text(String(c.header || ''), margin + i * colW + 4, y + 12, { maxWidth: colW - 8 });
+  // Column widths weighted by how much text each column actually holds
+  const weights = columns.map((c) => {
+    let maxLen = String(c.header || '').length;
+    data.slice(0, 300).forEach((row) => {
+      const v = typeof c.accessor === 'function' ? c.accessor(row) : row[c.accessor];
+      maxLen = Math.max(maxLen, String(v == null ? '' : v).length);
+    });
+    return Math.min(Math.max(maxLen, 7), 45);
   });
-  y += rowH;
+  const weightTotal = weights.reduce((s, w) => s + w, 0) || 1;
+  const raw = weights.map((w) => Math.max(34, (tableW * w) / weightTotal));
+  const rawTotal = raw.reduce((s, w) => s + w, 0);
+  const widths = raw.map((w) => (w * tableW) / rawTotal);
+
+  // Single-line cells: text that does not fit is trimmed with an ellipsis
+  const fit = (value, maxW) => {
+    let s = String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+    if (doc.getTextWidth(s) <= maxW) return s;
+    while (s.length > 1 && doc.getTextWidth(`${s}…`) > maxW) s = s.slice(0, -1);
+    return `${s.trimEnd()}…`;
+  };
+
+  const drawHeaderRow = (startY, first) => {
+    let y = startY;
+    if (first) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(17, 24, 39);
+      doc.text(title, margin, y);
+      y += 14;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(107, 114, 128);
+      doc.text(`Generated ${new Date().toLocaleString()} · ${data.length} records`, margin, y);
+      y += 16;
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(107, 114, 128);
+      doc.text(`${title} (continued)`, margin, y);
+      y += 10;
+    }
+    doc.setFillColor(238, 241, 246);
+    doc.rect(margin, y, tableW, rowH, 'F');
+    doc.setTextColor(55, 65, 81);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    let x = margin;
+    columns.forEach((c, i) => {
+      const w = widths[i];
+      const label = fit(c.header, w - cellPad * 2);
+      if (c.align === 'right') doc.text(label, x + w - cellPad, y + 13, { align: 'right' });
+      else doc.text(label, x + cellPad, y + 13);
+      x += w;
+    });
+    doc.setDrawColor(209, 213, 219);
+    doc.line(margin, y + rowH, margin + tableW, y + rowH);
+    return y + rowH;
+  };
+
+  let y = drawHeaderRow(40, true);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
 
   data.forEach((row, ri) => {
-    if (y > pageH - 30) { doc.addPage(); y = 40; }
-    if (ri % 2 === 1) { doc.setFillColor(248, 249, 251); doc.rect(margin, y, tableW, rowH, 'F'); }
+    if (y + rowH > pageH - margin - 14) {
+      doc.addPage();
+      y = drawHeaderRow(40, false);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+    }
+    if (ri % 2 === 1) {
+      doc.setFillColor(249, 250, 251);
+      doc.rect(margin, y, tableW, rowH, 'F');
+    }
+    doc.setTextColor(31, 41, 55);
+    let x = margin;
     columns.forEach((c, i) => {
+      const w = widths[i];
       const v = typeof c.accessor === 'function' ? c.accessor(row) : row[c.accessor];
-      const s = String(v == null ? '' : v).replace(/\n/g, ' ');
-      doc.text(s.slice(0, 60), margin + i * colW + 4, y + 12, { maxWidth: colW - 8 });
+      const text = fit(v, w - cellPad * 2);
+      if (c.align === 'right') doc.text(text, x + w - cellPad, y + 13, { align: 'right' });
+      else doc.text(text, x + cellPad, y + 13);
+      x += w;
     });
     y += rowH;
   });
+
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(156, 163, 175);
+    doc.text(`Page ${p} of ${pageCount}`, pageW - margin, pageH - 16, { align: 'right' });
+  }
 
   return doc;
 }

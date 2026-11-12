@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus, X, Save, Download, Send, GitMerge, FileEdit, CheckCircle, XCircle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { exportElementToPdf } from '@/lib/pdfPages';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
 
@@ -147,29 +148,12 @@ export default function PRForm() {
 
   const handleExportPDF = async () => {
     toast.info('Generating PDF...');
-    const { default: jsPDF } = await import('jspdf');
-    const { default: html2canvas } = await import('html2canvas');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pw = pdf.internal.pageSize.getWidth();
-    const ph = pdf.internal.pageSize.getHeight();
     const wrapper = document.getElementById('pr-pdf-area');
-    wrapper.style.display = 'block';
+    if (wrapper) wrapper.style.display = 'block';
     await new Promise(r => setTimeout(r, 100));
     const el = document.getElementById('pr-pdf-content');
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
-    wrapper.style.display = 'none';
-    const imgData = canvas.toDataURL('image/png');
-    const imgW = pw;
-    const imgH = (canvas.height * imgW) / canvas.width;
-    let yPos = 0;
-    let pageCount = 0;
-    while (yPos < imgH) {
-      if (pageCount > 0) pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH);
-      yPos += ph;
-      pageCount++;
-    }
-    pdf.save(`${form.pr_number}.pdf`);
+    await exportElementToPdf({ el, filename: `${form.pr_number}.pdf` });
+    if (wrapper) wrapper.style.display = 'none';
     toast.success('PDF exported');
   };
 

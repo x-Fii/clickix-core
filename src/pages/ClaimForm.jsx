@@ -11,6 +11,7 @@ import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle } from '
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
+import { exportElementToPdf } from '@/lib/pdfPages';
 
 const CATEGORIES = ['Hardware', 'Software', 'Networking', 'Cabling', 'Consumables', 'Services', 'Other'];
 const PAYMENT_TERMS = ['30 Days', '60 Days', '90 Days', 'COD', 'Advance Payment', 'Upon Delivery'];
@@ -326,41 +327,8 @@ export default function ClaimForm() {
 
   const handleExportPDF = async () => {
     toast.info('Generating PDF...');
-    const { default: jsPDF } = await import('jspdf');
-    const { default: html2canvas } = await import('html2canvas');
-
-    // Initialize standard A4 landscape/portrait sizing properties
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pw = pdf.internal.pageSize.getWidth();
-    const ph = pdf.internal.pageSize.getHeight();
-
     const el = document.getElementById('claim-pdf-content');
-    // Wait for images to load before capturing
-    const imgs = Array.from(el.querySelectorAll('img'));
-    await Promise.all(imgs.map((img) => img.complete ? Promise.resolve() : new Promise((res) => { img.onload = res; img.onerror = res; })));
-    await new Promise((r) => setTimeout(r, 100));
-    // Re-applied the explicit width threshold to maintain consistent text scaling across pages
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794 });
-
-    const imgData = canvas.toDataURL('image/png');
-    const imgW = pw;
-    const imgH = canvas.height * imgW / canvas.width;
-
-    let yPos = 0;
-    let pageCount = 0;
-
-    // Safely loop and distribute the image chunks down the pages
-    while (yPos < imgH) {
-      if (pageCount > 0) {
-        pdf.addPage();
-      }
-      // 'FAST' memory allocation avoids canvas doubling and limits total document size
-      pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH, undefined, 'FAST');
-      yPos += ph;
-      pageCount++;
-    }
-
-    pdf.save(`${form.claim_number}.pdf`);
+    await exportElementToPdf({ el, filename: `${form.claim_number}.pdf` });
     toast.success('PDF exported');
   };
 
