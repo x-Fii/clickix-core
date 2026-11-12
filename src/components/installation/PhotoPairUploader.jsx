@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Upload, X } from 'lucide-react';
 
-export default function PhotoPairUploader({ label, value = [], onChange, max = 2 }) {
+export default function PhotoPairUploader({ label, value = [], onChange, max }) {
   const [uploading, setUploading] = useState(false);
   const photos = value || [];
+  const limit = max ?? Infinity;
 
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const remaining = Math.max(0, max - photos.length);
-    const toUpload = files.slice(0, remaining);
+    const toUpload = files.slice(0, Number.isFinite(limit) ? Math.max(0, limit - photos.length) : files.length);
     if (!toUpload.length) return;
     setUploading(true);
     try {
@@ -25,7 +25,7 @@ export default function PhotoPairUploader({ label, value = [], onChange, max = 2
   };
 
   const remove = (i) => onChange(photos.filter((_, j) => j !== i));
-  const full = photos.length >= max;
+  const full = Number.isFinite(limit) && photos.length >= limit;
 
   return (
     <div>
@@ -49,7 +49,7 @@ export default function PhotoPairUploader({ label, value = [], onChange, max = 2
             <input type="file" accept="image/*" multiple className="hidden" disabled={uploading} onChange={handleUpload} />
           </label>
         )}
-        <p className="text-[10px] text-muted-foreground self-end">{photos.length}/{max} photos</p>
+        <p className="text-[10px] text-muted-foreground self-end">{Number.isFinite(limit) ? `${photos.length}/${limit}` : photos.length} photos</p>
       </div>
     </div>
   );
