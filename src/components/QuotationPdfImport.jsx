@@ -31,7 +31,7 @@ const QUOTATION_SCHEMA = {
   },
 };
 
-const CODE_SCHEMA = {
+const DETAILS_SCHEMA = {
   type: 'object',
   properties: {
     items: {
@@ -41,6 +41,7 @@ const CODE_SCHEMA = {
         properties: {
           index: { type: 'number' },
           item_code: { type: 'string' },
+          item_type: { type: 'string' },
         },
       },
     },
@@ -52,8 +53,13 @@ const readCode = (it) => {
   return String(raw).trim();
 };
 
-// Second pass: re-read the PDF asking only for the code column, for rows the first pass left blank.
-async function fillMissingCodes(items, fileUri) {
+const readType = (it) => {
+  const raw = it.item_type ?? it.type ?? it.itemType ?? it.category ?? it.uom ?? it.unit ?? '';
+  return String(raw).trim();
+};
+
+// Second pass: re-read the PDF for the code and type columns of rows the first pass left blank.
+async function fillMissingDetails(items, fileUri) {
   const rows = items.map((it, index) => ({
     index,
     description: it.description,
@@ -63,17 +69,19 @@ async function fillMissingCodes(items, fileUri) {
   }));
 
   const res = await base44.integrations.Core.InvokeLLM({
-    prompt: `This PDF is a supplier quotation with a table of line items. For every row listed below, return the item / part code printed in that row's code column (examples: "60020691", "MSV-042", "TV-65-4K"). Use the printed code exactly as written. Never use the row number as a code, and return an empty string when a row has no printed code. Return one entry per row, repeating the given index exactly.\n\nRows:\n${JSON.stringify(rows)}`,
+    prompt: `This PDF is a supplier quotation with a table of line items. For every row listed below return:\n- item_code: the product / item / part code printed in that row's code column, exactly as written (examples: "60020691", "MSV-042", "TV-65-4K"). Never the row number.\n- item_type: the type, category or unit printed for that row (examples: Hardware, Software, Services, Unit).\nUse an empty string when a row does not print one. Return one entry per row, repeating the given index exactly.\n\nRows:\n${JSON.stringify(rows)}`,
     file_urls: [fileUri],
-    response_json_schema: CODE_SCHEMA,
+    response_json_schema: DETAILS_SCHEMA,
   });
 
   (res?.items || []).forEach(entry => {
     const idx = Number(entry?.index);
+    const target = Number.isInteger(idx) ? items[idx] : null;
+    if (!target) return;
     const code = String(entry?.item_code || '').trim();
-    if (Number.isInteger(idx) && items[idx] && !items[idx].item_code && code) {
-      items[idx].item_code = code;
-    }
+    const type = String(entry?.item_type || '').trim();
+    if (!target.item_code && code) target.item_code = code;
+    if (!target.item_type && type) target.item_type = type;
   });
 }
 
@@ -105,7 +113,7 @@ export default function QuotationPdfImport({ onImported, hasItems }) {
           const unitCost = Number(it.unit_cost) || 0;
           return {
             item_code: readCode(it),
-            item_type: it.item_type || '',
+            item_type: readType(it),
             description: it.description || '',
             quantity,
             unit_cost: unitCost,
@@ -117,12 +125,14 @@ export default function QuotationPdfImport({ onImported, hasItems }) {
       if (!items.length) throw new Error('No line items found in this PDF');
 
       let missingCodes = items.filter(it => !it.item_code).length;
-      if (missingCodes) {
+      let missingTypes = items.filter(it => !it.item_type).length;
+      if (missingCodes || missingTypes) {
         try {
-          await fillMissingCodes(items, file_uri);
+          await fillMissingDetails(items, file_uri);
           missingCodes = items.filter(it => !it.item_code).length;
+          missingTypes = items.filter(it => !it.item_type).length;
         } catch {
-          // keep the items without codes rather than failing the whole import
+          // keep the items as read rather than failing the whole import
         }
       }
 
@@ -136,9 +146,11 @@ export default function QuotationPdfImport({ onImported, hasItems }) {
         },
       });
 
-      toast.success(
-        `${items.length} line item${items.length === 1 ? '' : 's'} imported${missingCodes ? `, ${missingCodes} without a code` : ''}`,
-      );
+      const gaps = [
+        missingCodes ? `${missingCodes} without a code` : '',
+        missingTypes ? `${missingTypes} without a type` : '',
+      ].filter(Boolean).join(', ');
+      toast.success(`${items.length} line item${items.length === 1 ? '' : 's'} imported${gaps ? ` (${gaps})` : ''}`);
     } catch (err) {
       toast.error(err?.message || 'Import failed');
     } finally {
