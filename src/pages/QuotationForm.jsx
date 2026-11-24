@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, X, Save, Download, FilePlus2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportElementToPdf } from '@/lib/pdfPages';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
+import QuotationPdfImport from '@/components/QuotationPdfImport';
 import { format } from 'date-fns';
 
 // Combobox-style input: pick from list or type freely
@@ -231,7 +232,7 @@ export default function QuotationForm() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto pb-20">
-      <div className="flex items-center justify-between mb-8 gap-4">
+      <div className="flex flex-wrap items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate('/quotations')}><ArrowLeft size={16} className="mr-2" /> Back</Button>
           <div>
@@ -239,16 +240,22 @@ export default function QuotationForm() {
             <p className="text-xs text-muted-foreground mt-0.5">{form.quotation_number}</p>
           </div>
         </div>
-        {isEdit && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleConvertToPR} className="gap-2">
-              <FilePlus2 size={14} /> Convert to PR
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
-              <Download size={14} /> PDF
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <QuotationPdfImport
+            hasItems={items.some(it => it.description || it.item_code)}
+            onImported={imported => setItems(imported)}
+          />
+          {isEdit && (
+            <>
+              <Button variant="outline" size="sm" onClick={handleConvertToPR} className="gap-2">
+                <FilePlus2 size={14} /> Convert to PR
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
+                <Download size={14} /> PDF
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="space-y-6">
