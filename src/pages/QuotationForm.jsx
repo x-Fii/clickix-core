@@ -230,6 +230,17 @@ export default function QuotationForm() {
     navigate(`/pr/${created.id}`);
   };
 
+  // Bring the scanned quotation's number, client and project (site) into the header fields.
+  const handlePdfImported = ({ items: importedItems, header }) => {
+    setItems(importedItems);
+    setForm(f => ({
+      ...f,
+      quotation_number: header.quotation_number || f.quotation_number,
+      client_name: f.client_name || header.client_name,
+      site_name: f.site_name || header.site_name || header.project_name,
+    }));
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto pb-20">
       <div className="flex flex-wrap items-center justify-between mb-8 gap-4">
@@ -243,7 +254,7 @@ export default function QuotationForm() {
         <div className="flex items-center gap-2">
           <QuotationPdfImport
             hasItems={items.some(it => it.description || it.item_code)}
-            onImported={imported => setItems(imported)}
+            onImported={handlePdfImported}
           />
           {isEdit && (
             <>

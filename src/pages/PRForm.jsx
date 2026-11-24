@@ -125,6 +125,12 @@ export default function PRForm() {
     setItems(prev => prev.map((it, idx) => idx === i
       ? { ...it, quotation_id: qId, quotation_number: q?.quotation_number || '' }
       : it));
+    // Carry the linked quotation's client and project (site) onto the PR header when empty.
+    setForm(f => ({
+      ...f,
+      client_name: f.client_name || q?.client_name || '',
+      site_name: f.site_name || q?.site_name || '',
+    }));
   };
 
   const updateItem = (i, field, val) => {

@@ -4,9 +4,13 @@ import { Button } from '@/components/ui/button';
 import { FileUp, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const LINE_ITEM_SCHEMA = {
+const QUOTATION_SCHEMA = {
   type: 'object',
   properties: {
+    quotation_number: { type: 'string' },
+    client_name: { type: 'string' },
+    site_name: { type: 'string' },
+    project_name: { type: 'string' },
     items: {
       type: 'array',
       items: {
@@ -24,7 +28,7 @@ const LINE_ITEM_SCHEMA = {
   },
 };
 
-// Reads a supplier's PDF quotation and turns its line items into quotation items.
+// Reads a supplier's PDF quotation and returns its header details and line items.
 export default function QuotationPdfImport({ onImported, hasItems }) {
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
@@ -40,12 +44,13 @@ export default function QuotationPdfImport({ onImported, hasItems }) {
       const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
       const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
         file_url: file_uri,
-        json_schema: LINE_ITEM_SCHEMA,
+        json_schema: QUOTATION_SCHEMA,
       });
       if (result?.status !== 'success') throw new Error(result?.details || 'Could not read the PDF');
 
-      const raw = Array.isArray(result.output) ? result.output : (result.output?.items || []);
-      const imported = raw
+      const out = Array.isArray(result.output) ? { items: result.output } : (result.output || {});
+      const rawItems = out.items || [];
+      const items = rawItems
         .filter(it => it && (it.description || it.item_code))
         .map(it => {
           const quantity = Number(it.quantity) || 0;
@@ -61,9 +66,18 @@ export default function QuotationPdfImport({ onImported, hasItems }) {
           };
         });
 
-      if (!imported.length) throw new Error('No line items found in this PDF');
-      onImported(imported);
-      toast.success(`${imported.length} line item${imported.length === 1 ? '' : 's'} imported`);
+      if (!items.length) throw new Error('No line items found in this PDF');
+
+      onImported({
+        items,
+        header: {
+          quotation_number: (out.quotation_number || '').trim(),
+          client_name: (out.client_name || '').trim(),
+          site_name: (out.site_name || '').trim(),
+          project_name: (out.project_name || '').trim(),
+        },
+      });
+      toast.success(`${items.length} line item${items.length === 1 ? '' : 's'} imported`);
     } catch (err) {
       toast.error(err?.message || 'Import failed');
     } finally {
