@@ -7,17 +7,20 @@ import { toast } from 'sonner';
 const QUOTATION_SCHEMA = {
   type: 'object',
   properties: {
-    quotation_number: { type: 'string' },
-    client_name: { type: 'string' },
+    quotation_number: { type: 'string', description: 'The quotation / reference number printed on the document' },
+    client_name: { type: 'string', description: 'The client or company the quotation is addressed to' },
     site_name: { type: 'string' },
-    project_name: { type: 'string' },
+    project_name: { type: 'string', description: 'The project name printed on the quotation, if any' },
     items: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
-          item_code: { type: 'string' },
-          item_type: { type: 'string' },
+          item_code: {
+            type: 'string',
+            description: 'The exact product / item / part code printed in the code column of that row, for example "60020691" or "MSV-042". Never the row number.',
+          },
+          item_type: { type: 'string', description: 'The category or unit printed for the row, for example Hardware, Software, Services, Unit' },
           description: { type: 'string' },
           quantity: { type: 'number' },
           unit_cost: { type: 'number' },
@@ -27,6 +30,52 @@ const QUOTATION_SCHEMA = {
     },
   },
 };
+
+const CODE_SCHEMA = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          index: { type: 'number' },
+          item_code: { type: 'string' },
+        },
+      },
+    },
+  },
+};
+
+const readCode = (it) => {
+  const raw = it.item_code ?? it.code ?? it.itemCode ?? it.part_no ?? it.part_number ?? it.sku ?? it.item_ref ?? '';
+  return String(raw).trim();
+};
+
+// Second pass: re-read the PDF asking only for the code column, for rows the first pass left blank.
+async function fillMissingCodes(items, fileUri) {
+  const rows = items.map((it, index) => ({
+    index,
+    description: it.description,
+    quantity: it.quantity,
+    unit_cost: it.unit_cost,
+    total: it.total,
+  }));
+
+  const res = await base44.integrations.Core.InvokeLLM({
+    prompt: `This PDF is a supplier quotation with a table of line items. For every row listed below, return the item / part code printed in that row's code column (examples: "60020691", "MSV-042", "TV-65-4K"). Use the printed code exactly as written. Never use the row number as a code, and return an empty string when a row has no printed code. Return one entry per row, repeating the given index exactly.\n\nRows:\n${JSON.stringify(rows)}`,
+    file_urls: [fileUri],
+    response_json_schema: CODE_SCHEMA,
+  });
+
+  (res?.items || []).forEach(entry => {
+    const idx = Number(entry?.index);
+    const code = String(entry?.item_code || '').trim();
+    if (Number.isInteger(idx) && items[idx] && !items[idx].item_code && code) {
+      items[idx].item_code = code;
+    }
+  });
+}
 
 // Reads a supplier's PDF quotation and returns its header details and line items.
 export default function QuotationPdfImport({ onImported, hasItems }) {
@@ -49,14 +98,13 @@ export default function QuotationPdfImport({ onImported, hasItems }) {
       if (result?.status !== 'success') throw new Error(result?.details || 'Could not read the PDF');
 
       const out = Array.isArray(result.output) ? { items: result.output } : (result.output || {});
-      const rawItems = out.items || [];
-      const items = rawItems
-        .filter(it => it && (it.description || it.item_code))
+      const items = (out.items || [])
+        .filter(it => it && (it.description || readCode(it)))
         .map(it => {
           const quantity = Number(it.quantity) || 0;
           const unitCost = Number(it.unit_cost) || 0;
           return {
-            item_code: it.item_code || '',
+            item_code: readCode(it),
             item_type: it.item_type || '',
             description: it.description || '',
             quantity,
@@ -68,6 +116,16 @@ export default function QuotationPdfImport({ onImported, hasItems }) {
 
       if (!items.length) throw new Error('No line items found in this PDF');
 
+      let missingCodes = items.filter(it => !it.item_code).length;
+      if (missingCodes) {
+        try {
+          await fillMissingCodes(items, file_uri);
+          missingCodes = items.filter(it => !it.item_code).length;
+        } catch {
+          // keep the items without codes rather than failing the whole import
+        }
+      }
+
       onImported({
         items,
         header: {
@@ -77,7 +135,10 @@ export default function QuotationPdfImport({ onImported, hasItems }) {
           project_name: (out.project_name || '').trim(),
         },
       });
-      toast.success(`${items.length} line item${items.length === 1 ? '' : 's'} imported`);
+
+      toast.success(
+        `${items.length} line item${items.length === 1 ? '' : 's'} imported${missingCodes ? `, ${missingCodes} without a code` : ''}`,
+      );
     } catch (err) {
       toast.error(err?.message || 'Import failed');
     } finally {
