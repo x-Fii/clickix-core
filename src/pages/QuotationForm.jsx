@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Plus, X, Save, Download } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, FilePlus2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportElementToPdf } from '@/lib/pdfPages';
+import { fetchNextRunningNumber } from '@/lib/runningNumber';
 import { format } from 'date-fns';
 
 // Combobox-style input: pick from list or type freely
@@ -178,6 +179,56 @@ export default function QuotationForm() {
     toast.success('PDF exported');
   };
 
+  // Copy every quotation line item into a new purchase requisition, unchanged.
+  const handleConvertToPR = async () => {
+    if (!isEdit) {
+      toast.error('Save the quotation before converting it');
+      return;
+    }
+    const prItems = items
+      .filter(it => it.description || Number(it.quantity) || Number(it.unit_cost))
+      .map((it, idx) => ({
+        item_no: idx + 1,
+        description: it.description || '',
+        category: it.item_type || '',
+        quotation_id: id,
+        quotation_number: form.quotation_number || '',
+        quantity: Number(it.quantity) || 0,
+        unit_cost: Number(it.unit_cost) || 0,
+        total: Number(it.total) || 0,
+      }));
+    if (!prItems.length) {
+      toast.error('This quotation has no line items to convert');
+      return;
+    }
+    const yy = String(new Date().getFullYear()).slice(-2);
+    const prNumber = await fetchNextRunningNumber('PurchaseRequisition', 'pr_number', `PR${yy}-`);
+    const subtotal = prItems.reduce((s, it) => s + it.total, 0);
+    const created = await base44.entities.PurchaseRequisition.create({
+      pr_number: prNumber,
+      pr_date: format(new Date(), 'yyyy-MM-dd'),
+      status: 'draft',
+      quotation_id: id,
+      quotation_number: form.quotation_number || '',
+      client_name: form.client_name || '',
+      site_name: form.site_name || '',
+      sr_id: form.sr_id || '',
+      sr_number: form.sr_number || '',
+      sr_ids: form.sr_ids || [],
+      sr_numbers: form.sr_numbers || [],
+      ir_id: form.ir_id || '',
+      ir_number: form.ir_number || '',
+      ir_ids: form.ir_ids || [],
+      ir_numbers: form.ir_numbers || [],
+      items: prItems,
+      subtotal,
+      grand_total: subtotal,
+    });
+    queryClient.invalidateQueries({ queryKey: ['purchase-requisitions'] });
+    toast.success(`Purchase requisition ${created.pr_number} created`);
+    navigate(`/pr/${created.id}`);
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto pb-20">
       <div className="flex items-center justify-between mb-8 gap-4">
@@ -189,9 +240,14 @@ export default function QuotationForm() {
           </div>
         </div>
         {isEdit && (
-          <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
-            <Download size={14} /> PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleConvertToPR} className="gap-2">
+              <FilePlus2 size={14} /> Convert to PR
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
+              <Download size={14} /> PDF
+            </Button>
+          </div>
         )}
       </div>
 

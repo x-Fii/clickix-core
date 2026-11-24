@@ -339,11 +339,14 @@ export default function PRForm() {
                     <td className="py-2 pr-2">
                       <div className="flex gap-1 items-center">
                         <Input value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8 flex-1" placeholder="Item description" />
-                        <Select value={['Service', 'Hardware'].includes(item.category) ? item.category : undefined} onValueChange={v => updateItem(i, 'category', v)}>
+                        <Select value={item.category || undefined} onValueChange={v => updateItem(i, 'category', v)}>
                           <SelectTrigger className="bg-background text-xs h-8 w-28"><SelectValue placeholder="Type" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Service">Service</SelectItem>
                             <SelectItem value="Hardware">Hardware</SelectItem>
+                            {item.category && !['Service', 'Hardware'].includes(item.category) && (
+                              <SelectItem value={item.category}>{item.category}</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
