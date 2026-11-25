@@ -19,6 +19,13 @@ import { propagateSiteChange } from '@/lib/propagateChanges';
 
 const MY_STATES = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis', 'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'];
 const REGIONS = ['Central', 'Northern', 'Southern', 'East Coast', 'East Malaysia'];
+const REGION_STATES = {
+  'Central': ['Kuala Lumpur', 'Putrajaya', 'Selangor', 'Negeri Sembilan'],
+  'Northern': ['Perak', 'Pulau Pinang', 'Kedah', 'Perlis'],
+  'Southern': ['Johor', 'Melaka'],
+  'East Coast': ['Kelantan', 'Terengganu', 'Pahang'],
+  'East Malaysia': ['Sabah', 'Sarawak', 'Labuan'],
+};
 
 const SITE_STATUSES = ['active', 'inactive', 're-instating', 're-instated'];
 const STATUS_STYLES = {
@@ -34,6 +41,7 @@ export default function Sites() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
+  const [siteRows, setSiteRows] = useState([{ site_name: '', site_location: '' }]);
   const [editId, setEditId] = useState(null);
   const [clientFilter, setClientFilter] = useState('all');
   const [regionFilter, setRegionFilter] = useState('all');
@@ -53,8 +61,9 @@ export default function Sites() {
   const { data: installationReports = [] } = useQuery({ queryKey: ['installation-reports'], queryFn: () => base44.entities.InstallationReport.list() });
 
   const save = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async ({ rows, shared }) => {
       if (editId) {
+        const data = { ...shared, site_name: rows[0].site_name.trim(), site_location: rows[0].site_location || '' };
         const old = sites.find((s) => s.id === editId) || {};
         await base44.entities.Site.update(editId, data);
         const nameChanged = old.site_name && old.site_name !== data.site_name;
@@ -63,7 +72,9 @@ export default function Sites() {
           await propagateSiteChange(editId, old.site_name, data.site_name, old.site_location, data.site_location);
         }
       } else {
-        await base44.entities.Site.create(data);
+        await base44.entities.Site.bulkCreate(
+          rows.map((r) => ({ ...shared, site_name: r.site_name.trim(), site_location: r.site_location || '' }))
+        );
       }
     },
     onSuccess: () => {
@@ -74,13 +85,21 @@ export default function Sites() {
       queryClient.invalidateQueries({ queryKey: ['purchase-requisitions'] });
       queryClient.invalidateQueries({ queryKey: ['claims'] });
       setOpen(false);
-      toast.success(editId ? 'Site updated' : 'Site added');
+      toast.success(editId ? 'Site updated' : 'Site(s) added');
     },
   });
 
-  const openNew = () => {setForm(empty);setEditId(null);setOpen(true);};
-  const openEdit = (s) => {setForm({ ...s, status: Array.isArray(s.status) ? s.status : (s.status ? [s.status] : []) });setEditId(s.id);setOpen(true);};
+  const openNew = () => {setForm(empty);setSiteRows([{ site_name: '', site_location: '' }]);setEditId(null);setOpen(true);};
+  const openEdit = (s) => {
+    setForm({ ...s, status: Array.isArray(s.status) ? s.status : (s.status ? [s.status] : []) });
+    setSiteRows([{ site_name: s.site_name || '', site_location: s.site_location || '' }]);
+    setEditId(s.id);
+    setOpen(true);
+  };
   const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const setRow = (i, k, v) => setSiteRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
+  const addRow = () => setSiteRows((p) => [...p, { site_name: '', site_location: '' }]);
+  const removeRow = (i) => setSiteRows((p) => p.filter((_, idx) => idx !== i));
 
   const handleClientChange = (id) => {
     const c = clients.find((c) => c.id === id);
@@ -88,9 +107,22 @@ export default function Sites() {
   };
 
   const handleSave = () => {
-    if (!form.site_name.trim()) {toast.error('Site name is required');return;}
+    const rows = siteRows.filter((r) => r.site_name.trim());
+    if (!rows.length) {toast.error('Site name is required');return;}
     if (!form.client_id) {toast.error('Please select a client');return;}
-    save.mutate(form);
+    save.mutate({
+      rows,
+      shared: {
+        client_id: form.client_id,
+        client_name: form.client_name,
+        region: form.region,
+        state: form.state,
+        status: form.status || [],
+        pic_name: form.pic_name,
+        pic_phone: form.pic_phone,
+        notes: form.notes,
+      },
+    });
   };
 
   const siteStatuses = (s) => (Array.isArray(s.status) ? s.status : (s.status ? [s.status] : []));
@@ -312,7 +344,7 @@ export default function Sites() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-card border-border max-w-md">
+        <DialogContent className="bg-card border-border max-w-lg">
           <DialogHeader><DialogTitle>{editId ? 'Edit Site' : 'Add New Site'}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
             <div className="space-y-1.5">
@@ -324,17 +356,19 @@ export default function Sites() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">State</Label>
-                <Select value={form.state || undefined} onValueChange={(v) => setF('state', v)}>
-                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select state..." /></SelectTrigger>
-                  <SelectContent className="max-h-60">{MY_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                <Label className="text-xs text-muted-foreground">Region</Label>
+                <Select
+                  value={form.region || undefined}
+                  onValueChange={(v) => setForm((f) => ({ ...f, region: v, state: (REGION_STATES[v] || []).includes(f.state) ? f.state : '' }))}>
+                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select region..." /></SelectTrigger>
+                  <SelectContent>{REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Region</Label>
-                <Select value={form.region || undefined} onValueChange={(v) => setF('region', v)}>
-                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select region..." /></SelectTrigger>
-                  <SelectContent>{REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                <Label className="text-xs text-muted-foreground">State</Label>
+                <Select value={form.state || undefined} onValueChange={(v) => setF('state', v)} disabled={!form.region}>
+                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder={form.region ? 'Select state...' : 'Select region first'} /></SelectTrigger>
+                  <SelectContent className="max-h-60">{(REGION_STATES[form.region] || MY_STATES).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
@@ -356,12 +390,40 @@ export default function Sites() {
                 </select>
               </div>
             </div>
-            {[['Site Name', 'site_name', true], ['Site Location', 'site_location'], ['PIC Name', 'pic_name'], ['PIC Phone', 'pic_phone']].map(([label, key, req]) =>
-            <div key={key} className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">{label}{req && <span className="text-red-400 ml-1">*</span>}</Label>
-                <Input value={form[key]} onChange={(e) => setF(key, e.target.value)} className="bg-background" />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground">
+                  Site(s) <span className="text-red-400 ml-0.5">*</span>
+                  {!editId && <span className="text-muted-foreground/60 ml-1">— add as many outlets as needed in this state</span>}
+                </Label>
+                {!editId &&
+                <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={addRow}>
+                    <Plus size={11} /> Add Site
+                  </Button>
+                }
               </div>
-            )}
+              <div className="space-y-2">
+                {siteRows.map((row, i) =>
+                <div key={i} className="flex items-center gap-2">
+                    <Input value={row.site_name} onChange={(e) => setRow(i, 'site_name', e.target.value)} placeholder={`Site name ${i + 1}`} className="bg-background flex-1" />
+                    <Input value={row.site_location} onChange={(e) => setRow(i, 'site_location', e.target.value)} placeholder="Location" className="bg-background flex-1" />
+                    {!editId && siteRows.length > 1 &&
+                    <button type="button" onClick={() => removeRow(i)} className="text-muted-foreground hover:text-destructive shrink-0"><X size={13} /></button>
+                    }
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">PIC Name</Label>
+                <Input value={form.pic_name} onChange={(e) => setF('pic_name', e.target.value)} className="bg-background" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">PIC Phone</Label>
+                <Input value={form.pic_phone} onChange={(e) => setF('pic_phone', e.target.value)} className="bg-background" />
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Notes</Label>
               <Textarea value={form.notes} onChange={(e) => setF('notes', e.target.value)} className="bg-background resize-none" rows={2} />
