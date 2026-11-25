@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle, FileDown, Paperclip, FileSpreadsheet, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle, FileDown, Paperclip, FileSpreadsheet, GripVertical } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
@@ -42,6 +43,9 @@ const STATUS_COLORS = {
   paid: 'bg-teal-500/15 text-teal-400 border-teal-500/25',
   draft: 'bg-slate-500/15 text-slate-400 border-slate-500/25'
 };
+
+const itemKey = () => `it-${Math.random().toString(36).slice(2, 9)}`;
+const withItemKeys = (list) => list.map((it) => (it._key ? it : { ...it, _key: itemKey() }));
 
 export default function ClaimForm() {
   const { id } = useParams();
@@ -85,8 +89,8 @@ export default function ClaimForm() {
     payment_reference: '',
     remarks: ''
   });
-  const [items, setItems] = useState([
-  { item_no: 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0 }]
+  const [items, setItems] = useState(withItemKeys([
+  { item_no: 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0 }])
   );
   const [offDayClaims, setOffDayClaims] = useState([
   { work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]
@@ -125,7 +129,7 @@ export default function ClaimForm() {
         quotation_ids: Array.isArray(c.quotation_ids) ? c.quotation_ids : (c.quotation_id ? [c.quotation_id] : []),
         quotation_numbers: Array.isArray(c.quotation_numbers) ? c.quotation_numbers : (c.quotation_number ? [c.quotation_number] : []),
       });
-      setItems(c.items?.length ? c.items : [{ item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
+      setItems(withItemKeys(c.items?.length ? c.items : [{ item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]));
       setOffDayClaims(c.off_day_claims?.length ? c.off_day_claims : [{ work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
       return c;
     },
@@ -204,14 +208,14 @@ export default function ClaimForm() {
         approved_by: pr.approved_by || ''
       }));
       if (pr.items?.length) {
-        setItems(pr.items.map((it, i) => ({
+        setItems(withItemKeys(pr.items.map((it, i) => ({
           item_no: i + 1,
           description: it.description || '',
           category: it.category || '',
           quantity: it.quantity || 1,
           unit_cost: it.unit_cost || 0,
           total: it.total || (it.quantity || 1) * (it.unit_cost || 0)
-        })));
+        }))));
       }
       return pr;
     },
@@ -269,14 +273,14 @@ export default function ClaimForm() {
         approved_by: pr.approved_by || ''
       }));
       if (pr.items?.length) {
-        setItems(pr.items.map((it, i) => ({
+        setItems(withItemKeys(pr.items.map((it, i) => ({
           item_no: i + 1,
           description: it.description || '',
           category: it.category || '',
           quantity: it.quantity || 1,
           unit_cost: it.unit_cost || 0,
           total: it.total || (it.quantity || 1) * (it.unit_cost || 0)
-        })));
+        }))));
         toast.success(`${pr.items.length} items imported from PR`);
       }
     }
@@ -323,15 +327,19 @@ export default function ClaimForm() {
     }));
   };
 
-  const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0, attachments: [] }]);
+  const addItem = () => setItems((p) => [...p, { _key: itemKey(), item_no: p.length + 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0, attachments: [] }]);
 
-  const moveItem = (from, to) => setItems((prev) => {
-    if (to < 0 || to >= prev.length) return prev;
-    const next = [...prev];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    return next.map((it, idx) => ({ ...it, item_no: idx + 1 }));
-  });
+  const itemsForSave = (list) => list.map(({ _key, ...rest }) => rest);
+
+  const handleDragEnd = ({ source, destination }) => {
+    if (!destination || destination.index === source.index) return;
+    setItems((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(source.index, 1);
+      next.splice(destination.index, 0, moved);
+      return next.map((it, idx) => ({ ...it, item_no: idx + 1 }));
+    });
+  };
 
   // Per-item PDF attachment (its pages are appended to the exported claim PDF).
   const attachItemPdf = async (i, file) => {
@@ -408,7 +416,7 @@ export default function ClaimForm() {
       toast.error('The linked quotation(s) have no line items');
       return;
     }
-    setItems((p) => [...p, ...rows.map((it, idx) => ({ ...it, item_no: p.length + idx + 1 }))]);
+    setItems((p) => [...p, ...rows.map((it, idx) => ({ ...it, _key: itemKey(), item_no: p.length + idx + 1 }))]);
     toast.success(`${rows.length} item${rows.length > 1 ? 's' : ''} added from ${selected.length} quotation${selected.length > 1 ? 's' : ''}`);
   };
 
@@ -530,24 +538,24 @@ export default function ClaimForm() {
   };
 
   const handleSave = (status) => {
-    saveMutation.mutate({ ...form, items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal, status: status || form.status });
+    saveMutation.mutate({ ...form, items: itemsForSave(items), off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal, status: status || form.status });
   };
 
   const handleApprove = () => {
     const today = format(new Date(), 'yyyy-MM-dd');
     setForm((f) => ({ ...f, status: 'approved', approved_date: f.approved_date || today }));
-    saveMutation.mutate({ ...form, status: 'approved', approved_date: form.approved_date || today, items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal });
+    saveMutation.mutate({ ...form, status: 'approved', approved_date: form.approved_date || today, items: itemsForSave(items), off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal });
   };
 
   const handleReject = () => {
     setF('status', 'rejected');
-    saveMutation.mutate({ ...form, status: 'rejected', items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal });
+    saveMutation.mutate({ ...form, status: 'rejected', items: itemsForSave(items), off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal });
   };
 
   const handleMarkPaid = () => {
     const today = format(new Date(), 'yyyy-MM-dd');
     setForm((f) => ({ ...f, status: 'paid', paid_date: f.paid_date || today }));
-    saveMutation.mutate({ ...form, status: 'paid', paid_date: form.paid_date || today, items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal });
+    saveMutation.mutate({ ...form, status: 'paid', paid_date: form.paid_date || today, items: itemsForSave(items), off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal });
   };
 
   const handleExportPDF = async () => {
@@ -850,10 +858,20 @@ export default function ClaimForm() {
                   <th className="w-8"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <Droppable droppableId="claim-items">
+                  {(provided) => (
+              <tbody ref={provided.innerRef} {...provided.droppableProps} className="divide-y divide-border">
                 {items.map((item, i) =>
-                <tr key={i}>
-                    <td className="py-2 pr-2 text-center text-xs text-muted-foreground font-mono">{i + 1}</td>
+                <Draggable key={item._key || `row-${i}`} draggableId={item._key || `row-${i}`} index={i}>
+                  {(dp, snapshot) => (
+                <tr ref={dp.innerRef} {...dp.draggableProps} className={snapshot.isDragging ? 'bg-muted/60 shadow-lg' : ''}>
+                    <td className="py-2 pr-2 text-center text-xs text-muted-foreground font-mono">
+                      <div className="flex items-center justify-center gap-1">
+                        <span {...dp.dragHandleProps} className="text-muted-foreground hover:text-primary cursor-grab active:cursor-grabbing" title="Drag to reorder"><GripVertical size={13} /></span>
+                        <span>{i + 1}</span>
+                      </div>
+                    </td>
                     <td className="py-2 pr-2">
                       <div className="flex gap-1 items-center">
                         <TypeCombobox
@@ -880,24 +898,6 @@ export default function ClaimForm() {
                     <td className="py-2 text-right font-mono text-xs text-primary">{(docCount > 0 ? (item.total || 0) / docCount : (item.total || 0)).toFixed(2)}</td>
                     <td className="py-2 pl-2">
                       <div className="flex items-center gap-1.5">
-                        <div className="flex flex-col">
-                          <button
-                            type="button"
-                            onClick={() => moveItem(i, i - 1)}
-                            disabled={i === 0}
-                            className="text-muted-foreground hover:text-primary disabled:opacity-25 disabled:hover:text-muted-foreground"
-                            title="Move up">
-                            <ArrowUp size={11} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveItem(i, i + 1)}
-                            disabled={i === items.length - 1}
-                            className="text-muted-foreground hover:text-primary disabled:opacity-25 disabled:hover:text-muted-foreground"
-                            title="Move down">
-                            <ArrowDown size={11} />
-                          </button>
-                        </div>
                         <label
                           className="cursor-pointer text-muted-foreground hover:text-primary"
                           title={item.attachments?.length ? item.attachments.map((a) => a.name).join('\n') : 'Attach PDF'}>
@@ -917,8 +917,14 @@ export default function ClaimForm() {
                       </div>
                     </td>
                   </tr>
+                  )}
+                </Draggable>
                 )}
+                {provided.placeholder}
               </tbody>
+                  )}
+                </Droppable>
+              </DragDropContext>
             </table>
           </div>
           <div className="mt-4 border-t border-border pt-4 flex justify-end">
