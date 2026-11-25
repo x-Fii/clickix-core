@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle, FileDown, Paperclip, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle, FileDown, Paperclip, FileSpreadsheet, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
@@ -324,6 +324,14 @@ export default function ClaimForm() {
   };
 
   const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0, attachments: [] }]);
+
+  const moveItem = (from, to) => setItems((prev) => {
+    if (to < 0 || to >= prev.length) return prev;
+    const next = [...prev];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    return next.map((it, idx) => ({ ...it, item_no: idx + 1 }));
+  });
 
   // Per-item PDF attachment (its pages are appended to the exported claim PDF).
   const attachItemPdf = async (i, file) => {
@@ -872,6 +880,24 @@ export default function ClaimForm() {
                     <td className="py-2 text-right font-mono text-xs text-primary">{(docCount > 0 ? (item.total || 0) / docCount : (item.total || 0)).toFixed(2)}</td>
                     <td className="py-2 pl-2">
                       <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col">
+                          <button
+                            type="button"
+                            onClick={() => moveItem(i, i - 1)}
+                            disabled={i === 0}
+                            className="text-muted-foreground hover:text-primary disabled:opacity-25 disabled:hover:text-muted-foreground"
+                            title="Move up">
+                            <ArrowUp size={11} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveItem(i, i + 1)}
+                            disabled={i === items.length - 1}
+                            className="text-muted-foreground hover:text-primary disabled:opacity-25 disabled:hover:text-muted-foreground"
+                            title="Move down">
+                            <ArrowDown size={11} />
+                          </button>
+                        </div>
                         <label
                           className="cursor-pointer text-muted-foreground hover:text-primary"
                           title={item.attachments?.length ? item.attachments.map((a) => a.name).join('\n') : 'Attach PDF'}>
