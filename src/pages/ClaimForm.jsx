@@ -14,6 +14,7 @@ import { fetchNextRunningNumber } from '@/lib/runningNumber';
 import { exportElementToPdf } from '@/lib/pdfPages';
 import TypeCombobox from '@/components/TypeCombobox';
 import SearchableSelect from '@/components/SearchableSelect';
+import MultiSearchableSelect from '@/components/MultiSearchableSelect';
 
 const CATEGORIES = [
   'Hardware', 'Software', 'Networking', 'Cabling', 'Consumables', 'Services',
@@ -64,6 +65,7 @@ export default function ClaimForm() {
     ir_ids: [],
     ir_numbers: [],
     client_name: '',
+    client_names: [],
     site_name: '',
     site_names: [],
     claimant_name: '',
@@ -114,6 +116,7 @@ export default function ClaimForm() {
         ir_ids: Array.isArray(c.ir_ids) ? c.ir_ids : (c.ir_id ? [c.ir_id] : []),
         ir_numbers: Array.isArray(c.ir_numbers) ? c.ir_numbers : (c.ir_number ? [c.ir_number] : []),
         site_names: Array.isArray(c.site_names) ? c.site_names : (c.site_name ? [c.site_name] : []),
+        client_names: Array.isArray(c.client_names) ? c.client_names : (c.client_name ? [c.client_name] : []),
       });
       setItems(c.items?.length ? c.items : [{ item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
       setOffDayClaims(c.off_day_claims?.length ? c.off_day_claims : [{ work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
@@ -147,6 +150,16 @@ export default function ClaimForm() {
     queryFn: () => base44.entities.InstallationReport.list('-created_date', 100)
   });
 
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => base44.entities.Client.list()
+  });
+
+  const { data: sites = [] } = useQuery({
+    queryKey: ['sites'],
+    queryFn: () => base44.entities.Site.list()
+  });
+
   // Auto-load from PR if ?from_pr=id query param
   const fromPrId = searchParams.get('from_pr');
   useQuery({
@@ -170,6 +183,7 @@ export default function ClaimForm() {
         ir_ids: pr.ir_id ? [pr.ir_id] : [],
         ir_numbers: pr.ir_number ? [pr.ir_number] : [],
         client_name: pr.client_name || '',
+        client_names: pr.client_name ? [pr.client_name] : [],
         site_name: pr.site_name || '',
         site_names: pr.site_name ? [pr.site_name] : [],
         claimant_name: pr.requester_name || '',
@@ -226,6 +240,7 @@ export default function ClaimForm() {
         ir_ids: pr.ir_id ? [pr.ir_id] : [],
         ir_numbers: pr.ir_number ? [pr.ir_number] : [],
         client_name: pr.client_name || '',
+        client_names: pr.client_name ? [pr.client_name] : [],
         site_name: pr.site_name || '',
         site_names: pr.site_name ? [pr.site_name] : [],
         claimant_name: pr.requester_name || '',
@@ -268,7 +283,8 @@ export default function ClaimForm() {
       ir_number: selIRs[0]?.report_number || '',
       site_names: sites,
       site_name: sites.join(', '),
-      client_name: clients[0] || f.client_name,
+      client_name: clients.join(', ') || f.client_name,
+      client_names: clients.length ? clients : f.client_names,
     }));
   };
 
@@ -343,6 +359,35 @@ export default function ClaimForm() {
   const offDayClaimedTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.claimed) || 0), 0);
   const offDayReplacementTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.replacement) || 0), 0);
   const grandTotal = averagedItemsTotal;
+
+  const selectedClientIds = clients
+    .filter((c) => (form.client_names || []).includes(c.company_name))
+    .map((c) => c.id);
+  const clientOptions = clients.map((c) => ({ value: c.company_name, label: c.company_name, sublabel: c.contact_person }));
+  const siteOptions = sites
+    .filter((s) => !selectedClientIds.length || selectedClientIds.includes(s.client_id))
+    .map((s) => ({ value: s.site_name, label: s.site_name, sublabel: s.client_name }));
+
+  const handleClientsChange = (names) => {
+    const ids = clients.filter((c) => names.includes(c.company_name)).map((c) => c.id);
+    setForm((f) => {
+      const keepSites = (f.site_names || []).filter((n) => {
+        const site = sites.find((s) => s.site_name === n);
+        return site ? ids.includes(site.client_id) : true;
+      });
+      return {
+        ...f,
+        client_names: names,
+        client_name: names.join(', '),
+        site_names: keepSites,
+        site_name: keepSites.join(', ')
+      };
+    });
+  };
+
+  const handleSitesChange = (names) => {
+    setForm((f) => ({ ...f, site_names: names, site_name: names.join(', ') }));
+  };
 
   const handleSave = (status) => {
     saveMutation.mutate({ ...form, items, off_day_claims: offDayClaims, subtotal: itemsTotal, grand_total: grandTotal, status: status || form.status });
@@ -477,8 +522,22 @@ export default function ClaimForm() {
                 <SelectContent>{PAYMENT_TERMS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="Client Name"><Input value={form.client_name} onChange={(e) => setF('client_name', e.target.value)} className="bg-background" placeholder="Client name" /></Field>
-            <Field label="Site Name"><Input value={form.site_name} onChange={(e) => setF('site_name', e.target.value)} className="bg-background" placeholder="Site name" /></Field>
+            <Field label="Client Name(s)">
+              <MultiSearchableSelect
+                values={form.client_names || []}
+                onChange={handleClientsChange}
+                options={clientOptions}
+                placeholder="Search and select client(s)..."
+                emptyText="No clients found" />
+            </Field>
+            <Field label="Site Name(s)">
+              <MultiSearchableSelect
+                values={form.site_names || []}
+                onChange={handleSitesChange}
+                options={siteOptions}
+                placeholder={selectedClientIds.length ? 'Search and select site(s)...' : 'Select client(s) first, or search all sites...'}
+                emptyText="No sites found" />
+            </Field>
             <div className="md:col-span-2">
               <Field label="Purpose / Justification">
                 <Textarea value={form.purpose} onChange={(e) => setF('purpose', e.target.value)} className="bg-background resize-none" rows={2} placeholder="Describe the purpose of this claim..." />
@@ -510,6 +569,7 @@ export default function ClaimForm() {
                    quotation_id: q.id,
                    quotation_number: q.quotation_number,
                    client_name: q.client_name || f.client_name,
+                   client_names: q.client_name ? [q.client_name] : f.client_names,
                    site_name: q.site_name || f.site_name,
                    site_names: q.site_name ? [q.site_name] : f.site_names,
                    sr_id: linkedSR ? linkedSR.id : f.sr_id,

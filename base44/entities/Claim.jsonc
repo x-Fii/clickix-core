@@ -70,6 +70,12 @@
     "client_name": {
       "type": "string"
     },
+    "client_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "site_name": {
       "type": "string"
     },
