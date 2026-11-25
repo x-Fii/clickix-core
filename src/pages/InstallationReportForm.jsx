@@ -1607,7 +1607,7 @@ export default function InstallationReportForm() {
             <div className="flex flex-wrap gap-3 items-start">
               {(form.supporting_documents || []).map((url, i) => isImage(url) ? (
                 <div key={i} className="relative group">
-                  <img src={url} alt="" className="w-24 h-24 object-cover rounded border border-border" />
+                  <img src={url} alt="" className="w-24 h-24 object-contain bg-white rounded border border-border" />
                   <button type="button" onClick={() => set('supporting_documents', form.supporting_documents.filter((_, j) => j !== i))}
                     className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:flex items-center justify-center">
                     <X size={10} />

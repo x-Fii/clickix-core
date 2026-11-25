@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { buildPdfWithinLimit } from '@/lib/pdfExportQuality';
 import { shrinkTemplateImages } from '@/lib/pdfImagePrep';
+import { createPhotoRow } from '@/lib/pdfPhotoRow';
+import { sortPhotoContainers } from '@/lib/photoOrder';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const L2_FLOW = ['escalated', 'quote', 'approved', 'schedule', 'complete', 'billed'];
@@ -399,6 +401,12 @@ export default function ReportDetail() {
      */
     await shrinkTemplateImages(wrapper);
 
+    /*
+     * Group the photos in each row, landscape first,
+     * so the PDF rows stay neat.
+     */
+    sortPhotoContainers(wrapper);
+
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     /*
@@ -766,47 +774,17 @@ export default function ReportDetail() {
         index += imagesPerRow
       ) {
      
-        const temporaryRow =
-          document.createElement('div');
-
         const gridWidth =
           gridElement.getBoundingClientRect().width ||
           gridElement.offsetWidth ||
           730;
-
-        Object.assign(temporaryRow.style, {
-          position: 'fixed',
-          left: '-10000px',
-          top: '0',
-          width: `${gridWidth}px`,
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(3, minmax(0, 1fr))',
-          gap: '8px',
-          backgroundColor: '#ffffff'
-        });
 
         const rowImages = imageElements.slice(
           index,
           index + imagesPerRow
         );
 
-        rowImages.forEach((image) => {
-          const clone = image.cloneNode(true);
-
-          Object.assign(clone.style, {
-            width: '100%',
-            height: '180px',
-            maxHeight: '180px',
-            objectFit: 'contain',
-            border: '1px solid #e5e7eb',
-            borderRadius: '4px',
-            backgroundColor: '#ffffff',
-            display: 'block'
-          });
-
-          temporaryRow.appendChild(clone);
-        });
+        const temporaryRow = createPhotoRow(rowImages, gridWidth);
 
         wrapper.appendChild(temporaryRow);
 
@@ -1249,7 +1227,7 @@ export default function ReportDetail() {
                     <div className="flex flex-wrap gap-2 mt-2">
                       {jobDescPhotos.map((url, pi) =>
                     <div key={pi} className="relative group">
-                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                          <img src={url} alt="" className="w-20 h-20 object-contain bg-white rounded border border-border" />
                           {!isReadOnly &&
                       <button onClick={() => setJobDescPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
                               <X size={8} />
@@ -1275,7 +1253,7 @@ export default function ReportDetail() {
                     <div className="flex flex-wrap gap-2 mt-2">
                       {remarksPhotos.map((url, pi) =>
                     <div key={pi} className="relative group">
-                          <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border" />
+                          <img src={url} alt="" className="w-20 h-20 object-contain bg-white rounded border border-border" />
                           {!isReadOnly &&
                       <button onClick={() => setRemarksPhotos((p) => p.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
                               <X size={8} />
@@ -1365,7 +1343,7 @@ export default function ReportDetail() {
                     <div className="flex flex-wrap gap-2">
                       {(item.photos || []).map((url, pi) =>
                   <div key={pi} className="relative group">
-                          <img src={url} alt="" className="w-16 h-16 object-cover rounded border border-border" />
+                          <img src={url} alt="" className="w-16 h-16 object-contain bg-white rounded border border-border" />
                           {!isReadOnly &&
                     <button onClick={() => updateAddon(i, 'photos', item.photos.filter((_, idx) => idx !== pi))} className="absolute top-0 right-0 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
                               <X size={8} />

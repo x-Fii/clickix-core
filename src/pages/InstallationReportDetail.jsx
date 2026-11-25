@@ -12,6 +12,9 @@ import html2canvas from 'html2canvas';
 import { drawEquipmentBlock, sortEquipmentItems } from '@/lib/installationPdfNative';
 import { buildPdfWithinLimit } from '@/lib/pdfExportQuality';
 import { shrinkTemplateImages } from '@/lib/pdfImagePrep';
+import { createPhotoRow } from '@/lib/pdfPhotoRow';
+import { sortPhotoContainers } from '@/lib/photoOrder';
+import PhotoGrid from '@/components/PhotoGrid';
 
 const STATUS_CONFIG = {
   pending:    { label: 'Pending',    className: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
@@ -79,6 +82,12 @@ export default function InstallationReportDetail() {
       * instead of full-size phone photos.
       */
       await shrinkTemplateImages(wrapper);
+
+      /*
+      * Group the photos in each row, landscape first,
+      * so the PDF rows stay neat.
+      */
+      sortPhotoContainers(wrapper);
 
       await new Promise((resolve) =>
         setTimeout(resolve, 100)
@@ -407,9 +416,6 @@ export default function InstallationReportDetail() {
             index < imageElements.length;
             index += imagesPerRow
           ) {
-            const temporaryRow =
-              document.createElement('div');
-
             const containerWidth =
               photoContainer
                 .getBoundingClientRect()
@@ -417,45 +423,14 @@ export default function InstallationReportDetail() {
               photoContainer.offsetWidth ||
               730;
 
-            Object.assign(
-              temporaryRow.style,
-              {
-                position: 'fixed',
-                left: '-10000px',
-                top: '0',
-                width: `${containerWidth}px`,
-                display: 'grid',
-                gridTemplateColumns:
-                  'repeat(3, minmax(0, 1fr))',
-                gap: '8px',
-                backgroundColor: '#ffffff'
-              }
-            );
-
             const rowImages =
               imageElements.slice(
                 index,
                 index + imagesPerRow
               );
 
-            rowImages.forEach((image) => {
-              const clone =
-                image.cloneNode(true);
-
-              Object.assign(clone.style, {
-                width: '100%',
-                height: '180px',
-                maxHeight: '180px',
-                objectFit: 'contain',
-                border:
-                  '1px solid #e5e7eb',
-                borderRadius: '4px',
-                backgroundColor: '#ffffff',
-                display: 'block'
-              });
-
-              temporaryRow.appendChild(clone);
-            });
+            const temporaryRow =
+              createPhotoRow(rowImages, containerWidth);
 
             wrapper.appendChild(temporaryRow);
 
@@ -994,13 +969,7 @@ export default function InstallationReportDetail() {
               </div>
             )}
             {hasPhotos && (
-              <div className="flex flex-wrap gap-2">
-                {report.pre_job_assessment_photos.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noreferrer">
-                    <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
-                  </a>
-                ))}
-              </div>
+              <PhotoGrid photos={report.pre_job_assessment_photos} height={96} />
             )}
           </div>
         );
@@ -1061,13 +1030,7 @@ export default function InstallationReportDetail() {
           <h2 className="text-xs font-mono font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
             <Package size={14} /> Post-Install Photos
           </h2>
-          <div className="flex flex-wrap gap-3">
-            {report.supporting_photos.map((url, i) => (
-              <a key={i} href={url} target="_blank" rel="noreferrer">
-                <img src={url} alt={`Photo ${i + 1}`} className="w-28 h-28 object-cover rounded border border-border hover:opacity-80 transition-opacity" />
-              </a>
-            ))}
-          </div>
+          <PhotoGrid photos={report.supporting_photos} height={140} />
         </div>
       )}
 
@@ -1272,9 +1235,9 @@ export default function InstallationReportDetail() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {report.pre_job_assessment_photos.map((url, i) => (
                       <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                    width: '145px',
-                                                                                    height: 'auto',
-                                                                                    maxHeight: '180px',
+                                                                                    width: 'auto',
+                                                                                    height: '140px',
+                                                                                    maxWidth: '100%',
                                                                                     objectFit: 'contain',
                                                                                     border: '1px solid #e5e7eb',
                                                                                     borderRadius: '4px',
@@ -1322,9 +1285,9 @@ export default function InstallationReportDetail() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {report.supporting_photos.map((url, i) => (
                   <img key={i} src={url} alt="" crossOrigin="anonymous" style={{
-                                                                                width: '145px',
-                                                                                height: 'auto',
-                                                                                maxHeight: '180px',
+                                                                                width: 'auto',
+                                                                                height: '140px',
+                                                                                maxWidth: '100%',
                                                                                 objectFit: 'contain',
                                                                                 border: '1px solid #e5e7eb',
                                                                                 borderRadius: '4px',

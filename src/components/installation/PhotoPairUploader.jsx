@@ -33,7 +33,7 @@ export default function PhotoPairUploader({ label, value = [], onChange, max }) 
       <div className="flex flex-wrap gap-3 items-start">
         {photos.map((url, i) => (
           <div key={i} className="relative group">
-            <img src={url} alt="" className="w-24 h-24 object-cover rounded border border-border" />
+            <img src={url} alt="" className="w-24 h-24 object-contain bg-white rounded border border-border" />
             <button type="button" onClick={() => remove(i)}
               className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 hidden group-hover:flex items-center justify-center">
               <X size={10} />
