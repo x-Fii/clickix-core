@@ -15,6 +15,7 @@ import { exportElementToPdf } from '@/lib/pdfPages';
 import TypeCombobox from '@/components/TypeCombobox';
 import SearchableSelect from '@/components/SearchableSelect';
 import MultiSearchableSelect from '@/components/MultiSearchableSelect';
+import NewQuotationDialog from '@/components/claims/NewQuotationDialog';
 
 const CATEGORIES = [
   'Hardware', 'Software', 'Networking', 'Cabling', 'Consumables', 'Services',
@@ -56,6 +57,8 @@ export default function ClaimForm() {
     pr_number: '',
     quotation_id: '',
     quotation_number: '',
+    quotation_ids: [],
+    quotation_numbers: [],
     sr_id: '',
     sr_number: '',
     sr_ids: [],
@@ -89,6 +92,7 @@ export default function ClaimForm() {
   );
   const loadedRef = useRef(false);
   const prPrefillRef = useRef(false);
+  const [newQuotationOpen, setNewQuotationOpen] = useState(false);
 
   // Assign the next gap-filled claim number for new claims.
   useEffect(() => {
@@ -117,6 +121,8 @@ export default function ClaimForm() {
         ir_numbers: Array.isArray(c.ir_numbers) ? c.ir_numbers : (c.ir_number ? [c.ir_number] : []),
         site_names: Array.isArray(c.site_names) ? c.site_names : (c.site_name ? [c.site_name] : []),
         client_names: Array.isArray(c.client_names) ? c.client_names : (c.client_name ? [c.client_name] : []),
+        quotation_ids: Array.isArray(c.quotation_ids) ? c.quotation_ids : (c.quotation_id ? [c.quotation_id] : []),
+        quotation_numbers: Array.isArray(c.quotation_numbers) ? c.quotation_numbers : (c.quotation_number ? [c.quotation_number] : []),
       });
       setItems(c.items?.length ? c.items : [{ item_no: 1, description: '', category: '', quantity: 1, unit_cost: 0, total: 0 }]);
       setOffDayClaims(c.off_day_claims?.length ? c.off_day_claims : [{ work_date: '', work_type: '', unit: 'Hours', claimed: 0, replacement_date: '', replacement: 0 }]);
@@ -174,6 +180,8 @@ export default function ClaimForm() {
         pr_number: pr.pr_number,
         quotation_id: pr.quotation_id || '',
         quotation_number: pr.quotation_number || '',
+        quotation_ids: pr.quotation_id ? [pr.quotation_id] : [],
+        quotation_numbers: pr.quotation_number ? [pr.quotation_number] : [],
         sr_id: pr.sr_id || '',
         sr_number: pr.sr_number || '',
         sr_ids: pr.sr_id ? [pr.sr_id] : [],
@@ -231,6 +239,8 @@ export default function ClaimForm() {
         pr_number: pr.pr_number,
         quotation_id: pr.quotation_id || '',
         quotation_number: pr.quotation_number || '',
+        quotation_ids: pr.quotation_id ? [pr.quotation_id] : [],
+        quotation_numbers: pr.quotation_number ? [pr.quotation_number] : [],
         sr_id: pr.sr_id || '',
         sr_number: pr.sr_number || '',
         sr_ids: pr.sr_id ? [pr.sr_id] : [],
@@ -308,37 +318,37 @@ export default function ClaimForm() {
 
   const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0 }]);
 
-  // Pull the line items of the quotation chosen in Linked Documents into Claim Items.
+  // Pull the line items of every quotation linked in Linked Documents into Claim Items.
   const addItemsFromQuotation = () => {
-    const q = quotations.find((x) => x.id === form.quotation_id);
-    if (!q) {
-      toast.error('Select a quotation in Linked Documents first');
+    const ids = form.quotation_ids || [];
+    const selected = quotations.filter((q) => ids.includes(q.id));
+    if (!selected.length) {
+      toast.error('Add a quotation in Linked Documents first');
       return;
     }
-    const rows = (q.items || []).filter((it) => it.description || it.unit_cost || it.quantity);
-    if (!rows.length) {
-      toast.error(`${q.quotation_number} has no line items`);
-      return;
-    }
-    const ref = q.quotation_number || form.quotation_number;
-    setItems((p) => [
-      ...p,
-      ...rows.map((it, idx) => {
+    const rows = [];
+    selected.forEach((q) => {
+      (q.items || []).forEach((it) => {
+        if (!(it.description || it.unit_cost || it.quantity)) return;
         const qty = parseFloat(it.quantity) || 0;
         const cost = parseFloat(it.unit_cost) || 0;
-        return {
-          item_no: p.length + idx + 1,
+        rows.push({
           description: it.description || '',
           category: it.item_type || '',
           quotation_id: q.id,
-          quotation_number: ref,
+          quotation_number: q.quotation_number || '',
           quantity: it.quantity ?? 1,
           unit_cost: it.unit_cost ?? 0,
           total: qty * cost || parseFloat(it.total) || 0
-        };
-      })
-    ]);
-    toast.success(`${rows.length} item${rows.length > 1 ? 's' : ''} added from ${ref}`);
+        });
+      });
+    });
+    if (!rows.length) {
+      toast.error('The linked quotation(s) have no line items');
+      return;
+    }
+    setItems((p) => [...p, ...rows.map((it, idx) => ({ ...it, item_no: p.length + idx + 1 }))]);
+    toast.success(`${rows.length} item${rows.length > 1 ? 's' : ''} added from ${selected.length} quotation${selected.length > 1 ? 's' : ''}`);
   };
 
   const updateOffDay = (i, field, val) => {
@@ -387,6 +397,59 @@ export default function ClaimForm() {
 
   const handleSitesChange = (names) => {
     setForm((f) => ({ ...f, site_names: names, site_name: names.join(', ') }));
+  };
+
+  const quotationNumbersFor = (ids, extra) => {
+    const map = new Map(quotations.map((q) => [q.id, q]));
+    if (extra) map.set(extra.id, extra);
+    return ids.map((qid) => map.get(qid)?.quotation_number).filter(Boolean);
+  };
+
+  const linkQuotation = (q) => {
+    if (!q) return;
+    setForm((f) => {
+      const ids = f.quotation_ids || [];
+      if (ids.includes(q.id)) return f;
+      const nextIds = [...ids, q.id];
+      const numbers = quotationNumbersFor(nextIds, q);
+      const clientNames = q.client_name ? Array.from(new Set([...(f.client_names || []), q.client_name])) : f.client_names || [];
+      const siteNames = q.site_name ? Array.from(new Set([...(f.site_names || []), q.site_name])) : f.site_names || [];
+      const linkedSR = q.sr_id ? reports.find((r) => r.id === q.sr_id) : null;
+      const linkedIR = q.ir_id ? installationReports.find((r) => r.id === q.ir_id) : null;
+      return {
+        ...f,
+        quotation_ids: nextIds,
+        quotation_numbers: numbers,
+        quotation_id: nextIds[0],
+        quotation_number: numbers.join(', '),
+        client_names: clientNames,
+        client_name: clientNames.join(', '),
+        site_names: siteNames,
+        site_name: siteNames.join(', '),
+        sr_id: linkedSR ? f.sr_id || linkedSR.id : f.sr_id,
+        sr_number: linkedSR ? f.sr_number || linkedSR.running_number : f.sr_number,
+        sr_ids: linkedSR ? Array.from(new Set([...(f.sr_ids || []), linkedSR.id])) : f.sr_ids,
+        sr_numbers: linkedSR ? Array.from(new Set([...(f.sr_numbers || []), linkedSR.running_number])) : f.sr_numbers,
+        ir_id: linkedIR ? f.ir_id || linkedIR.id : f.ir_id,
+        ir_number: linkedIR ? f.ir_number || linkedIR.report_number : f.ir_number,
+        ir_ids: linkedIR ? Array.from(new Set([...(f.ir_ids || []), linkedIR.id])) : f.ir_ids,
+        ir_numbers: linkedIR ? Array.from(new Set([...(f.ir_numbers || []), linkedIR.report_number])) : f.ir_numbers
+      };
+    });
+  };
+
+  const unlinkQuotation = (qid) => {
+    setForm((f) => {
+      const nextIds = (f.quotation_ids || []).filter((x) => x !== qid);
+      const numbers = quotationNumbersFor(nextIds);
+      return {
+        ...f,
+        quotation_ids: nextIds,
+        quotation_numbers: numbers,
+        quotation_id: nextIds[0] || '',
+        quotation_number: numbers.join(', ')
+      };
+    });
   };
 
   const handleSave = (status) => {
@@ -557,33 +620,38 @@ export default function ClaimForm() {
                 options={prs.map((p) => ({ value: p.id, label: `${p.pr_number} — ${p.client_name || ''}` }))}
                 placeholder="Select PR to convert from..." />
             </Field>
-            <Field label="Quotation">
-              <SearchableSelect value={form.quotation_id} onChange={(v) => {
-                const q = quotations.find((x) => x.id === v);
-                if (!q) return;
-                // chain-fill linked SR or IR from quotation
-                const linkedSR = q.sr_id ? reports.find((r) => r.id === q.sr_id) : null;
-                const linkedIR = q.ir_id ? installationReports.find((r) => r.id === q.ir_id) : null;
-                setForm((f) => ({
-                   ...f,
-                   quotation_id: q.id,
-                   quotation_number: q.quotation_number,
-                   client_name: q.client_name || f.client_name,
-                   client_names: q.client_name ? [q.client_name] : f.client_names,
-                   site_name: q.site_name || f.site_name,
-                   site_names: q.site_name ? [q.site_name] : f.site_names,
-                   sr_id: linkedSR ? linkedSR.id : f.sr_id,
-                   sr_number: linkedSR ? linkedSR.running_number : f.sr_number,
-                   sr_ids: linkedSR ? [linkedSR.id] : f.sr_ids,
-                   sr_numbers: linkedSR ? [linkedSR.running_number] : f.sr_numbers,
-                   ir_id: linkedIR ? linkedIR.id : f.ir_id,
-                   ir_number: linkedIR ? linkedIR.report_number : f.ir_number,
-                   ir_ids: linkedIR ? [linkedIR.id] : f.ir_ids,
-                   ir_numbers: linkedIR ? [linkedIR.report_number] : f.ir_numbers
-                 }));
-              }}
-                options={quotations.map((q) => ({ value: q.id, label: `${q.quotation_number} — ${q.client_name || ''}` }))}
-                placeholder="Select quotation..." />
+            <Field label="Quotations">
+              <div className="rounded-md border border-input bg-background p-2 space-y-2">
+                {(form.quotation_ids?.length > 0) ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(form.quotation_ids || []).map((qid) => {
+                      const q = quotations.find((x) => x.id === qid);
+                      return (
+                        <span key={qid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                          {q?.quotation_number || 'Quotation'}
+                          <button type="button" onClick={() => unlinkQuotation(qid)} className="hover:text-destructive"><X size={11} /></button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground/50">No quotations linked</p>
+                )}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <SearchableSelect
+                    value=""
+                    onChange={(v) => v && linkQuotation(quotations.find((q) => q.id === v))}
+                    options={quotations
+                      .filter((q) => !(form.quotation_ids || []).includes(q.id))
+                      .map((q) => ({ value: q.id, label: `${q.quotation_number} — ${q.client_name || ''}`, sublabel: q.site_name }))}
+                    placeholder="+ Add Quotation"
+                    emptyText="No quotations left"
+                    className="flex-1 min-w-[150px] h-8 text-xs border-border bg-transparent text-muted-foreground" />
+                  <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => setNewQuotationOpen(true)}>
+                    <Plus size={12} /> New
+                  </Button>
+                </div>
+              </div>
             </Field>
             <Field label="Service / Installation Reports">
               <div className="rounded-md border border-input bg-background p-2 space-y-2">
@@ -655,7 +723,7 @@ export default function ClaimForm() {
                 size="sm"
                 className="gap-1 text-xs"
                 onClick={addItemsFromQuotation}
-                disabled={!form.quotation_id}>
+                disabled={!(form.quotation_ids || []).length}>
                 <FileDown size={12} /> From Quotation
               </Button>
               <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addItem}><Plus size={12} /> Add Item</Button>
@@ -896,6 +964,13 @@ export default function ClaimForm() {
         </div>
       </div>
 
+      <NewQuotationDialog
+        open={newQuotationOpen}
+        onOpenChange={setNewQuotationOpen}
+        clients={clients}
+        sites={sites}
+        onCreated={linkQuotation} />
+
       {/* Hidden PDF Template */}
       <div id="claim-pdf-area" style={{ position: 'fixed', left: '-9999px', top: 0, fontFamily: 'Arial, sans-serif', color: '#111827' }}>
         <div id="claim-pdf-content" style={{ width: '794px', background: 'white' }}>
@@ -948,7 +1023,7 @@ export default function ClaimForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Linked Documents</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['PR NO.', form.pr_number], ['QUOTATION NO.', form.quotation_number], ['SR NO.', (form.sr_numbers || []).join(', ') || form.sr_number], ['IR NO.', (form.ir_numbers || []).join(', ') || form.ir_number], ['CLIENT', form.client_name], ['SITE(S)', (form.site_names || []).join(', ') || form.site_name], ['PAYMENT TERM', form.payment_term], ['CLAIM DATE', form.claim_date]].map(([k, v]) =>
+                {[['PR NO.', form.pr_number], ['QUOTATION NO.', (form.quotation_numbers || []).join(', ') || form.quotation_number], ['SR NO.', (form.sr_numbers || []).join(', ') || form.sr_number], ['IR NO.', (form.ir_numbers || []).join(', ') || form.ir_number], ['CLIENT', form.client_name], ['SITE(S)', (form.site_names || []).join(', ') || form.site_name], ['PAYMENT TERM', form.payment_term], ['CLAIM DATE', form.claim_date]].map(([k, v]) =>
                 <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>

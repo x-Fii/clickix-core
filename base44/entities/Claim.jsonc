@@ -31,6 +31,18 @@
     "quotation_number": {
       "type": "string"
     },
+    "quotation_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "quotation_numbers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "sr_id": {
       "type": "string"
     },
