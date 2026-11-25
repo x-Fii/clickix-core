@@ -91,6 +91,12 @@
     "site_name": {
       "type": "string"
     },
+    "site_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "claimant_name": {
       "type": "string"
     },
@@ -153,7 +159,32 @@
           },
           "total": {
             "type": "number"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "file_uri": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
           }
+        }
+      }
+    },
+    "items_sheet": {
+      "type": "object",
+      "properties": {
+        "file_uri": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
         }
       }
     },
@@ -212,12 +243,6 @@
     },
     "remarks": {
       "type": "string"
-    },
-    "site_names": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
     }
   },
   "required": [

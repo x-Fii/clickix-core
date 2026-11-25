@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle, FileDown } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle, FileDown, Paperclip, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
-import { exportElementToPdf } from '@/lib/pdfPages';
+import { buildElementPdf } from '@/lib/pdfPages';
+import { appendPdfAttachments, downloadPdfBytes } from '@/lib/claimAttachmentsPdf';
 import TypeCombobox from '@/components/TypeCombobox';
 import SearchableSelect from '@/components/SearchableSelect';
 import MultiSearchableSelect from '@/components/MultiSearchableSelect';
@@ -322,7 +323,37 @@ export default function ClaimForm() {
     }));
   };
 
-  const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0 }]);
+  const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0, attachments: [] }]);
+
+  // Per-item PDF attachment (its pages are appended to the exported claim PDF).
+  const attachItemPdf = async (i, file) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      toast.error('Only PDF files can be attached to an item');
+      return;
+    }
+    const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+    setItems((prev) => prev.map((it, idx) => idx === i
+      ? { ...it, attachments: [...(it.attachments || []), { file_uri, name: file.name }] }
+      : it));
+    toast.success('PDF attached');
+  };
+
+  const removeItemAttachment = (i, fileUri) => setItems((prev) => prev.map((it, idx) => idx === i
+    ? { ...it, attachments: (it.attachments || []).filter((a) => a.file_uri !== fileUri) }
+    : it));
+
+  // Excel workbook covering all claim items.
+  const attachItemsSheet = async (file) => {
+    if (!file) return;
+    if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
+      toast.error('Upload an Excel file (.xlsx, .xls, .csv)');
+      return;
+    }
+    const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+    setF('items_sheet', { file_uri, name: file.name });
+    toast.success('Item sheet attached');
+  };
 
   // Resolve the linked quotations even when they sit outside the cached quotation list.
   const resolveLinkedQuotations = async () => {
@@ -514,7 +545,15 @@ export default function ClaimForm() {
   const handleExportPDF = async () => {
     toast.info('Generating PDF...');
     const el = document.getElementById('claim-pdf-content');
-    await exportElementToPdf({ el, filename: `${form.claim_number}.pdf` });
+    const pdf = await buildElementPdf({ el });
+    const filename = `${form.claim_number}.pdf`;
+    const attachments = items.flatMap((it) => it.attachments || []);
+    if (attachments.length) {
+      const bytes = await appendPdfAttachments({ basePdf: pdf, attachments });
+      downloadPdfBytes(bytes, filename);
+    } else {
+      pdf.save(filename);
+    }
     toast.success('PDF exported');
   };
 
@@ -766,6 +805,16 @@ export default function ClaimForm() {
                 disabled={!(form.quotation_ids || []).length}>
                 <FileDown size={12} /> From Quotation
               </Button>
+              <label
+                className="inline-flex items-center gap-1 h-8 max-w-[190px] px-3 rounded-md border border-input bg-transparent text-xs hover:bg-accent cursor-pointer"
+                title={form.items_sheet ? `Excel sheet: ${form.items_sheet.name}` : 'Upload Excel for all items'}>
+                <FileSpreadsheet size={12} className="shrink-0" />
+                <span className="truncate">{form.items_sheet ? form.items_sheet.name : 'Excel'}</span>
+                <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { attachItemsSheet(e.target.files?.[0]); e.target.value = ''; }} />
+              </label>
+              {form.items_sheet && (
+                <button type="button" onClick={() => setF('items_sheet', null)} className="text-muted-foreground hover:text-destructive" title="Remove Excel sheet"><X size={12} /></button>
+              )}
               <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addItem}><Plus size={12} /> Add Item</Button>
             </div>
           </div>
@@ -822,7 +871,24 @@ export default function ClaimForm() {
                     <td className="py-2 pr-2 text-right font-mono text-xs">{(item.total || 0).toFixed(2)}</td>
                     <td className="py-2 text-right font-mono text-xs text-primary">{(docCount > 0 ? (item.total || 0) / docCount : (item.total || 0)).toFixed(2)}</td>
                     <td className="py-2 pl-2">
-                      <button onClick={() => setItems((p) => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
+                      <div className="flex items-center gap-1.5">
+                        <label
+                          className="cursor-pointer text-muted-foreground hover:text-primary"
+                          title={item.attachments?.length ? item.attachments.map((a) => a.name).join('\n') : 'Attach PDF'}>
+                          <Paperclip size={13} />
+                          <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => { attachItemPdf(i, e.target.files?.[0]); e.target.value = ''; }} />
+                        </label>
+                        {item.attachments?.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItemAttachment(i, item.attachments[item.attachments.length - 1].file_uri)}
+                            className="text-[10px] font-mono text-primary"
+                            title={`${item.attachments.length} PDF attached — click to remove the last one`}>
+                            {item.attachments.length}
+                          </button>
+                        )}
+                        <button onClick={() => setItems((p) => p.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive"><X size={13} /></button>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -1122,6 +1188,23 @@ export default function ClaimForm() {
                   )}
                 </tbody>
               </table>
+
+              {(form.items_sheet || items.some((it) => it.attachments?.length)) &&
+              <div style={{ marginBottom: '20px' }}>
+                  <div style={{ background: '#eff6ff', borderLeft: '4px solid #2563eb', padding: '6px 12px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Attachments</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#111827', lineHeight: '1.7' }}>
+                    {form.items_sheet && <div><strong>Item workbook (Excel):</strong> {form.items_sheet.name}</div>}
+                    {items.map((it, i) => it.attachments?.length ? (
+                      <div key={i}><strong>Item {i + 1}:</strong> {it.attachments.map((a) => a.name).join(', ')}</div>
+                    ) : null)}
+                    {items.some((it) => it.attachments?.length) &&
+                    <div style={{ color: '#6b7280', marginTop: '4px' }}>Attached PDFs follow on the pages after this document.</div>
+                    }
+                  </div>
+                </div>
+              }
 
               {offDayClaims.some((o) => o.work_date || o.claimed) &&
               <div style={{ marginBottom: '20px' }}>

@@ -60,7 +60,7 @@ function paginate(totalHeight, breaks) {
  * Renders an on-page A4 document element to a PDF, breaking pages on row and
  * section boundaries so items continue cleanly instead of being cut mid-line.
  */
-export async function exportElementToPdf({ el, filename, scale = 2 }) {
+export async function buildElementPdf({ el, scale = 2 }) {
   await waitForImages(el);
   await new Promise((r) => setTimeout(r, 60));
 
@@ -87,5 +87,11 @@ export async function exportElementToPdf({ el, filename, scale = 2 }) {
     pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, A4_W_MM, imgHeightMm);
   });
 
+  return pdf;
+}
+
+/** Renders an on-page A4 element to a PDF and downloads it. */
+export async function exportElementToPdf({ el, filename, scale = 2 }) {
+  const pdf = await buildElementPdf({ el, scale });
   pdf.save(filename);
 }
