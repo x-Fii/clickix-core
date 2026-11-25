@@ -311,8 +311,8 @@ export default function Claims() {
             <table className="w-full text-sm min-w-[760px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  {['Claim No.', 'PR No.', 'SR / IR No.', 'Claimant', 'Site', 'Job Type', 'Type', 'Date', 'Total (MYR)', 'Status', ''].map((h) =>
-                  <th key={h} className={`px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider ${h === 'Total (MYR)' ? 'text-right' : h === '' ? '' : 'text-left'}`}>{h}</th>
+                  {['Claim No.', 'PR No.', 'SR / IR No.', 'Claimant', 'Site', 'Job Type', 'Type', 'Date', 'Total (MYR)', 'Status'].map((h) =>
+                  <th key={h} className={`px-4 py-3 text-xs font-mono text-muted-foreground uppercase tracking-wider ${h === 'Total (MYR)' ? 'text-right' : 'text-left'}`}>{h}</th>
               )}
                 </tr>
               </thead>
@@ -361,12 +361,6 @@ export default function Claims() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.claim_date ? format(parseISO(c.claim_date), 'dd/MM/yy') : '—'}</td>
                     <td className="px-4 py-3 text-right font-mono text-sm">{c.grand_total != null ? c.grand_total.toFixed(2) : '—'}</td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-1 justify-end">
-                        
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeleteId(c.id)}><Trash2 size={13} /></Button>
-                      </div>
-                    </td>
                   </tr>
             )}
               </tbody>
