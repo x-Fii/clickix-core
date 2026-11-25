@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
 import { exportElementToPdf } from '@/lib/pdfPages';
+import TypeCombobox from '@/components/TypeCombobox';
 
 const CATEGORIES = [
   'Hardware', 'Software', 'Networking', 'Cabling', 'Consumables', 'Services',
@@ -583,10 +584,12 @@ export default function ClaimForm() {
                     <td className="py-2 pr-2">
                       <div className="flex gap-1 items-center">
                         <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8 flex-1 min-w-[240px]" placeholder="Item description" />
-                        <Select value={CATEGORIES.includes(item.category) ? item.category : undefined} onValueChange={(v) => updateItem(i, 'category', v)}>
-                          <SelectTrigger className="bg-background text-xs h-8 w-32"><SelectValue placeholder="Type" /></SelectTrigger>
-                          <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <TypeCombobox
+                          value={item.category || ''}
+                          onChange={(v) => updateItem(i, 'category', v)}
+                          options={CATEGORIES}
+                          placeholder="Type"
+                          className="w-32 shrink-0" />
                       </div>
                     </td>
                     <td className="py-2 pr-2">
