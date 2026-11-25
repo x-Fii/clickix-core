@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, MapPin, Phone, User, ExternalLink, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, MapPin, Phone, User, ExternalLink, ChevronRight, ChevronDown, Search, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import StatusBadge from '@/components/StatusBadge';
 import { format } from 'date-fns';
@@ -36,6 +36,10 @@ export default function Sites() {
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
   const [clientFilter, setClientFilter] = useState('all');
+  const [regionFilter, setRegionFilter] = useState('all');
+  const [stateFilter, setStateFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const [selectedSite, setSelectedSite] = useState(null);
   const [collapsedRegions, setCollapsedRegions] = useState(new Set());
   const [collapsedStates, setCollapsedStates] = useState(new Set());
@@ -89,8 +93,19 @@ export default function Sites() {
     save.mutate(form);
   };
 
-  const filtered = (clientFilter === 'all' ? sites : sites.filter((s) => s.client_id === clientFilter)).
-  slice().
+  const siteStatuses = (s) => (Array.isArray(s.status) ? s.status : (s.status ? [s.status] : []));
+  const searchTerm = search.trim().toLowerCase();
+
+  const filtered = sites.
+  filter((s) => {
+    if (clientFilter !== 'all' && s.client_id !== clientFilter) return false;
+    if (regionFilter !== 'all' && (s.region || 'No Region') !== regionFilter) return false;
+    if (stateFilter !== 'all' && (s.state || 'No State') !== stateFilter) return false;
+    if (statusFilter !== 'all' && !siteStatuses(s).includes(statusFilter)) return false;
+    if (!searchTerm) return true;
+    return [s.site_name, s.client_name, s.site_location, s.state, s.region, s.pic_name, s.pic_phone].
+    filter(Boolean).join(' ').toLowerCase().includes(searchTerm);
+  }).
   sort((a, b) => {
     const regionCmp = (a.region || '').localeCompare(b.region || '');
     if (regionCmp !== 0) return regionCmp;
@@ -99,12 +114,26 @@ export default function Sites() {
     return (a.site_name || '').localeCompare(b.site_name || '');
   });
 
+  const regionOptions = Array.from(new Set(sites.map((s) => s.region || 'No Region'))).sort();
+  const stateOptions = Array.from(new Set(sites.map((s) => s.state || 'No State'))).sort();
+
+  const filtersActive = !!searchTerm || clientFilter !== 'all' || regionFilter !== 'all' || stateFilter !== 'all' || statusFilter !== 'all';
+  const clearFilters = () => {
+    setSearch('');
+    setClientFilter('all');
+    setRegionFilter('all');
+    setStateFilter('all');
+    setStatusFilter('all');
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold font-heading">Sites / Outlets</h1>
-          <p className="text-sm text-muted-foreground mt-1">{sites.length} registered sites</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {filtersActive ? `${filtered.length} of ${sites.length} sites` : `${sites.length} registered sites`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButtons
@@ -124,6 +153,48 @@ export default function Sites() {
           />
           <Button onClick={openNew} className="gap-2"><Plus size={16} /> Add Site</Button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[240px] max-w-sm">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search site, outlet, client, location, PIC..."
+            className="pl-8 pr-8 h-9 bg-background text-sm" />
+          {search && (
+            <button type="button" onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X size={13} />
+            </button>
+          )}
+        </div>
+        <Select value={regionFilter} onValueChange={setRegionFilter}>
+          <SelectTrigger className="bg-background h-9 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All regions</SelectItem>
+            {regionOptions.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={stateFilter} onValueChange={setStateFilter}>
+          <SelectTrigger className="bg-background h-9 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent className="max-h-60">
+            <SelectItem value="all">All states</SelectItem>
+            {stateOptions.map((st) => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="bg-background h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            {SITE_STATUSES.map((st) => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {filtersActive && (
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={clearFilters}>
+            <X size={13} /> Clear
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -166,7 +237,7 @@ export default function Sites() {
                 {regionKeys.map((region) => {
                   const stateKeys = Object.keys(grouped[region]).sort();
                   const regionCount = stateKeys.reduce((n, st) => n + grouped[region][st].length, 0);
-                  const regionCollapsed = collapsedRegions.has(region);
+                  const regionCollapsed = !filtersActive && collapsedRegions.has(region);
                   return (
                     <Fragment key={`region-${region}`}>
                       <tr className="bg-muted/50 cursor-pointer select-none" onClick={() => toggleRegion(region)}>
@@ -181,7 +252,7 @@ export default function Sites() {
                       {!regionCollapsed && stateKeys.map((state) => {
                         const stateSites = grouped[region][state];
                         const stateKey = `${region}::${state}`;
-                        const stateCollapsed = collapsedStates.has(stateKey);
+                        const stateCollapsed = !filtersActive && collapsedStates.has(stateKey);
                         return (
                           <Fragment key={`state-${stateKey}`}>
                             <tr className="bg-muted/20 cursor-pointer select-none" onClick={() => toggleState(stateKey)}>
