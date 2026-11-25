@@ -791,13 +791,13 @@ export default function ClaimForm() {
                     <td className="py-2 pr-2 text-center text-xs text-muted-foreground font-mono">{i + 1}</td>
                     <td className="py-2 pr-2">
                       <div className="flex gap-1 items-center">
-                        <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8 flex-1 min-w-[240px]" placeholder="Item description" />
                         <TypeCombobox
                           value={item.category || ''}
                           onChange={(v) => updateItem(i, 'category', v)}
                           options={CATEGORIES}
                           placeholder="Type"
                           className="w-32 shrink-0" />
+                        <Input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} className="bg-background text-xs h-8 flex-1 min-w-[240px]" placeholder="Item description" />
                       </div>
                     </td>
                     <td className="py-2 pr-2">
