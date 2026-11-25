@@ -318,16 +318,31 @@ export default function ClaimForm() {
 
   const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0 }]);
 
-  // Pull the line items of every quotation linked in Linked Documents into Claim Items.
-  const addItemsFromQuotation = () => {
+  // Resolve the linked quotations even when they sit outside the cached quotation list.
+  const resolveLinkedQuotations = async () => {
     const ids = form.quotation_ids || [];
-    const selected = quotations.filter((q) => ids.includes(q.id));
-    if (!selected.length) {
+    const known = quotations.filter((q) => ids.includes(q.id));
+    const missingIds = ids.filter((id) => !known.some((q) => q.id === id));
+    const fetched = missingIds.length
+      ? await Promise.all(missingIds.map((id) => base44.entities.Quotation.get(id).catch(() => null)))
+      : [];
+    return [...known, ...fetched.filter(Boolean)];
+  };
+
+  // Pull the line items of every quotation linked in Linked Documents into Claim Items.
+  const addItemsFromQuotation = async () => {
+    if (!(form.quotation_ids || []).length) {
       toast.error('Add a quotation in Linked Documents first');
+      return;
+    }
+    const selected = await resolveLinkedQuotations();
+    if (!selected.length) {
+      toast.error('Linked quotations could not be loaded');
       return;
     }
     const rows = [];
     selected.forEach((q) => {
+      const ref = q.quotation_number || form.quotation_number || '';
       (q.items || []).forEach((it) => {
         if (!(it.description || it.unit_cost || it.quantity)) return;
         const qty = parseFloat(it.quantity) || 0;
@@ -337,7 +352,7 @@ export default function ClaimForm() {
           category: it.item_type || '',
           quotation_id: q.id,
           quotation_ids: [q.id],
-          quotation_number: q.quotation_number || '',
+          quotation_number: ref,
           quantity: it.quantity ?? 1,
           unit_cost: it.unit_cost ?? 0,
           total: qty * cost || parseFloat(it.total) || 0
@@ -371,10 +386,10 @@ export default function ClaimForm() {
   const offDayReplacementTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.replacement) || 0), 0);
   const grandTotal = averagedItemsTotal;
 
-  const linkedQuotationNumbers = quotations
-    .filter((q) => (form.quotation_ids || []).includes(q.id))
-    .map((q) => q.quotation_number)
-    .filter(Boolean);
+  const linkedQuotationNumbers = Array.from(new Set([
+    ...quotations.filter((q) => (form.quotation_ids || []).includes(q.id)).map((q) => q.quotation_number),
+    ...(form.quotation_numbers || []),
+  ].filter(Boolean)));
 
   const itemQuoteValues = (item) =>
     String(item.quotation_number || '').split(',').map((s) => s.trim()).filter(Boolean);
