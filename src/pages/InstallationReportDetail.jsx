@@ -11,6 +11,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { drawEquipmentBlock, sortEquipmentItems } from '@/lib/installationPdfNative';
 import { buildPdfWithinLimit } from '@/lib/pdfExportQuality';
+import { shrinkTemplateImages } from '@/lib/pdfImagePrep';
 
 const STATUS_CONFIG = {
   pending:    { label: 'Pending',    className: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
@@ -73,8 +74,14 @@ export default function InstallationReportDetail() {
         )
       );
 
+      /*
+      * Shrink the photos first, so every capture draws small images
+      * instead of full-size phone photos.
+      */
+      await shrinkTemplateImages(wrapper);
+
       await new Promise((resolve) =>
-        setTimeout(resolve, 300)
+        setTimeout(resolve, 100)
       );
 
       /*

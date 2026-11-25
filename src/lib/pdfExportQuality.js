@@ -9,9 +9,9 @@
 export const PDF_MAX_BYTES = 15 * 1024 * 1024;
 
 export const PDF_QUALITY_STEPS = [
-  { scale: 1.75, quality: 0.85 },
-  { scale: 1.4, quality: 0.72 },
-  { scale: 1.15, quality: 0.6 },
+  { scale: 1.5, quality: 0.85 },
+  { scale: 1.3, quality: 0.72 },
+  { scale: 1.1, quality: 0.6 },
 ];
 
 export const pdfByteSize = (pdf) => pdf.output('blob').size;

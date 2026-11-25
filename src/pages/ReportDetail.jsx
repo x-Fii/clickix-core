@@ -15,6 +15,7 @@ import { ArrowLeft, Download, Send, Plus, X, Upload, Edit2, Save, Check } from '
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { buildPdfWithinLimit } from '@/lib/pdfExportQuality';
+import { shrinkTemplateImages } from '@/lib/pdfImagePrep';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const L2_FLOW = ['escalated', 'quote', 'approved', 'schedule', 'complete', 'billed'];
@@ -392,7 +393,13 @@ export default function ReportDetail() {
     /*
      * Give React and the browser a short moment to finish layout.
      */
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    /*
+     * Shrink the photos first, so every capture draws small images
+     * instead of full-size phone photos.
+     */
+    await shrinkTemplateImages(wrapper);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     /*
      * Each attempt rebuilds the PDF with lighter capture settings,
@@ -843,7 +850,8 @@ export default function ReportDetail() {
      */
     const addElementWithPagination = async (
       element,
-      depth = 0
+      depth = 0,
+      preRenderedCanvas = null
     ) => {
       if (
         !element ||
@@ -892,7 +900,7 @@ export default function ReportDetail() {
       }
 
       const canvas =
-        await renderElement(element);
+        preRenderedCanvas || (await renderElement(element));
 
       const estimatedHeight =
         (canvas.height * contentWidth) /
@@ -965,7 +973,8 @@ export default function ReportDetail() {
 
         await addElementWithPagination(
           child,
-          depth + 1
+          depth + 1,
+          childCanvas
         );
       }
     };
