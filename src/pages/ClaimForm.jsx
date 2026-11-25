@@ -230,6 +230,12 @@ export default function ClaimForm() {
 
   const setF = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const isReimbursement = form.claim_type === 'Reimbursement';
+  const setClaimType = (v) => {
+    const val = v === 'Other' ? ' ' : v;
+    setForm((f) => ({ ...f, claim_type: val, payment_term: val === 'Reimbursement' ? '' : f.payment_term }));
+  };
+
   const handlePRSelect = (prId) => {
     const pr = prs.find((x) => x.id === prId);
     if (pr) {
@@ -257,7 +263,7 @@ export default function ClaimForm() {
         claimant_department: pr.requester_department || '',
         claimant_email: pr.requester_email || '',
         claimant_phone: pr.requester_phone || '',
-        payment_term: pr.payment_term || '',
+        payment_term: isReimbursement ? '' : (pr.payment_term || ''),
         purpose: Array.isArray(pr.purpose_of_purchase) ? pr.purpose_of_purchase.join(', ') : (pr.purpose_of_purchase || ''),
         approved_by: pr.approved_by || ''
       }));
@@ -605,18 +611,20 @@ export default function ClaimForm() {
                   <button onClick={() => setF('claim_type', '')} className="text-muted-foreground hover:text-foreground px-1"><X size={14} /></button>
                 </div>
               ) : (
-                <Select value={form.claim_type || undefined} onValueChange={(v) => setF('claim_type', v === 'Other' ? ' ' : v)}>
+                <Select value={form.claim_type || undefined} onValueChange={setClaimType}>
                   <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select type..." /></SelectTrigger>
                   <SelectContent>{CLAIM_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
               )}
             </Field>
-            <Field label="Payment Term">
-              <Select value={form.payment_term} onValueChange={(v) => setF('payment_term', v)}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select payment term..." /></SelectTrigger>
-                <SelectContent>{PAYMENT_TERMS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
-            </Field>
+            {!isReimbursement && (
+              <Field label="Payment Term">
+                <Select value={form.payment_term} onValueChange={(v) => setF('payment_term', v)}>
+                  <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select payment term..." /></SelectTrigger>
+                  <SelectContent>{PAYMENT_TERMS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </Field>
+            )}
             <Field label="Client Name(s)">
               <MultiSearchableSelect
                 values={form.client_names || []}
