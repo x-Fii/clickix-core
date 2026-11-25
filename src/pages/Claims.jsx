@@ -318,10 +318,25 @@ export default function Claims() {
               </thead>
               <tbody>
                 {filtered.map((c) =>
-            <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/claims/${c.id}`)}>
+            <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors cursor-pointer"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey) { window.open(`/claims/${c.id}`, '_blank'); return; }
+                navigate(`/claims/${c.id}`);
+              }}
+              onAuxClick={(e) => { if (e.button === 1) window.open(`/claims/${c.id}`, '_blank'); }}>
                     <td className="px-4 py-3 font-mono text-xs text-primary">
                       <div className="flex items-center gap-1.5">
-                        <span>{c.claim_number}</span>
+                        <a
+                          href={`/claims/${c.id}`}
+                          onClick={(e) => {
+                            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/claims/${c.id}`);
+                          }}
+                          className="hover:underline">
+                          {c.claim_number}
+                        </a>
                         {c.items_sheet?.name &&
                         <span title={`Excel sheet: ${c.items_sheet.name}`}>
                             <FileSpreadsheet size={12} className="text-emerald-400" />
