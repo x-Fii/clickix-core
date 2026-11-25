@@ -118,7 +118,7 @@ export default function QuotationPdfImport({ onImported, hasItems }) {
             quantity,
             unit_cost: unitCost,
             total: Number(it.total) || quantity * unitCost,
-            taxable: true,
+            taxable: false,
           };
         });
 
