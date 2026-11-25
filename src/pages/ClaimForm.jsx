@@ -22,7 +22,7 @@ import NewQuotationDialog from '@/components/claims/NewQuotationDialog';
 const CATEGORIES = [
   'Hardware', 'Software', 'Networking', 'Cabling', 'Consumables', 'Services',
   'Flight', 'Airport Transfer', 'Car Rental', 'Mileage Claim', 'Transport',
-  'Fuel - Car Rental', 'Toll', 'Accommodation', 'Per Diem', 'Site Fee',
+  'Fuel - Car Rental', 'Toll & Parking', 'Accommodation', 'Per Diem', 'Site Fee',
   'Subscription', 'Manpower/Helper', 'Other'
 ];
 const PAYMENT_TERMS = ['30 Days', '60 Days', '90 Days', 'COD', 'Advance Payment', 'Upon Delivery'];
