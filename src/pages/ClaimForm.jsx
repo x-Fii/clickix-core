@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
 import { exportElementToPdf } from '@/lib/pdfPages';
 import TypeCombobox from '@/components/TypeCombobox';
+import SearchableSelect from '@/components/SearchableSelect';
 
 const CATEGORIES = [
   'Hardware', 'Software', 'Networking', 'Cabling', 'Consumables', 'Services',
@@ -458,13 +459,14 @@ export default function ClaimForm() {
           <h3 className="font-semibold text-sm pb-3 mb-5 border-b border-border">Linked Documents</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Purchase Requisition (PR)">
-              <Select value={form.pr_id} onValueChange={handlePRSelect}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select PR to convert from..." /></SelectTrigger>
-                <SelectContent>{prs.map((p) => <SelectItem key={p.id} value={p.id}>{p.pr_number} — {p.client_name}</SelectItem>)}</SelectContent>
-              </Select>
+              <SearchableSelect
+                value={form.pr_id}
+                onChange={handlePRSelect}
+                options={prs.map((p) => ({ value: p.id, label: `${p.pr_number} — ${p.client_name || ''}` }))}
+                placeholder="Select PR to convert from..." />
             </Field>
             <Field label="Quotation">
-              <Select value={form.quotation_id} onValueChange={(v) => {
+              <SearchableSelect value={form.quotation_id} onChange={(v) => {
                 const q = quotations.find((x) => x.id === v);
                 if (!q) return;
                 // chain-fill linked SR or IR from quotation
@@ -486,10 +488,9 @@ export default function ClaimForm() {
                    ir_ids: linkedIR ? [linkedIR.id] : f.ir_ids,
                    ir_numbers: linkedIR ? [linkedIR.report_number] : f.ir_numbers
                  }));
-              }}>
-                <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Select quotation..." /></SelectTrigger>
-                <SelectContent>{quotations.map((q) => <SelectItem key={q.id} value={q.id}>{q.quotation_number} — {q.client_name}</SelectItem>)}</SelectContent>
-              </Select>
+              }}
+                options={quotations.map((q) => ({ value: q.id, label: `${q.quotation_number} — ${q.client_name || ''}` }))}
+                placeholder="Select quotation..." />
             </Field>
             <Field label="Service / Installation Reports">
               <div className="rounded-md border border-input bg-background p-2 space-y-2">
@@ -519,21 +520,25 @@ export default function ClaimForm() {
                 ) : (
                   <p className="text-xs text-muted-foreground/50">No reports selected</p>
                 )}
-                <div className="flex gap-2">
-                  <select
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <SearchableSelect
                     value=""
-                    onChange={(e) => { const v = e.target.value; if (v) toggleReport(v, 'sr'); e.target.value = ''; }}
-                    className="text-xs bg-transparent border border-border rounded-md px-2 py-1 text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
-                    <option value="">+ Add Service Report</option>
-                    {reports.map((r) => <option key={r.id} value={r.id} disabled={(form.sr_ids || []).includes(r.id)}>{r.running_number} — {r.site_name}</option>)}
-                  </select>
-                  <select
+                    onChange={(v) => v && toggleReport(v, 'sr')}
+                    options={reports
+                      .filter((r) => !(form.sr_ids || []).includes(r.id))
+                      .map((r) => ({ value: r.id, label: r.running_number, sublabel: r.site_name }))}
+                    placeholder="+ Add Service Report"
+                    emptyText="No service reports left"
+                    className="flex-1 min-w-[150px] h-8 text-xs border-border bg-transparent text-muted-foreground" />
+                  <SearchableSelect
                     value=""
-                    onChange={(e) => { const v = e.target.value; if (v) toggleReport(v, 'ir'); e.target.value = ''; }}
-                    className="text-xs bg-transparent border border-border rounded-md px-2 py-1 text-muted-foreground outline-none cursor-pointer flex-1 min-w-[120px]">
-                    <option value="">+ Add Installation Report</option>
-                    {installationReports.map((r) => <option key={r.id} value={r.id} disabled={(form.ir_ids || []).includes(r.id)}>{r.report_number} — {r.site_name}</option>)}
-                  </select>
+                    onChange={(v) => v && toggleReport(v, 'ir')}
+                    options={installationReports
+                      .filter((r) => !(form.ir_ids || []).includes(r.id))
+                      .map((r) => ({ value: r.id, label: r.report_number, sublabel: r.site_name }))}
+                    placeholder="+ Add Installation Report"
+                    emptyText="No installation reports left"
+                    className="flex-1 min-w-[150px] h-8 text-xs border-border bg-transparent text-muted-foreground" />
                 </div>
               </div>
             </Field>
