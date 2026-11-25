@@ -5,7 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Receipt, Eye, Trash2, Calendar, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Receipt, Eye, Trash2, Calendar, List, ChevronLeft, ChevronRight, Paperclip, FileSpreadsheet } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear, subDays, isWithinInterval } from 'date-fns';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -319,7 +319,25 @@ export default function Claims() {
               <tbody>
                 {filtered.map((c) =>
             <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/claims/${c.id}`)}>
-                    <td className="px-4 py-3 font-mono text-xs text-primary">{c.claim_number}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-primary">
+                      <div className="flex items-center gap-1.5">
+                        <span>{c.claim_number}</span>
+                        {c.items_sheet?.name &&
+                        <span title={`Excel sheet: ${c.items_sheet.name}`}>
+                            <FileSpreadsheet size={12} className="text-emerald-400" />
+                          </span>
+                        }
+                        {(() => {
+                          const pdfCount = (c.items || []).reduce((n, it) => n + (it.attachments?.length || 0), 0);
+                          if (!pdfCount) return null;
+                          return (
+                            <span className="inline-flex items-center gap-0.5 text-muted-foreground" title={`${pdfCount} PDF attachment${pdfCount > 1 ? 's' : ''}`}>
+                              <Paperclip size={11} />
+                              {pdfCount > 1 && <span className="text-[10px]">{pdfCount}</span>}
+                            </span>);
+                        })()}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.pr_number || '—'}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.sr_number || c.ir_number || '—'}</td>
                     <td className="px-4 py-3">{c.claimant_name || '—'}</td>
