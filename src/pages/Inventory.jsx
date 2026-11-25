@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Boxes, Search } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Pencil, Trash2, Boxes, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import ExportButtons from '@/components/ExportButtons';
 
@@ -60,6 +61,9 @@ export default function Inventory() {
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
   const [search, setSearch] = useState('');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [siteFilter, setSiteFilter] = useState('all');
+  const [outletFilter, setOutletFilter] = useState('all');
   const [deleteId, setDeleteId] = useState(null);
 
   const { data: items = [], isLoading } = useQuery({ queryKey: ['inventory'], queryFn: () => base44.entities.Inventory.list() });
@@ -89,8 +93,25 @@ export default function Inventory() {
   const handleSave = () => save.mutate(form);
 
   const q = search.toLowerCase();
-  const filtered = items.filter((r) => !q || FIELDS.some(([key]) => String(r[key] || '').toLowerCase().includes(q)));
+  const filtered = items.filter((r) => {
+    if (clientFilter !== 'all' && (r.client || '') !== clientFilter) return false;
+    if (siteFilter !== 'all' && (r.site_name || '') !== siteFilter) return false;
+    if (outletFilter !== 'all' && (r.outlet || '') !== outletFilter) return false;
+    return !q || FIELDS.some(([key]) => String(r[key] || '').toLowerCase().includes(q));
+  });
   const sorted = filtered.slice().sort((a, b) => (a.outlet || '').localeCompare(b.outlet || ''));
+
+  const clientOptions = Array.from(new Set(items.map((r) => r.client).filter(Boolean))).sort();
+  const siteOptions = Array.from(new Set(items.map((r) => r.site_name).filter(Boolean))).sort();
+  const outletOptions = Array.from(new Set(items.map((r) => r.outlet).filter(Boolean))).sort();
+
+  const filtersActive = !!q || clientFilter !== 'all' || siteFilter !== 'all' || outletFilter !== 'all';
+  const clearFilters = () => {
+    setSearch('');
+    setClientFilter('all');
+    setSiteFilter('all');
+    setOutletFilter('all');
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -99,7 +120,9 @@ export default function Inventory() {
           <h1 className="text-2xl font-semibold font-heading flex items-center gap-2">
             <Boxes size={22} className="text-primary" /> Inventory
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">{items.length} records</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {filtersActive ? `${sorted.length} of ${items.length} records` : `${items.length} records`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButtons
@@ -112,20 +135,59 @@ export default function Inventory() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Search outlet, license, SKU, processor..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 bg-card" />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[240px] max-w-sm">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search outlet, license, SKU, processor..."
+            className="pl-8 pr-8 h-9 bg-background text-sm" />
+          {search && (
+            <button type="button" onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X size={13} />
+            </button>
+          )}
+        </div>
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="bg-background h-9 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent className="max-h-60">
+            <SelectItem value="all">All clients</SelectItem>
+            {clientOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={siteFilter} onValueChange={setSiteFilter}>
+          <SelectTrigger className="bg-background h-9 w-[180px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent className="max-h-60">
+            <SelectItem value="all">All sites</SelectItem>
+            {siteOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={outletFilter} onValueChange={setOutletFilter}>
+          <SelectTrigger className="bg-background h-9 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent className="max-h-60">
+            <SelectItem value="all">All outlets</SelectItem>
+            {outletOptions.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {filtersActive && (
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={clearFilters}>
+            <X size={13} /> Clear
+          </Button>
+        )}
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-x-auto">
         {isLoading && <div className="text-center py-12 text-muted-foreground text-sm">Loading...</div>}
-        {!isLoading && items.length === 0 && (
+        {!isLoading && sorted.length === 0 && (
           <div className="text-center py-16">
             <Boxes size={40} className="mx-auto text-muted-foreground/30 mb-3" />
-            <p className="text-muted-foreground text-sm">No inventory yet. Add your first item.</p>
+            <p className="text-muted-foreground text-sm">
+              {items.length === 0 ? 'No inventory yet. Add your first item.' : 'No inventory records match your search.'}
+            </p>
           </div>
         )}
-        {!isLoading && items.length > 0 && (
+        {!isLoading && sorted.length > 0 && (
           <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="border-b border-border bg-muted/30">
