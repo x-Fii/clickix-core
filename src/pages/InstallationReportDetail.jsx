@@ -10,6 +10,7 @@ import EquipmentSummary from '@/components/installation/EquipmentSummary';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { drawEquipmentBlock, sortEquipmentItems } from '@/lib/installationPdfNative';
+import { buildPdfWithinLimit } from '@/lib/pdfExportQuality';
 
 const STATUS_CONFIG = {
   pending:    { label: 'Pending',    className: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
@@ -76,6 +77,11 @@ export default function InstallationReportDetail() {
         setTimeout(resolve, 300)
       );
 
+      /*
+      * Each attempt rebuilds the PDF with lighter capture settings,
+      * so a long report with many photos still stays under the size limit.
+      */
+      const buildPdf = async ({ scale: captureScale, quality: captureQuality }) => {
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -139,7 +145,7 @@ export default function InstallationReportDetail() {
       */
       const headerCanvas =
         await html2canvas(headerElement, {
-          scale: 2,
+          scale: captureScale,
           useCORS: true,
           allowTaint: false,
           backgroundColor: '#2563eb',
@@ -150,7 +156,7 @@ export default function InstallationReportDetail() {
       const headerImageData =
         headerCanvas.toDataURL(
           'image/jpeg',
-          0.95
+          captureQuality
         );
 
       let renderedHeaderHeight =
@@ -272,7 +278,7 @@ export default function InstallationReportDetail() {
 
         try {
           return await html2canvas(element, {
-            scale: 2,
+            scale: captureScale,
             useCORS: true,
             allowTaint: false,
             backgroundColor: '#ffffff',
@@ -296,7 +302,7 @@ export default function InstallationReportDetail() {
         const imageData =
           canvas.toDataURL(
             'image/jpeg',
-            0.95
+            captureQuality
           );
 
         const mainContentStyle =
@@ -730,6 +736,11 @@ export default function InstallationReportDetail() {
       * Add accurate page numbers after pagination.
       */
       drawAllFooters();
+
+      return pdf;
+      };
+
+      const pdf = await buildPdfWithinLimit(buildPdf);
 
       pdf.save(
         `${report.report_number || 'installation-report'}.pdf`

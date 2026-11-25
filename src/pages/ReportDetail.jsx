@@ -14,6 +14,7 @@ import L1ReadOnly from '@/components/L1ReadOnly';
 import { ArrowLeft, Download, Send, Plus, X, Upload, Edit2, Save, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { buildPdfWithinLimit } from '@/lib/pdfExportQuality';
 
 const DEVICE_TYPES = ['PC', 'TV', 'Network Device', 'Cabling', 'CMS Software', 'Other'];
 const L2_FLOW = ['escalated', 'quote', 'approved', 'schedule', 'complete', 'billed'];
@@ -393,6 +394,11 @@ export default function ReportDetail() {
      */
     await new Promise((resolve) => setTimeout(resolve, 300));
 
+    /*
+     * Each attempt rebuilds the PDF with lighter capture settings,
+     * so a long report with many photos still stays under the size limit.
+     */
+    const buildPdf = async ({ scale: captureScale, quality: captureQuality }) => {
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -451,7 +457,7 @@ export default function ReportDetail() {
 
     if (headerElement) {
       const headerCanvas = await html2canvas(headerElement, {
-        scale: 2,
+        scale: captureScale,
         useCORS: true,
         allowTaint: false,
         backgroundColor: '#2563eb',
@@ -459,7 +465,7 @@ export default function ReportDetail() {
       });
 
       headerImageData =
-        headerCanvas.toDataURL('image/jpeg', 0.95);
+        headerCanvas.toDataURL('image/jpeg', captureQuality);
 
       renderedHeaderHeight =
         (headerCanvas.height * pageWidth) /
@@ -636,7 +642,7 @@ export default function ReportDetail() {
 
     try {
       return await html2canvas(element, {
-        scale: 2,
+        scale: captureScale,
         useCORS: true,
         allowTaint: false,
         backgroundColor: '#ffffff',
@@ -663,7 +669,7 @@ export default function ReportDetail() {
       forceFullWidth = true
     ) => {
       const imageData =
-        canvas.toDataURL('image/jpeg', 0.95);
+        canvas.toDataURL('image/jpeg', captureQuality);
 
       let renderWidth;
 
@@ -975,6 +981,11 @@ export default function ReportDetail() {
      * Add accurate dynamic page numbers after pagination is complete.
      */
     drawAllFooters();
+
+    return pdf;
+    };
+
+    const pdf = await buildPdfWithinLimit(buildPdf);
 
     pdf.save(
       `${report.running_number || 'service-report'}.pdf`
