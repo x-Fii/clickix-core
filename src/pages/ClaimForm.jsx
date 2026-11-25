@@ -370,6 +370,11 @@ export default function ClaimForm() {
   const offDayReplacementTotal = offDayClaims.reduce((s, it) => s + (parseFloat(it.replacement) || 0), 0);
   const grandTotal = averagedItemsTotal;
 
+  const linkedQuotationNumbers = quotations
+    .filter((q) => (form.quotation_ids || []).includes(q.id))
+    .map((q) => q.quotation_number)
+    .filter(Boolean);
+
   const selectedClientIds = clients
     .filter((c) => (form.client_names || []).includes(c.company_name))
     .map((c) => c.id);
@@ -769,12 +774,15 @@ export default function ClaimForm() {
                       </div>
                     </td>
                     <td className="py-2 pr-2">
-                      <Input
+                      <TypeCombobox
                         value={item.quotation_number || ''}
-                        onChange={(e) => updateItem(i, 'quotation_number', e.target.value)}
-                        className="bg-background text-xs h-8"
-                        placeholder="Type project reference"
-                      />
+                        onChange={(v) => {
+                          const q = quotations.find((x) => x.quotation_number === v);
+                          setItems((prev) => prev.map((it, idx) => idx === i ? { ...it, quotation_number: v, quotation_id: q ? q.id : '' } : it));
+                        }}
+                        options={linkedQuotationNumbers}
+                        placeholder="Link quotation"
+                        className="w-full h-8" />
                     </td>
                     <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" /></td>
                     <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.unit_cost} onChange={(e) => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" placeholder="0.00" /></td>
