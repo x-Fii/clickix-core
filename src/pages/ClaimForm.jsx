@@ -1064,7 +1064,7 @@ export default function ClaimForm() {
                 <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Linked Documents</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px 24px' }}>
-                {[['PR NO.', form.pr_number], ['QUOTATION NO.', (form.quotation_numbers || []).join(', ') || form.quotation_number], ['SR NO.', (form.sr_numbers || []).join(', ') || form.sr_number], ['IR NO.', (form.ir_numbers || []).join(', ') || form.ir_number], ['CLIENT', form.client_name], ['SITE(S)', (form.site_names || []).join(', ') || form.site_name], ['PAYMENT TERM', form.payment_term], ['CLAIM DATE', form.claim_date]].map(([k, v]) =>
+                {[['PR NO.', form.pr_number], ['QUOTATION NO.', (form.quotation_numbers || []).join(', ') || form.quotation_number], ['SR NO.', (form.sr_numbers || []).join(', ') || form.sr_number], ['IR NO.', (form.ir_numbers || []).join(', ') || form.ir_number], ['CLIENT(S)', (form.client_names || []).join(', ') || form.client_name], ['SITE(S)', (form.site_names || []).join(', ') || form.site_name], ['PAYMENT TERM', form.payment_term], ['CLAIM DATE', form.claim_date]].map(([k, v]) =>
                 <div key={k}>
                     <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{k}</div>
                     <div style={{ fontSize: '12px', color: '#111827' }}>{v || '—'}</div>
@@ -1074,12 +1074,10 @@ export default function ClaimForm() {
             </div>
 
             {/* Purpose */}
-            {form.purpose &&
             <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>PURPOSE</div>
-                <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.5' }}>{form.purpose}</div>
-              </div>
-            }
+              <div style={{ fontSize: '9px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>PURPOSE / JUSTIFICATION</div>
+              <div style={{ fontSize: '12px', color: '#111827', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>{form.purpose || '—'}</div>
+            </div>
 
             {/* Approval & Payment */}
             <div style={{ marginBottom: '20px' }}>
@@ -1104,8 +1102,8 @@ export default function ClaimForm() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '16px' }}>
                 <thead>
                   <tr style={{ background: '#f3f4f6' }}>
-                    {['#', 'Description', 'Project Reference', 'Qty', 'Unit Cost', 'Total', 'Avg Total'].map((h, i) =>
-                    <th key={h} style={{ padding: '7px 10px', textAlign: i > 2 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 2 ? '90px' : i > 2 ? '80px' : 'auto' }}>{h}</th>
+                    {['#', 'Type', 'Description', 'Project Reference', 'Qty', 'Unit Cost', 'Total', 'Avg Total'].map((h, i) =>
+                    <th key={h} style={{ padding: '7px 10px', textAlign: i > 3 ? 'right' : i === 0 ? 'center' : 'left', color: '#374151', fontWeight: '700', fontSize: '9px', textTransform: 'uppercase', border: '1px solid #e5e7eb', width: i === 0 ? '30px' : i === 1 ? '70px' : i === 3 ? '90px' : i > 3 ? '75px' : 'auto' }}>{h}</th>
                     )}
                   </tr>
                 </thead>
@@ -1113,6 +1111,7 @@ export default function ClaimForm() {
                   {items.map((item, i) =>
                   <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                       <td style={{ padding: '7px 10px', textAlign: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: '10px', border: '1px solid #e5e7eb' }}>{i + 1}</td>
+                      <td style={{ padding: '7px 10px', color: '#374151', border: '1px solid #e5e7eb' }}>{item.category || '—'}</td>
                       <td style={{ padding: '7px 10px', border: '1px solid #e5e7eb' }}>{item.description || '—'}</td>
                       <td style={{ padding: '7px 10px', color: '#6b7280', border: '1px solid #e5e7eb' }}>{item.quotation_number || '—'}</td>
                       <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', border: '1px solid #e5e7eb' }}>{item.quantity}</td>
