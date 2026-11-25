@@ -136,6 +136,12 @@
           "quotation_id": {
             "type": "string"
           },
+          "quotation_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "quotation_number": {
             "type": "string"
           },

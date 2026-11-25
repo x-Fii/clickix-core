@@ -336,6 +336,7 @@ export default function ClaimForm() {
           description: it.description || '',
           category: it.item_type || '',
           quotation_id: q.id,
+          quotation_ids: [q.id],
           quotation_number: q.quotation_number || '',
           quantity: it.quantity ?? 1,
           unit_cost: it.unit_cost ?? 0,
@@ -374,6 +375,17 @@ export default function ClaimForm() {
     .filter((q) => (form.quotation_ids || []).includes(q.id))
     .map((q) => q.quotation_number)
     .filter(Boolean);
+
+  const itemQuoteValues = (item) =>
+    String(item.quotation_number || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+  const setItemQuotations = (i, nums) => {
+    setItems((prev) => prev.map((it, idx) => {
+      if (idx !== i) return it;
+      const ids = nums.map((n) => quotations.find((q) => q.quotation_number === n)?.id).filter(Boolean);
+      return { ...it, quotation_number: nums.join(', '), quotation_ids: ids };
+    }));
+  };
 
   const selectedClientIds = clients
     .filter((c) => (form.client_names || []).includes(c.company_name))
@@ -774,15 +786,13 @@ export default function ClaimForm() {
                       </div>
                     </td>
                     <td className="py-2 pr-2">
-                      <TypeCombobox
-                        value={item.quotation_number || ''}
-                        onChange={(v) => {
-                          const q = quotations.find((x) => x.quotation_number === v);
-                          setItems((prev) => prev.map((it, idx) => idx === i ? { ...it, quotation_number: v, quotation_id: q ? q.id : '' } : it));
-                        }}
-                        options={linkedQuotationNumbers}
-                        placeholder="Link quotation"
-                        className="w-full h-8" />
+                      <MultiSearchableSelect
+                        values={itemQuoteValues(item)}
+                        onChange={(nums) => setItemQuotations(i, nums)}
+                        options={linkedQuotationNumbers.map((n) => ({ value: n, label: n }))}
+                        placeholder="Link quotation(s)"
+                        emptyText="No linked quotations"
+                        className="w-full text-xs px-2" />
                     </td>
                     <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} className="bg-background text-xs h-8 text-right" /></td>
                     <td className="py-2 pr-2"><Input type="text" inputMode="decimal" value={item.unit_cost} onChange={(e) => updateItem(i, 'unit_cost', e.target.value)} className="bg-background text-xs h-8 text-right" placeholder="0.00" /></td>
