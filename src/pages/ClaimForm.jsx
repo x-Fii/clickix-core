@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Download, Send, CheckCircle, XCircle, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fetchNextRunningNumber } from '@/lib/runningNumber';
@@ -292,6 +292,39 @@ export default function ClaimForm() {
 
   const addItem = () => setItems((p) => [...p, { item_no: p.length + 1, description: '', category: '', quotation_id: '', quotation_number: '', quantity: 1, unit_cost: 0, total: 0 }]);
 
+  // Pull the line items of the quotation chosen in Linked Documents into Claim Items.
+  const addItemsFromQuotation = () => {
+    const q = quotations.find((x) => x.id === form.quotation_id);
+    if (!q) {
+      toast.error('Select a quotation in Linked Documents first');
+      return;
+    }
+    const rows = (q.items || []).filter((it) => it.description || it.unit_cost || it.quantity);
+    if (!rows.length) {
+      toast.error(`${q.quotation_number} has no line items`);
+      return;
+    }
+    const ref = q.quotation_number || form.quotation_number;
+    setItems((p) => [
+      ...p,
+      ...rows.map((it, idx) => {
+        const qty = parseFloat(it.quantity) || 0;
+        const cost = parseFloat(it.unit_cost) || 0;
+        return {
+          item_no: p.length + idx + 1,
+          description: it.description || '',
+          category: it.item_type || '',
+          quotation_id: q.id,
+          quotation_number: ref,
+          quantity: it.quantity ?? 1,
+          unit_cost: it.unit_cost ?? 0,
+          total: qty * cost || parseFloat(it.total) || 0
+        };
+      })
+    ]);
+    toast.success(`${rows.length} item${rows.length > 1 ? 's' : ''} added from ${ref}`);
+  };
+
   const updateOffDay = (i, field, val) => {
     setOffDayClaims((prev) => prev.map((item, idx) => idx !== i ? item : { ...item, [field]: val }));
   };
@@ -556,7 +589,17 @@ export default function ClaimForm() {
                   : 'Items being claimed (can differ from PR)'}
               </p>
             </div>
-            <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addItem}><Plus size={12} /> Add Item</Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 text-xs"
+                onClick={addItemsFromQuotation}
+                disabled={!form.quotation_id}>
+                <FileDown size={12} /> From Quotation
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={addItem}><Plus size={12} /> Add Item</Button>
+            </div>
           </div>
           {docCount > 0 && (
             <div className="mb-4 flex flex-wrap gap-1.5">
